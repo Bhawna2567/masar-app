@@ -10,11 +10,11 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            build: npm run dist:mac
+            build: npx electron-builder --mac --publish never
             artifact: masar-macos-dmg
             pattern: installers/*.dmg
           - os: windows-latest
-            build: npm run dist:win
+            build: npx electron-builder --win --publish never
             artifact: masar-windows-exe
             pattern: installers/*.exe
     runs-on: ${{ matrix.os }}
@@ -23,11 +23,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npm install
-      - run: ${{ matrix.build }}
+      - name: Install dependencies
+        run: npm install
+      - name: Build installer
+        run: ${{ matrix.build }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      - uses: actions/upload-artifact@v4
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.pattern }}
