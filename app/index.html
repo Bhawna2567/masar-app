@@ -115,6 +115,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 
 <!-- Curriculum data (auto-generated from the official MOE files). Replace this file to extend. -->
 <script src="curriculum.js"></script>
+<script src="questions.js"></script>
 <script>
 /* ============================================================
    MASAR — app logic; curriculum lives in curriculum.js.
@@ -131,38 +132,7 @@ const GRADES = [
 const ENG_SKILLS = ["Reading","Writing","Vocabulary","Grammar"];
 const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probability"];
 
-const QUESTION_BANK = {
-  "6":{
-    English:[
-      {skill:"Reading",q:"\"Although the team lost, they walked off smiling, proud of how far they'd come.\" Which theme does this best convey?",options:["Winning is everything","Growth matters more than winning","Sports are dangerous","Teams should not smile"],answer:1},
-      {skill:"Reading",q:"Which sentence is the BEST textual evidence that a character is generous?",options:["He owned a large house.","He quietly paid for a stranger's meal.","He walked to the shop.","He liked the colour blue."],answer:1},
-      {skill:"Reading",q:"Two articles describe the same storm — one uses eyewitness quotes, the other weather data. Comparing them shows that:",options:["They must disagree","Different texts can present one event from different angles","Only one can be true","Neither is useful"],answer:1},
-      {skill:"Writing",q:"In a well-structured essay, the main claim (thesis) usually appears:",options:["Only in the title","In the introduction","Randomly in the middle","It is never stated"],answer:1},
-      {skill:"Writing",q:"Choose the best transition to show contrast: \"I trained hard. ___, I did not win.\"",options:["Therefore","However","For example","Finally"],answer:1},
-      {skill:"Writing",q:"Which is the STRONGEST support for an argument that schools should start later?",options:["I just think so.","A study found later starts improved student test scores.","My friend agrees.","Mornings are cold."],answer:1},
-      {skill:"Vocabulary",q:"\"Her smile was sunshine.\" This is an example of a:",options:["simile","metaphor","question","command"],answer:1},
-      {skill:"Vocabulary",q:"The Greek root \"bio\" in \"biology\" means:",options:["earth","life","sound","water"],answer:1},
-      {skill:"Vocabulary",q:"\"Childish\" and \"youthful\" both relate to being young, but \"childish\" carries a ___ connotation.",options:["positive","negative","neutral","scientific"],answer:1},
-      {skill:"Grammar",q:"Choose the present perfect tense: \"She ___ her homework already.\"",options:["finish","finished","has finished","finishing"],answer:2},
-      {skill:"Grammar",q:"Choose the correct verb: \"The list of items ___ on the desk.\"",options:["are","is","were","be"],answer:1},
-      {skill:"Grammar",q:"Choose the correct pronoun: \"Neither of the boys finished ___ lunch.\"",options:["their","his","they","them"],answer:1}
-    ],
-    Math:[
-      {skill:"Number & Operations",q:"What is 2/3 + 1/6?",options:["3/9","5/6","1/2","3/6"],answer:1},
-      {skill:"Number & Operations",q:"What is 0.25 × 4?",options:["1","0.1","10","0.025"],answer:0},
-      {skill:"Number & Operations",q:"A recipe uses 2 cups of flour for 3 people. The unit rate per person is:",options:["2/3 cup","3/2 cup","6 cups","1 cup"],answer:0},
-      {skill:"Algebra",q:"Evaluate 3x + 5 when x = 4.",options:["12","17","23","20"],answer:1},
-      {skill:"Algebra",q:"Solve: x + 7 = 12.",options:["5","19","7","6"],answer:0},
-      {skill:"Algebra",q:"If y is proportional to x and y = 10 when x = 2, find y when x = 5.",options:["13","25","20","15"],answer:1},
-      {skill:"Geometry",q:"Area of a triangle with base 8 and height 5:",options:["40","20","13","26"],answer:1},
-      {skill:"Geometry",q:"Volume of a box 2 × 3 × 4:",options:["9","24","14","12"],answer:1},
-      {skill:"Geometry",q:"A figure is a 4×4 square joined to a 4×2 rectangle. Total area:",options:["16","24","20","32"],answer:1},
-      {skill:"Data & Probability",q:"Data: 4, 8, 8, 12, 18. The median is:",options:["8","12","10","18"],answer:0},
-      {skill:"Data & Probability",q:"The mean of 6, 10, 14 is:",options:["10","30","12","9"],answer:0},
-      {skill:"Data & Probability",q:"A histogram differs from a bar graph because it shows:",options:["unrelated categories","data grouped in equal numeric intervals","only one value","no data"],answer:1}
-    ]
-  }
-};
+if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 
 const LS_KEY="masar_state_v3";
 let S = load() || {student:null,answers:{},result:null,plan:null,taskDone:{},activeTab:"setup"};

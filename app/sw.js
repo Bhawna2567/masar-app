@@ -1,6 +1,6 @@
 /* Masar service worker — offline caching */
 const CACHE = "masar-v4";
-const ASSETS = ["./", "./index.html", "./curriculum.js", "./sw.js"];
+const ASSETS = ["./", "./index.html", "./curriculum.js", "./questions.js", "./sw.js"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
