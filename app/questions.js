@@ -1,6 +1,4 @@
-/* Masar diagnostic question banks — keyed by grade then subject.
-   Each question is tagged by skill (English: Reading/Writing/Vocabulary/Grammar;
-   Math: Number & Operations / Algebra / Geometry / Data & Probability). */
+/* Masar diagnostic question banks — keyed by grade then subject. */
 var QUESTION_BANK = {
  "6": {
   "English": [
@@ -39,12 +37,12 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "In a well-structured essay, the main claim (thesis) usually appears:",
+    "q": "Which is the best topic sentence for a paragraph about recycling?",
     "options": [
-     "Only in the title",
-     "In the introduction",
-     "Randomly in the middle",
-     "It is never stated"
+     "Recycling.",
+     "Recycling helps protect the environment in several important ways.",
+     "I kind of like recycling.",
+     "The end."
     ],
     "answer": 1
    },
@@ -61,12 +59,12 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "Which is the STRONGEST support for an argument that schools should start later?",
+    "q": "Which is the strongest supporting detail for \"Exercise is healthy\"?",
     "options": [
      "I just think so.",
-     "A study found later starts improved test scores.",
-     "My friend agrees.",
-     "Mornings are cold."
+     "Studies show 30 minutes of daily exercise lowers the risk of heart disease.",
+     "Exercise is exercise.",
+     "My cousin agrees."
     ],
     "answer": 1
    },
@@ -309,18 +307,18 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A strong paragraph has a topic sentence, supporting details, and a:",
+    "q": "Which is the best topic sentence?",
     "options": [
-     "concluding sentence",
-     "picture",
-     "title page",
-     "rhyme"
+     "Dogs.",
+     "Dogs make excellent pets because they are loyal and protective.",
+     "I have a dog at home.",
+     "Dogs are dogs."
     ],
-    "answer": 0
+    "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Which transition shows cause and effect?",
+    "q": "Which transition word shows cause and effect?",
     "options": [
      "meanwhile",
      "because",
@@ -331,12 +329,12 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "Which sentence is most appropriate for a formal essay?",
+    "q": "Which sentence is the most concise?",
     "options": [
-     "Gonna talk about pollution.",
-     "This essay examines the causes of pollution.",
-     "Pollution is bad, right?",
-     "idk, pollution"
+     "At this point in time, we should leave.",
+     "We should leave now.",
+     "We should, at this present time, leave.",
+     "Now is the time at which we should leave."
     ],
     "answer": 1
    },
@@ -579,18 +577,18 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A thesis statement belongs in the:",
+    "q": "A thesis statement should:",
     "options": [
-     "conclusion",
-     "introduction",
-     "middle, at random",
-     "title"
+     "list every detail in the essay",
+     "clearly state the essay's main argument",
+     "ask a question and stop",
+     "appear only in the conclusion"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Which transition signals contrast?",
+    "q": "Which transition signals a contrast?",
     "options": [
      "therefore",
      "however",
@@ -601,14 +599,14 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "Cohesive writing uses ___ to connect ideas.",
+    "q": "Which sentence fixes the run-on \"It rained we stayed inside\"?",
     "options": [
-     "transitions",
-     "random words",
-     "only nouns",
-     "emojis"
+     "It rained we, stayed inside.",
+     "It rained, so we stayed inside.",
+     "It rained we stayed, inside.",
+     "It, rained we stayed inside."
     ],
-    "answer": 0
+    "answer": 1
    },
    {
     "skill": "Vocabulary",
@@ -849,36 +847,36 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A counterclaim in an argument essay is:",
+    "q": "A strong thesis for an argument essay should:",
     "options": [
-     "your main point",
-     "the opposing view you address",
-     "the title",
-     "a citation"
+     "summarize the plot",
+     "take a clear, debatable position",
+     "list facts with no opinion",
+     "be phrased as a question"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Citing sources helps a writer:",
+    "q": "A counterclaim in an argument is:",
     "options": [
-     "confuse readers",
-     "support credibility",
-     "fill space",
-     "rhyme"
+     "your own main point",
+     "the opposing view you address and respond to",
+     "the essay's title",
+     "a works-cited entry"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Which is the more precise, formal verb?",
+    "q": "Which revision is the most concise? \"Due to the fact that it was late, we left.\"",
     "options": [
-     "got",
-     "obtained",
-     "grabbed",
-     "snagged"
+     "Because it was late, we left.",
+     "Owing to the lateness of the hour, we left.",
+     "In light of the fact it was late, we left.",
+     "It being late, we therefore departed."
     ],
-    "answer": 1
+    "answer": 0
    },
    {
     "skill": "Vocabulary",
@@ -1119,36 +1117,36 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "An argument essay should include reasons and:",
+    "q": "What does a good topic sentence do?",
     "options": [
-     "evidence",
-     "drawings",
-     "rhymes",
-     "nothing"
-    ],
-    "answer": 0
-   },
-   {
-    "skill": "Writing",
-    "q": "A transition word for adding ideas is:",
-    "options": [
-     "however",
-     "also",
-     "because",
-     "but"
+     "ends the paragraph",
+     "states the paragraph's main idea",
+     "repeats the title",
+     "adds a picture"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "A more formal synonym for \"help\" is:",
+    "q": "Which transition word adds an idea?",
     "options": [
-     "assist",
-     "grab",
-     "get",
-     "do"
+     "however",
+     "also",
+     "but",
+     "yet"
     ],
-    "answer": 0
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Which sentence is best for a formal essay?",
+    "options": [
+     "Gonna explain my main point.",
+     "I will explain my main point.",
+     "idk what my point is",
+     "My point, yeah, here it is."
+    ],
+    "answer": 1
    },
    {
     "skill": "Vocabulary",
@@ -1389,34 +1387,34 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A well-developed body paragraph includes a claim, evidence, and:",
+    "q": "In a body paragraph, evidence should be followed by:",
     "options": [
-     "analysis",
-     "a drawing",
-     "a title",
-     "a rhyme"
-    ],
-    "answer": 0
-   },
-   {
-    "skill": "Writing",
-    "q": "Paraphrasing means:",
-    "options": [
-     "copying exactly",
-     "restating in your own words",
-     "ignoring the source",
-     "quoting fully"
+     "a brand-new topic",
+     "analysis explaining how it supports the claim",
+     "the conclusion",
+     "the essay title"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Which phrase is the most concise?",
+    "q": "To paraphrase a source correctly, you should:",
     "options": [
-     "due to the fact that",
-     "because",
-     "in light of the fact that",
-     "owing to the reason that"
+     "copy it word for word",
+     "restate it in your own words and cite it",
+     "ignore the source",
+     "quote the whole passage"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Which sentence is the most concise?",
+    "options": [
+     "Due to the fact that the data was clear, we acted.",
+     "Because the data was clear, we acted.",
+     "In light of the clarity of the data, we acted.",
+     "Owing to the reason the data was clear, we acted."
     ],
     "answer": 1
    },
@@ -1659,7 +1657,7 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A body paragraph supports the:",
+    "q": "A body paragraph should support the essay's:",
     "options": [
      "thesis",
      "title",
@@ -1670,25 +1668,25 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "To paraphrase is to:",
+    "q": "A concluding sentence should:",
     "options": [
-     "copy exactly",
-     "restate in your own words",
-     "skip it",
-     "quote"
+     "introduce new evidence",
+     "wrap up the paragraph's main idea",
+     "begin a new topic",
+     "be left blank"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "A concise version of \"at this point in time\" is:",
+    "q": "Which is the clearest sentence?",
     "options": [
-     "now",
-     "currently at this time",
-     "in this time",
-     "then"
+     "The task was completed by the team in a manner that was quick.",
+     "The team finished the task quickly.",
+     "Quickly, the team, finished the task.",
+     "It was quick, the team finishing the task."
     ],
-    "answer": 0
+    "answer": 1
    },
    {
     "skill": "Vocabulary",
@@ -1929,34 +1927,34 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A literary analysis focuses on:",
+    "q": "A literary analysis essay should focus on:",
     "options": [
-     "plot summary only",
-     "how the author creates meaning",
-     "the cover price",
-     "the page count"
+     "a plot summary",
+     "how the author creates meaning through technique",
+     "the book's price",
+     "the number of pages"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "A strong conclusion:",
+    "q": "A strong conclusion should:",
     "options": [
-     "adds new evidence",
-     "restates and extends the thesis",
-     "repeats the intro exactly",
-     "is missing"
+     "introduce brand-new evidence",
+     "restate the thesis and extend its significance",
+     "copy the introduction exactly",
+     "be left out"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Citations are used to:",
+    "q": "Which sentence best integrates a quotation?",
     "options": [
-     "decorate",
-     "credit sources and avoid plagiarism",
-     "add length",
-     "confuse"
+     "The author said a quote about progress.",
+     "The author argues that progress \"demands sacrifice\" (12).",
+     "Progress demands sacrifice, the author.",
+     "\"Demands sacrifice.\""
     ],
     "answer": 1
    },
@@ -2199,36 +2197,36 @@ var QUESTION_BANK = {
    },
    {
     "skill": "Writing",
-    "q": "A literary analysis discusses:",
+    "q": "A literary analysis discusses how the author:",
     "options": [
-     "how the author creates meaning",
-     "the price",
-     "the cover",
-     "the length"
-    ],
-    "answer": 0
-   },
-   {
-    "skill": "Writing",
-    "q": "A conclusion should:",
-    "options": [
-     "add new facts",
-     "restate the main idea",
-     "repeat everything",
-     "be blank"
+     "prices the book",
+     "creates meaning in the text",
+     "designs the cover",
+     "counts the pages"
     ],
     "answer": 1
    },
    {
     "skill": "Writing",
-    "q": "Citing sources avoids:",
+    "q": "A conclusion paragraph should:",
     "options": [
-     "plagiarism",
-     "reading",
-     "writing",
-     "editing"
+     "add brand-new facts",
+     "restate the main idea",
+     "repeat the essay word for word",
+     "be left blank"
     ],
-    "answer": 0
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Which transition shows a result or effect?",
+    "options": [
+     "however",
+     "as a result",
+     "for instance",
+     "meanwhile"
+    ],
+    "answer": 1
    },
    {
     "skill": "Vocabulary",
@@ -2432,4 +2430,16 @@ var QUESTION_BANK = {
    }
   ]
  }
+};
+
+var WRITING_PROMPTS = {
+ "6": "Write a short paragraph (5–6 sentences) about your favourite hobby. Begin with a clear topic sentence and give at least two supporting details.",
+ "7": "Some students think homework should be banned. Write a paragraph giving your opinion, with at least two reasons and an example for each.",
+ "8": "Should students wear school uniforms? Write a short response (2 paragraphs) stating your view and supporting it with clear reasons.",
+ "9A": "Write an argumentative paragraph responding to this claim: \"Social media does more harm than good for teenagers.\" State a clear position, support it with evidence, and address one counterclaim.",
+ "9G": "Write a paragraph about a person you admire. Use a topic sentence, supporting details, and a concluding sentence.",
+ "10A": "In 1–2 paragraphs, analyse how technology has changed the way people communicate. Use specific examples and organise your ideas clearly.",
+ "10G": "Write a paragraph describing a memorable event in your life. Organise your ideas in order and use descriptive details.",
+ "11A": "Write an argumentative response (2 paragraphs) to: \"Schools should replace exams with project-based assessment.\" Make a clear claim, support it with evidence and reasoning, and acknowledge a counterargument.",
+ "11G": "Write a short essay giving your opinion on whether young people should do volunteer work. Include an introduction, reasons with examples, and a conclusion."
 };
