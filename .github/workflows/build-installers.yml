@@ -25,6 +25,8 @@ jobs:
           node-version: "20"
       - run: npm install
       - run: ${{ matrix.build }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
