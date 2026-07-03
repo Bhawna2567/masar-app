@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Adeptly — Curriculum Diagnostic & Skill Development</title>
+<meta name="theme-color" content="#4f46e5">
+<meta name="description" content="UAE MOE curriculum diagnostic, gap analysis, skill plan and progress tracker for Grades 6–12.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Adeptly">
+<style>
+:root{
+  --green:#4f46e5; --green-d:#4338ca; --gold:#14b8a6; --gold-d:#0d9488;
+  --red:#e11d48; --amber:#d97706; --ok:#0d9488;
+  --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f4f6fb; --card:#ffffff;
+  --shadow:0 2px 4px rgba(15,23,42,.05),0 1px 2px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-tap-highlight-color:transparent}
+a{color:var(--green)}
+.app{max-width:1080px;margin:0 auto;padding:0 18px 90px}
+header.top{background:linear-gradient(120deg,var(--green),var(--green-d));color:#fff;padding:calc(16px + env(safe-area-inset-top)) 22px 16px;border-radius:0 0 16px 16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+.logo{width:42px;height:42px;border-radius:10px;overflow:hidden;flex-shrink:0;line-height:0}
+.brand h1{margin:0;font-size:20px;letter-spacing:.3px}
+.brand p{margin:2px 0 0;font-size:12px;opacity:.85}
+#installBtn{margin-left:auto;background:var(--gold);color:#1d2733;border:none;padding:9px 14px;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;display:none}
+nav.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5}
+nav.tabs button{border:1px solid var(--line);background:var(--card);color:var(--muted);padding:9px 14px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:600;transition:.15s}
+nav.tabs button:hover{border-color:var(--green)}
+nav.tabs button.active{background:var(--green);color:#fff;border-color:var(--green)}
+nav.tabs button:disabled{opacity:.4;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+.card h2{margin:0 0 4px;font-size:18px}
+.card .sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.col{flex:1;min-width:220px}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:.4px}
+input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:none;border-color:var(--green)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;background:var(--green);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{background:var(--green-d)}
+.btn.gold{background:var(--gold);color:#1d2733}.btn.gold:hover{background:var(--gold-d)}
+.btn.ghost{background:#fff;color:var(--green);border:1px solid var(--green)}
+.btn.ghost:hover{background:#eef2ff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:7px 12px;font-size:12px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.3px}
+.pill.green{background:#ccfbf1;color:var(--ok)}
+.pill.amber{background:#fef3c7;color:#b45309}
+.pill.red{background:#ffe4e6;color:var(--red)}
+.pill.grey{background:#eef1f5;color:var(--muted)}
+.q{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.q .meta{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.q .stem{font-size:15px;font-weight:600;margin-bottom:12px}
+.opt{display:block;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:.12s}
+.opt:hover{border-color:var(--green);background:#f3f4ff}
+.opt input{width:auto;margin-right:10px}
+.opt.sel{border-color:var(--green);background:#eef2ff}
+.bar{height:10px;border-radius:6px;background:#eef1f5;overflow:hidden}
+.bar > span{display:block;height:100%;border-radius:6px;background:var(--green)}
+.kpi{display:flex;gap:14px;flex-wrap:wrap}
+.kpi .box{flex:1;min-width:140px;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+.kpi .box .n{font-size:26px;font-weight:800}
+.kpi .box .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.skillrow td{vertical-align:middle}
+.muted{color:var(--muted)}
+.center{text-align:center}
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty .big{font-size:42px;margin-bottom:10px}
+.folder{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.folder .fh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;background:#fafbfc}
+.folder .fh:hover{background:#f3f6f9}
+.folder .fh .ft{font-weight:700;font-size:14px;display:flex;align-items:center;gap:10px}
+.folder .body{padding:6px 16px 14px;display:none}
+.folder.open .body{display:block}
+.task{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.task:last-child{border-bottom:none}
+.task input{width:auto;margin-top:3px}
+.task .tt{font-size:14px}
+.task .ts{font-size:12px;color:var(--muted)}
+.chartwrap{display:flex;align-items:flex-end;gap:10px;height:170px;padding:10px 0;border-bottom:1px solid var(--line)}
+.chartwrap .colbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end;height:100%}
+.chartwrap .colbar .vb{width:70%;background:var(--green);border-radius:6px 6px 0 0;transition:.4s;min-height:2px}
+.chartwrap .colbar .vb.plan{background:var(--gold)}
+.legend{display:flex;gap:16px;font-size:12px;margin-top:10px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.notice{background:#fff8e8;border:1px solid #f0e2b8;border-radius:10px;padding:12px 14px;font-size:13px;color:#7a5d00;margin-bottom:16px}
+.flex-between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tag{font-size:11px;background:#eef1f5;color:var(--muted);padding:2px 8px;border-radius:6px;font-weight:700}
+.termtag{font-size:10px;background:#eef2ff;color:var(--green);border:1px solid #cbd5e1;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:6px}
+.subj{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.3px;border:1px solid transparent}
+.subj.eng{background:#f3e8ff;color:#6d28d9;border-color:#e4d4fb}
+.subj.math{background:#fff1e6;color:#c2410c;border-color:#fcd9bf}
+.print-only{display:none}
+#exModal .ovl{position:fixed;inset:0;background:rgba(16,24,40,.55);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:100;overflow:auto}
+#exModal .ex{background:#fff;max-width:780px;width:100%;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.28);padding:22px;margin:auto}
+.exq{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.opt.exok{border-color:var(--ok);background:#ccfbf1}
+.opt.exbad{border-color:var(--red);background:#ffe4e6}
+@media print{nav.tabs,header.top .brand p,#installBtn,.no-print{display:none!important}.app{padding:0}.print-only{display:block}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo"><svg viewBox="0 0 512 512" width="42" height="42" xmlns="http://www.w3.org/2000/svg" aria-label="Adeptly"><defs><linearGradient id="alg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#4338ca"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="url(#alg)"/><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path d="M120 436 L256 96 L392 436" stroke-width="64"/><path d="M172 332 L340 332" stroke-width="56"/></g><circle cx="256" cy="96" r="14" fill="#2dd4bf"/></svg></div>
+  <div class="brand">
+    <h1>Adeptly</h1>
+    <p>UAE MOE Curriculum Diagnostic &amp; Skill Development · Grades 6–12 · English &amp; Math</p>
+  </div>
+  <div id="userChip" style="margin-left:auto;display:flex;gap:8px;align-items:center"></div>
+  <button id="installBtn">⤓ Install app</button>
+</header>
+
+<div class="app">
+  <nav class="tabs" id="tabs"></nav>
+  <div id="view"></div>
+</div>
+
+<div id="exModal" style="display:none"></div>
+<!-- Curriculum data (auto-generated from the official MOE files). Replace this file to extend. -->
+<script src="curriculum.js"></script>
+<script src="questions.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script>try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}catch(e){}</script>
+<script>
+/* ============================================================
+   MASAR — app logic; curriculum lives in curriculum.js.
+   ============================================================ */
+if (typeof CURRICULUM === "undefined") { window.CURRICULUM = {}; }
+if (typeof WRITING_PROMPTS === "undefined") { var WRITING_PROMPTS = {}; }
+
+const GRADES = [
+  {id:"6",label:"Grade 6"},{id:"7",label:"Grade 7"},{id:"8",label:"Grade 8"},
+  {id:"9A",label:"Grade 9 Advanced"},{id:"9G",label:"Grade 9 General"},
+  {id:"10A",label:"Grade 10 Advanced"},{id:"10G",label:"Grade 10 General"},
+  {id:"11A",label:"Grade 11 Advanced"},{id:"11G",label:"Grade 11 General"},
+  {id:"12A",label:"Grade 12 Advanced"},{id:"12G",label:"Grade 12 General"}
+];
+const ENG_SKILLS = ["Reading","Writing","Vocabulary","Grammar"];
+const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probability"];
+
+if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
+
+/* ---- Firebase Auth + Firestore data layer (cloud) ---- */
+try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.warn("Firebase init:",e); }
+try{ if(typeof APPCHECK_SITE_KEY!=="undefined" && APPCHECK_SITE_KEY && APPCHECK_SITE_KEY.indexOf("PASTE_")<0 && firebase.appCheck){ firebase.appCheck().activate(APPCHECK_SITE_KEY, true); } }catch(e){ console.warn("App Check:",e); }
+const fbAuth=firebase.auth(), db=firebase.firestore();
+let AUTH=null, CACHE={assignments:[],classes:[],tests:[]}, _unsub=[];
+let VIEWING=null, READONLY=false;
+function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
+function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function assignments(){return CACHE.assignments;}
+function classesList(){return CACHE.classes||[];}
+function teacherTests(){return CACHE.tests||[];}
+function freshState(){return {student:null,answers:{},result:null,plan:null,taskDone:{},writeResponse:"",activeTab:"home",authMode:"login"};}
+function stateKey(){return "masar_cloud_state_"+(AUTH?AUTH.uid:"guest");}
+let S=freshState();
+function load(){return lsGet(stateKey(),null);}
+function save(){ if(READONLY) return; if(AUTH&&AUTH.role==="student"){ lsSet(stateKey(),S); syncResultToAssignment(); } }
+function loadStateForUser(){S=load()||freshState();}
+function reset(){ if(READONLY) return; if(confirm("Clear this student's progress on this device and start over?")){ localStorage.removeItem(stateKey()); S=freshState(); render(); } }
+function syncResultToAssignment(){
+  if(!(AUTH&&AUTH.role==="student")||!S.result||!S.activeAssignment) return;
+  const r=S.result;
+  const payload={status:"completed",score:r.overallPct,level:r.level?r.level.name:"",levelCls:r.level?r.level.cls:"grey",skillPct:r.skillPct||{},subject:S.student.subject,writePrompt:r.writePrompt||"",writeResponse:r.writeResponse||"",completedAt:Date.now(),retakeAllowed:false};
+  if(S.plan){
+    let totalDone=0,totalAll=0,tp={};
+    ["1","2","3"].forEach(t=>{let d=0,tt=0; S.plan.terms[t].weeks.forEach(w=>w.tasks.forEach((_,i)=>{tt++; if(S.taskDone[t+"-"+w.week+"-"+i])d++;})); tp[t]=tt?Math.round(d/tt*100):0; totalDone+=d; totalAll+=tt;});
+    const focus=(S.plan.focus||[]).map(f=>{let d=0,tt=0; ["1","2","3"].forEach(t=>S.plan.terms[t].weeks.forEach(w=>{if(w.skill===f)w.tasks.forEach((_,i)=>{tt++; if(S.taskDone[t+"-"+w.week+"-"+i])d++;});})); return {skill:f,baseline:(S.result.skillPct[f]||0),planPct:tt?Math.round(d/tt*100):0};});
+    payload.progress={yearPct:totalAll?Math.round(totalDone/totalAll*100):0,t1:tp["1"],t2:tp["2"],t3:tp["3"],totalDone:totalDone,totalAll:totalAll,focus:focus,updatedAt:Date.now()};
+    payload.goals=S.plan.goals||[];
+  }
+  payload.snapshot={result:S.result,plan:S.plan,taskDone:S.taskDone||{},student:S.student};
+  db.collection("assignments").doc(S.activeAssignment).set(payload,{merge:true}).catch(e=>console.warn("sync:",e));
+}
+function startListeners(){
+  _unsub.forEach(u=>{try{u()}catch(e){}}); _unsub=[];
+  if(AUTH.role==="teacher"){
+    _unsub.push(db.collection("assignments").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
+    _unsub.push(db.collection("classes").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.classes=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
+    _unsub.push(db.collection("tests").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.tests=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
+    _unsub.push(db.collection("users").doc(AUTH.uid).onSnapshot(d=>{ if(d.exists){ AUTH=Object.assign({},AUTH,d.data(),{uid:AUTH.uid}); render(); } }, e=>console.warn(e)));
+  } else {
+    _unsub.push(db.collection("assignments").where("studentEmail","==",AUTH.email).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
+  }
+}
+
+const gLabel = id => (GRADES.find(g=>g.id===id)||{}).label||id;
+const skillsFor = subj => subj==="Math"?MATH_SKILLS:ENG_SKILLS;
+function subjChip(s){return '<span class="subj '+(s==="Math"?"math":"eng")+'">'+(s==="Math"?"Mathematics":"English")+'</span>';}
+function levelFromPct(p){ if(p>=80)return{name:"On Track / Advanced",cls:"green"}; if(p>=60)return{name:"Approaching",cls:"amber"}; if(p>=40)return{name:"Developing",cls:"amber"}; return{name:"Needs Intensive Support",cls:"red"}; }
+function rag(p){ return p>=80?"green":p>=55?"amber":"red"; }
+function curriculumFor(grade, subj, skill){
+  let out=[];
+  ["1","2","3"].forEach(t=>{
+    const arr=(CURRICULUM[grade]&&CURRICULUM[grade][t]&&CURRICULUM[grade][t][subj]&&CURRICULUM[grade][t][subj][skill])||[];
+    arr.forEach(x=>{ if(x && !x.startsWith("(Upload")) out.push({term:t,text:x}); });
+  });
+  return out;
+}
+
+const TABS=[
+  {id:"home",label:"🏠 My Dashboard",always:true},
+  {id:"setup",label:"1 · Student Setup",always:true},
+  {id:"diagnostic",label:"2 · Diagnostic Test",need:"student"},
+  {id:"results",label:"3 · Level & Results",need:"result"},
+  {id:"gaps",label:"4 · Gap Analysis",need:"result"},
+  {id:"report",label:"5 · Parent/Teacher Report",need:"result"},
+  {id:"goals",label:"🎯 My Goals",need:"result"},
+  {id:"plan",label:"6 · Skill Development Plan",need:"result"},
+  {id:"folders",label:"7 · Weekly Folders",need:"plan"},
+  {id:"tracker",label:"8 · Progress Tracker",need:"plan"},
+  {id:"graphs",label:"📊 Progress Graphs",always:true},
+  {id:"curriculum",label:"📚 Curriculum",need:"student"}
+];
+function tabEnabled(t){ if(t.always)return true; if(t.need==="student")return !!S.student; if(t.need==="result")return !!S.result; if(t.need==="plan")return !!S.plan; return true; }
+function renderTabs(){
+  const el=document.getElementById("tabs"); el.innerHTML="";
+  const hideTabs=VIEWING?["home","setup","diagnostic"]:(AUTH.role==="student"?["setup"]:[]);
+  TABS.forEach(t=>{
+    if(hideTabs.indexOf(t.id)>=0) return;
+    const b=document.createElement("button");
+    b.textContent=t.label; b.disabled=!tabEnabled(t);
+    if(S.activeTab===t.id)b.classList.add("active");
+    b.onclick=()=>{S.activeTab=t.id;save();render();};
+    el.appendChild(b);
+  });
+  if(VIEWING){const rb=document.createElement("button");rb.className="no-print";rb.style.marginLeft="auto";rb.textContent="← Back";rb.onclick=teacherCloseStudent;el.appendChild(rb);}
+}
+
+function render(){
+  const chip=document.getElementById("userChip");
+  if(chip){ chip.innerHTML = AUTH?`<span class="pill ${AUTH.role==='teacher'?'amber':'green'}">${AUTH.role==='teacher'?'Teacher':'Student'}</span><span style="color:#fff;font-size:13px;font-weight:600">${(AUTH.name||'').split(' ')[0]}</span><button class="btn ghost sm" onclick="logout()">Log out</button>`:""; }
+  const tabsEl=document.getElementById("tabs"); const v=document.getElementById("view");
+  if(!AUTH){ tabsEl.innerHTML=""; v.innerHTML=viewAuth(); window.scrollTo(0,0); return; }
+  if(AUTH.role==="teacher" && !VIEWING){ tabsEl.innerHTML=""; v.innerHTML=verifyBanner()+(S.openClassId?viewClass(S.openClassId):viewTeacher()); window.scrollTo(0,0); return; }
+  renderTabs();
+  const map={home:viewHome,setup:viewSetup,diagnostic:viewDiagnostic,results:viewResults,gaps:viewGaps,report:viewReport,goals:viewGoals,plan:viewPlan,folders:viewFolders,tracker:viewTracker,graphs:viewProgressGraphs,curriculum:viewCurriculum};
+  if(!tabEnabled(TABS.find(t=>t.id===S.activeTab))){S.activeTab=VIEWING?"results":"home";}
+  let inner=(map[S.activeTab]||viewHome)();
+  if(VIEWING) inner=`<div class="notice" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">👁 Viewing <b>${VIEWING.studentName}</b>'s dashboard (read-only) <button class="btn ghost sm" onclick="teacherCloseStudent()">← Back to my dashboard</button></div>`+inner;
+  v.innerHTML=verifyBanner()+inner;
+  window.scrollTo(0,0);
+}
+
+/* ===== AUTH + DASHBOARDS (cloud) ===== */
+function viewAuth(){
+  const mode=S.authMode||"login";
+  return `<div class="card" style="max-width:460px;margin:28px auto">
+    <div style="text-align:center;margin-bottom:6px"><div style="font-size:30px;color:var(--green);font-weight:800">Adeptly</div><p class="muted" style="font-size:12px;margin:2px 0 0">Curriculum Diagnostic &amp; Skill Development</p></div>
+    <div style="display:flex;gap:6px;margin:14px 0">
+      <button class="btn ${mode==='login'?'':'ghost'} sm" style="flex:1" onclick="setAuthMode('login')">Log in</button>
+      <button class="btn ${mode==='register'?'':'ghost'} sm" style="flex:1" onclick="setAuthMode('register')">Register</button>
+    </div>
+    ${mode==='register'?`<label>I am a…</label>
+      <select id="a_role"><option value="teacher">Teacher</option><option value="student">Student</option></select>
+      <div style="height:10px"></div>
+      <label>Full name</label><input id="a_name" placeholder="e.g. Sara Al Hashimi"><div style="height:10px"></div>`:""}
+    <label>School email</label><input id="a_email" type="email" placeholder="name@school.ae"><div style="height:10px"></div>
+    <label>Password</label><input id="a_pass" type="password" placeholder="at least 8 characters" onkeydown="if(event.key==='Enter'){${mode==='register'?'doRegister':'doLogin'}()}">
+    <div id="authMsg" style="font-size:12px;color:var(--red);margin-top:8px"></div>
+    <div style="margin-top:14px"><button class="btn" style="width:100%" onclick="${mode==='register'?'doRegister':'doLogin'}()">${mode==='register'?'Create account':'Log in'}</button></div>
+    <p class="muted" style="font-size:11px;margin-top:12px">Accounts are stored securely in the cloud — teachers and students can log in from any device.</p>
+  </div>`;
+}
+function setAuthMode(m){S.authMode=m; render();}
+function fbErr(e){ const c=(e&&e.code)||""; if(c.indexOf("email-already-in-use")>=0)return "An account with this email already exists — try logging in."; if(c.indexOf("wrong-password")>=0||c.indexOf("invalid-credential")>=0)return "Wrong email or password."; if(c.indexOf("user-not-found")>=0)return "No account found — try registering."; if(c.indexOf("invalid-email")>=0)return "Enter a valid email address."; if(c.indexOf("weak-password")>=0)return "Password too weak (at least 6 characters)."; if(c.indexOf("network")>=0)return "Network error — check your connection."; if(c.indexOf("configuration")>=0||c.indexOf("api-key")>=0)return "App not connected to Firebase yet (check firebase-config.js)."; return (e&&e.message)||"Something went wrong."; }
+function doRegister(){
+  const role=document.getElementById("a_role").value, name=document.getElementById("a_name").value.trim();
+  const email=document.getElementById("a_email").value.trim().toLowerCase(), pass=document.getElementById("a_pass").value;
+  const msg=document.getElementById("authMsg");
+  if(!name||!email||!pass){msg.textContent="Please fill in all fields.";return;}
+  if(pass.length<8){msg.textContent="Password must be at least 8 characters.";return;}
+  msg.textContent="Creating account…";
+  fbAuth.createUserWithEmailAndPassword(email,pass)
+    .then(cred=>{ try{ cred.user.sendEmailVerification(); }catch(e){} return db.collection("users").doc(cred.user.uid).set({role:role,name:name,email:email,students:[]}); })
+    .catch(e=>{const m=document.getElementById("authMsg"); if(m)m.textContent=fbErr(e);});
+}
+function verifyBanner(){
+  try{ var u=fbAuth.currentUser; if(u && !u.emailVerified){ return '<div class="notice" style="background:#fff8e8;border-color:#f0e2b8;color:#7a5d00;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">✉️ Please verify your email — we sent a link to <b>'+(u.email||"")+'</b>. (Check spam too.) <button class="btn ghost sm" onclick="resendVerification()">Resend email</button></div>'; } }catch(e){} return "";
+}
+function resendVerification(){
+  var u=fbAuth.currentUser;
+  if(!u){ alert("You're not signed in right now. Please log out and log back in, then try Resend again."); return; }
+  if(u.emailVerified){ alert("Good news — your email is already verified ✓"); render(); return; }
+  u.sendEmailVerification()
+    .then(function(){ alert("Verification email sent to "+(u.email||"your address")+".\n\nCheck your inbox AND your spam/junk folder. It comes from noreply@masar-22cd5.firebaseapp.com."); })
+    .catch(function(e){ var c=(e&&e.code)||""; if(c.indexOf("too-many-requests")>=0){ alert("Too many requests just now — please wait a few minutes and try again."); } else { alert("Couldn't send the email: "+((e&&e.message)||e)); } });
+}
+function exportBackup(){
+  try{
+    var data={ exportedAt:new Date().toISOString(), teacher:{name:AUTH.name,email:AUTH.email}, classes:classesList(), assignments:assignments() };
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url;
+    a.download="adeptly-backup-"+(new Date().toISOString().slice(0,10))+".json";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }catch(e){ alert("Backup failed: "+e.message); }
+}
+function doLogin(){
+  const email=document.getElementById("a_email").value.trim().toLowerCase(), pass=document.getElementById("a_pass").value;
+  const msg=document.getElementById("authMsg"); msg.textContent="Logging in…";
+  fbAuth.signInWithEmailAndPassword(email,pass).catch(e=>{const m=document.getElementById("authMsg"); if(m)m.textContent=fbErr(e);});
+}
+function logout(){ fbAuth.signOut(); }
+function viewTeacher(){
+  const me=AUTH, as=assignments(), roster=me.students||[];
+  const grades=GRADES.map(g=>`<option value="${g.id}">${g.label}</option>`).join("");
+  const rosterRows=roster.length?roster.map(s=>{
+    const sa=as.filter(a=>a.studentEmail===s.email), done=sa.filter(a=>a.status==="completed");
+    const last=done.slice().sort((a,b)=>(b.completedAt||0)-(a.completedAt||0))[0];
+    return `<tr><td><b>${s.name}</b><div class="muted" style="font-size:11px">${s.email}</div></td>
+      <td>${sa.length} assigned · ${done.length} done</td>
+      <td>${last?`${last.score}% · ${last.level||""}`:"—"}</td>
+      <td>${(last&&last.progress)?`${last.progress.yearPct}% <span class="muted" style="font-size:10px">(${last.progress.totalDone}/${last.progress.totalAll})</span>`:"—"}</td>
+      <td>${last?`<button class="btn sm" onclick="teacherOpenStudent('${last.id}')">Open →</button> `:""}<button class="btn ghost sm" onclick="removeStudent('${s.email}')">Remove</button></td></tr>`;
+  }).join(""):`<tr><td colspan="4" class="muted">No students yet — add one below.</td></tr>`;
+  const studentOpts=roster.map(s=>`<option value="${s.email}">${s.name} (${s.email})</option>`).join("");
+  const assignRows=as.length?as.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(a=>`<tr><td>${a.studentName||a.studentEmail}</td><td>${subjChip(a.subject)}</td><td>${gLabel(a.prevGrade)} → ${gLabel(a.curGrade)}</td><td>${a.status==="completed"?`<span class="pill green">Done · ${a.score}%</span>`:`<span class="pill amber">Pending</span>`}</td><td>${a.status==="completed"?`<button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake allowed ✓":"Allow retake"}</button> `:""}<button class="btn ghost sm" onclick="deleteAssignment('${a.id}')">Delete</button></td></tr>`).join(""):`<tr><td colspan="5" class="muted">Nothing assigned yet.</td></tr>`;
+  const sec=S.tSection||"classes";
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px">`
+    +`<button class="btn ${sec==='classes'?'':'ghost'} sm" onclick="setTSection('classes')">🏫 Classes</button>`
+    +`<button class="btn ${sec==='students'?'':'ghost'} sm" onclick="setTSection('students')">👥 Students &amp; direct tests</button>`
+    +`<button class="btn ${sec==='tests'?'':'ghost'} sm" onclick="setTSection('tests')">📝 Import a test</button>`
+    +`<button class="btn ${sec==='settings'?'':'ghost'} sm" onclick="setTSection('settings')">⚙️ Backup &amp; reset</button>`
+    +`</div>`;
+  const studentsBody=`<div class="card"><h2>My students</h2><p class="sub">For assigning a diagnostic to an <b>individual</b> student. (For a whole class, use the Classes tab instead.)</p>
+    <table><thead><tr><th>Student</th><th>Diagnostics</th><th>Latest result</th><th>Plan progress</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
+    <h3 style="font-size:14px;margin:18px 0 6px">Add a student</h3>
+    <div class="row"><div class="col"><label>Name</label><input id="t_sname" placeholder="Student name"></div>
+      <div class="col"><label>School email</label><input id="t_semail" type="email" placeholder="student@school.ae"></div></div>
+    <div style="margin-top:12px"><button class="btn" onclick="addStudent()">+ Add student</button> <span id="tmsg" style="font-size:12px;color:var(--red)"></span></div>
+  </div>
+  <div class="card"><h2>Assign &amp; share a diagnostic</h2><p class="sub">Pick a student and the test — it appears on their dashboard the moment they log in.</p>
+    ${roster.length?`<div class="row">
+      <div class="col"><label>Student</label><select id="as_student">${studentOpts}</select></div>
+      <div class="col"><label>Subject</label><select id="as_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div>
+      <div class="col"><label>Diagnostic test</label><select id="as_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${t.subject==="Math"?"Math":"Eng"} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
+    <div class="row" style="margin-top:10px">
+      <div class="col"><label>Diagnostic grade (previous)</label><select id="as_prev">${grades}</select></div>
+      <div class="col"><label>Current grade</label><select id="as_cur">${grades}</select></div></div>
+    <div class="row" style="margin-top:10px">
+      <div class="col"><label>Term</label><select id="as_term"><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div>
+      <div class="col"><label>Publish date — optional</label><input type="date" id="as_date"></div>
+      <div class="col"><label>Parent's WhatsApp — optional</label><input id="as_parent" placeholder="9715XXXXXXXX"></div></div>
+    <div style="margin-top:12px"><button class="btn gold" onclick="assignDiagnostic()">Assign &amp; share</button> <span id="amsg" style="font-size:12px;color:var(--ok)"></span></div>`:`<p class="muted">Add a student first.</p>`}
+  </div>
+  <div class="card"><h2>Assigned diagnostics</h2><table><thead><tr><th>Student</th><th>Subject</th><th>Grades</th><th>Status</th><th></th></tr></thead><tbody>${assignRows}</tbody></table></div>`;
+  const settingsBody=`<div class="card"><h2>Back up your data</h2><p class="sub">Download all your classes and diagnostics as a file you can keep safe. Good to do before any big change.</p><button class="btn ghost" onclick="exportBackup()">⬇ Download my data (JSON)</button></div>
+  <div class="card" style="border:1px solid #f3c8cc"><h2>Reset dashboard</h2><p class="sub">Permanently delete all your students, classes and diagnostics to start fresh. This cannot be undone.</p><button class="btn" style="background:var(--red)" onclick="resetDashboard()">Reset everything</button></div>`;
+  const body = sec==="classes"?classCard() : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
+  return `<div class="card"><h2>Teacher Dashboard</h2><p class="sub">${me.name} · ${me.email}</p></div>${nav}${body}`;
+}
+function setTSection(s){ S.tSection=s; render(); }
+function addStudent(){
+  const name=document.getElementById("t_sname").value.trim(), email=document.getElementById("t_semail").value.trim().toLowerCase();
+  const msg=document.getElementById("tmsg");
+  if(!name||!email){msg.textContent="Enter a name and email.";return;}
+  if((AUTH.students||[]).find(s=>s.email===email)){msg.textContent="That student is already on your list.";return;}
+  db.collection("users").doc(AUTH.uid).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(e=>{const m=document.getElementById("tmsg"); if(m)m.textContent=fbErr(e);});
+}
+function assignDiagnostic(){
+  const studentEmail=document.getElementById("as_student").value, subject=document.getElementById("as_subject").value;
+  const prevGrade=document.getElementById("as_prev").value, curGrade=document.getElementById("as_cur").value;
+  const term=document.getElementById("as_term").value, publishDate=document.getElementById("as_date").value||"";
+  const parent=((document.getElementById("as_parent")||{}).value||"").replace(/[^0-9]/g,"");
+  const s=(AUTH.students||[]).find(x=>x.email===studentEmail);
+  const testId=(document.getElementById("as_test")||{}).value||"";
+  const ct=testId?teacherTests().find(x=>x.id===testId):null;
+  const payload={teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
+  if(ct){ payload.customQuestions=ct.questions||[]; payload.customTitle=ct.title||"Custom test"; }
+  db.collection("assignments").add(payload)
+    .then(()=>{const m=document.getElementById("amsg"); if(m)m.textContent=ct?("Assigned “"+ct.title+"” — it's on the student's dashboard."):"Assigned! It is now on the student's dashboard.";})
+    .catch(e=>{const m=document.getElementById("amsg"); if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
+}
+function showAssignmentResult(id){
+  const a=assignments().find(x=>x.id===id); const m=document.getElementById("exModal");
+  if(!a||a.status!=="completed"){ m.innerHTML=`<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">No result yet</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="muted">This test hasn't been completed yet.</p></div></div>`; m.style.display="block"; return; }
+  const areas=(a.subject==="Math")?MATH_SKILLS:ENG_SKILLS, sp=a.skillPct||{};
+  const rows=areas.map(k=>`<tr><td>${k}</td><td>${sp[k]!=null?sp[k]+"%":"—"}</td><td>${sp[k]!=null?`<span class="pill ${rag(sp[k])}">${sp[k]>=80?"Strong":sp[k]>=55?"Developing":"Gap"}</span>`:""}</td></tr>`).join("");
+  m.innerHTML=`<div class="ovl"><div class="ex">
+    <div class="flex-between"><h2 style="margin:0">${a.studentName} — result</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
+    <p class="sub">${subjChip(a.subject)} ${gLabel(a.prevGrade)} → ${gLabel(a.curGrade)}</p>
+    <div class="kpi"><div class="box"><div class="n">${a.score}%</div><div class="l">Overall</div></div><div class="box"><div class="n"><span class="pill ${a.levelCls||'grey'}" style="font-size:12px">${a.level||""}</span></div><div class="l">Level</div></div></div>
+    <table style="margin-top:12px"><thead><tr><th>Skill</th><th>%</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+    ${a.writePrompt?`<h3 style="font-size:14px;margin:14px 0 6px">Written response</h3><div style="border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;white-space:pre-wrap">${((a.writeResponse&&a.writeResponse.trim())?a.writeResponse:"(none written)").replace(/</g,"&lt;")}</div>`:""}
+  </div></div>`; m.style.display="block";
+}
+function showAssignmentProgress(id){
+  const a=assignments().find(x=>x.id===id); const m=document.getElementById("exModal");
+  if(!a||!a.progress){ m.innerHTML=`<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">No progress yet</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="muted">This student hasn't started their skill plan activities yet.</p></div></div>`; m.style.display="block"; return; }
+  const p=a.progress, terms=[["1",p.t1||0],["2",p.t2||0],["3",p.t3||0]];
+  const chart=`<div class="chartwrap">${terms.map(([k,v])=>`<div class="colbar"><span style="font-size:11px;font-weight:700">${v}%</span><div style="display:flex;gap:4px;align-items:flex-end;height:100%;width:100%;justify-content:center"><div class="vb" style="height:${v}%"></div><div class="vb plan" style="height:100%;opacity:.5"></div></div><span style="font-size:11px;color:var(--muted)">Term ${k}</span></div>`).join("")}</div><div class="legend"><span><i style="background:var(--green)"></i>Actual completion</span><span><i style="background:var(--gold)"></i>Plan target</span></div>`;
+  const focusRows=(p.focus||[]).map(f=>`<tr><td><b>${f.skill}</b></td><td>${f.baseline}%</td><td style="width:40%"><div class="bar"><span style="width:${f.planPct}%"></span></div></td><td>${f.planPct}%</td><td><span class="pill ${f.planPct>=60?"green":f.planPct>0?"amber":"grey"}">${f.planPct>=60?"Improving":f.planPct>0?"Started":"Not started"}</span></td></tr>`).join("");
+  m.innerHTML=`<div class="ovl"><div class="ex">
+    <div class="flex-between"><h2 style="margin:0">${a.studentName} — plan progress</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
+    <p class="sub">${subjChip(a.subject)} skill development plan${p.updatedAt?` · updated ${new Date(p.updatedAt).toLocaleDateString()}`:""}</p>
+    <div class="kpi"><div class="box"><div class="n">${p.yearPct}%</div><div class="l">Year completion</div></div><div class="box"><div class="n">${p.totalDone}/${p.totalAll}</div><div class="l">Tasks done</div></div></div>
+    ${(a.goals&&a.goals.length)?`<h3 style="font-size:14px;margin:14px 0 6px">🎯 Goals</h3>${a.goals.map(g=>`<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;font-size:13px"><b>${g.skill}</b> — ${g.statement}</div>`).join("")}`:""}
+    <div style="margin-top:14px"><b style="font-size:14px">Completion by term</b>${chart}</div>
+    <h3 style="font-size:14px;margin:16px 0 6px">Improvement by focus skill</h3>
+    <table><thead><tr><th>Skill</th><th>Baseline</th><th>Plan progress</th><th>%</th><th>Trend</th></tr></thead><tbody>${focusRows}</tbody></table>
+  </div></div>`; m.style.display="block";
+}
+function teacherOpenStudent(id){
+  const a=assignments().find(x=>x.id===id);
+  if(!a||!a.snapshot){ alert("This student hasn't completed a diagnostic yet, so there is no dashboard to open."); return; }
+  VIEWING={assignmentId:id, studentName:a.studentName, studentEmail:a.studentEmail};
+  READONLY=true;
+  S=JSON.parse(JSON.stringify(a.snapshot));
+  if(!S.taskDone) S.taskDone={};
+  S.activeTab="results";
+  render();
+}
+function teacherCloseStudent(){ VIEWING=null; READONLY=false; S=freshState(); render(); }
+
+/* ============================================================
+   LOCKDOWN / ANTI-CHEAT
+   - Real lockdown comes from the ClassCurio app hosting Adeptly
+     in its webview. Adeptly looks for a window.ClassCurio bridge
+     and calls it to start/stop the OS-level lockdown.
+   - Soft in-browser measures run regardless (fullscreen, block
+     copy/paste/right-click, and flag tab-switching to the teacher).
+   ============================================================ */
+var LOCK={active:false, leaves:0, handlers:null};
+function ccBridge(){ return (typeof window!=="undefined" && window.ClassCurio) ? window.ClassCurio : null; }
+function inClassCurio(){ return !!ccBridge() || /ClassCurio/i.test((typeof navigator!=="undefined"&&navigator.userAgent)||""); }
+function ccCall(names){ const b=ccBridge(); if(!b)return false; for(var i=0;i<names.length;i++){ var n=names[i]; if(typeof b[n]==="function"){ try{ b[n](); return true; }catch(e){} } } return false; }
+function lockdownStart(){
+  if(LOCK.active) return;
+  if(!(AUTH&&AUTH.role==="student")||READONLY) return;
+  LOCK.active=true; LOCK.leaves=0;
+  ccCall(["startLockdown","start","lock","enterLockdown","enable"]);
+  try{ var el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen().catch(function(){}); }catch(e){}
+  var block=function(e){ e.preventDefault(); return false; };
+  var onLeave=function(){ if(document.hidden){ LOCK.leaves++; flagLeave(); } };
+  var onBlur=function(){ LOCK.leaves++; flagLeave(); };
+  document.addEventListener("contextmenu",block);
+  document.addEventListener("copy",block); document.addEventListener("cut",block); document.addEventListener("paste",block);
+  document.addEventListener("visibilitychange",onLeave);
+  window.addEventListener("blur",onBlur);
+  LOCK.handlers={block:block,onLeave:onLeave,onBlur:onBlur};
+  renderLockBadge();
+}
+function lockdownEnd(){
+  if(!LOCK.active) return;
+  ccCall(["stopLockdown","stop","unlock","exitLockdown","disable"]);
+  var h=LOCK.handlers;
+  if(h){ document.removeEventListener("contextmenu",h.block); document.removeEventListener("copy",h.block); document.removeEventListener("cut",h.block); document.removeEventListener("paste",h.block); document.removeEventListener("visibilitychange",h.onLeave); window.removeEventListener("blur",h.onBlur); }
+  try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){}); }catch(e){}
+  LOCK.active=false; LOCK.handlers=null; removeLockBadge();
+}
+function flagLeave(){
+  if(AUTH&&AUTH.role==="student"&&S.activeAssignment){ db.collection("assignments").doc(S.activeAssignment).update({leaveCount:LOCK.leaves,lastLeftAt:Date.now()}).catch(function(){}); }
+  var b=document.getElementById("lockBadge"); if(b){ var c=b.querySelector(".lk-leaves"); if(c)c.textContent=LOCK.leaves; }
+}
+function renderLockBadge(){
+  removeLockBadge();
+  var d=document.createElement("div"); d.id="lockBadge";
+  d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:200;background:#0f172a;color:#fff;font-size:12px;text-align:center;padding:6px 10px;letter-spacing:.3px";
+  d.innerHTML="🔒 Secure assessment mode"+(inClassCurio()?" — ClassCurio lockdown active":" — stay on this screen; leaving is recorded")+" · screen exits: <b class=\"lk-leaves\">0</b>";
+  document.body.appendChild(d);
+}
+function removeLockBadge(){ var b=document.getElementById("lockBadge"); if(b&&b.parentNode)b.parentNode.removeChild(b); }
+
+/* ===== QUICK IMPORT — teacher pastes their own test, app builds it ===== */
+function parseImport(text, areas){
+  var lines=(text||"").split(/\r?\n/), out=[], warnings=[], cur=null;
+  function isOpt(l){ return /^\s*(\*|[\-•]|[A-Za-z][\.\)])\s+/.test(l); }
+  var skillRe=/^\s*\[\s*skill\s*:\s*(.+?)\s*\]\s*$/i;
+  var ansRe=/^\s*(answer|ans|correct|key)\s*[:\-]\s*(.+?)\s*$/i;
+  function setAnswer(q,val){ if(/^[A-Za-z]$/.test(val)){ var idx=val.toUpperCase().charCodeAt(0)-65; if(idx>=0&&idx<q.options.length)q.answer=idx; return; } for(var k=0;k<q.options.length;k++){ if(q.options[k].toLowerCase()===val.toLowerCase()){q.answer=k;return;} } var m=val.match(/^[A-Za-z][\.\)]\s*(.+)$/); if(m)setAnswer(q,m[1].trim()); }
+  function finalize(){ if(cur){ if(cur.options.length>=2){ if(cur.answer<0){ cur.answer=0; warnings.push('"'+cur.q.slice(0,32)+'…": no correct option marked with *, used the first option.'); } out.push(cur); } else if(cur.q){ warnings.push('"'+cur.q.slice(0,32)+'…": needs at least 2 options — skipped.'); } } cur=null; }
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].replace(/\s+$/,"");
+    if(!line.trim()){ continue; }
+    var sm=line.match(skillRe);
+    if(sm && cur){ cur.skill=sm[1].trim(); continue; }
+    var am=line.match(ansRe);
+    if(am && cur && cur.options.length){ setAnswer(cur, am[2].trim()); continue; }
+    if(cur && isOpt(line)){
+      var t=line.trim(), correct=false;
+      if(/^\*/.test(t)){ correct=true; t=t.replace(/^\*\s*/,""); }
+      else { t=t.replace(/^[\-•]\s*/,"").replace(/^[A-Za-z][\.\)]\s*/,""); }
+      if(/\*\s*$/.test(t)){ correct=true; t=t.replace(/\s*\*\s*$/,""); }
+      if(/\(\s*correct\s*\)\s*$/i.test(t)){ correct=true; t=t.replace(/\s*\(\s*correct\s*\)\s*$/i,""); }
+      var idx=cur.options.length; cur.options.push(t.trim()); if(correct)cur.answer=idx;
+      continue;
+    }
+    finalize();
+    var q=line.trim().replace(/^\s*(\d+[\.\)]|Q\s*[:\.\)]?)\s*/i,"");
+    cur={q:q, options:[], answer:-1, skill:null};
+  }
+  finalize();
+  for(var j=0;j<out.length;j++){ if(!out[j].skill || areas.indexOf(out[j].skill)<0){ out[j].skill=areas[j%areas.length]; } }
+  return {questions:out, warnings:warnings};
+}
+var IMPORTED=null;
+function handleImportFile(input){
+  var f=input.files && input.files[0]; if(!f)return;
+  var subj=document.getElementById("imp_subject").value;
+  var nm=(f.name||"").toLowerCase();
+  var prev=document.getElementById("imp_preview"); if(prev) prev.innerHTML='<p class="muted" style="font-size:13px">Reading <b>'+(f.name||"file").replace(/</g,"&lt;")+'</b>…</p>';
+  var titleEl=document.getElementById("imp_title"); if(titleEl && !titleEl.value){ titleEl.value=(f.name||"").replace(/\.(pdf|docx?)$/i,""); }
+  var fail=function(m){ var p=document.getElementById("imp_preview"); if(p) p.innerHTML='<div class="notice">Could not read this file'+(m?(": "+m):"")+'. Please upload a <b>.pdf</b> or <b>.docx</b> file.</div>'; };
+  var reader=new FileReader();
+  reader.onerror=function(){ fail("the file could not be opened"); };
+  reader.onload=function(){
+    var buf=reader.result;
+    try{
+      if(nm.endsWith(".pdf") || f.type==="application/pdf"){
+        extractPdfText(buf).then(function(t){finishImport(t,subj);}).catch(function(e){fail((e&&e.message)||e);});
+      } else if(nm.endsWith(".docx")){
+        if(typeof mammoth==="undefined"){ fail("the Word reader didn't load — check your internet and try again"); return; }
+        mammoth.extractRawText({arrayBuffer:buf}).then(function(r){finishImport((r&&r.value)||"",subj);}).catch(function(e){fail((e&&e.message)||e);});
+      } else if(nm.endsWith(".doc")){
+        fail("the old .doc format isn't supported — please re-save as .docx or PDF");
+      } else { fail("unsupported file type"); }
+    }catch(e){ fail((e&&e.message)||e); }
+  };
+  reader.readAsArrayBuffer(f);
+}
+function extractPdfText(buf){
+  if(typeof pdfjsLib==="undefined") return Promise.reject(new Error("the PDF reader didn't load — check your internet"));
+  return pdfjsLib.getDocument({data:buf}).promise.then(function(pdf){
+    var pages=[], chain=Promise.resolve();
+    for(var p=1;p<=pdf.numPages;p++){ (function(pn){ chain=chain.then(function(){ return pdf.getPage(pn).then(function(pg){ return pg.getTextContent().then(function(tc){ pages.push(reconstructLines(tc.items)); }); }); }); })(p); }
+    return chain.then(function(){ return pages.join("\n"); });
+  });
+}
+function reconstructLines(items){
+  var rows={};
+  items.forEach(function(it){ var y=Math.round((it.transform&&it.transform[5])||0), x=(it.transform&&it.transform[4])||0; (rows[y]=rows[y]||[]).push({x:x,s:it.str||""}); });
+  var ys=Object.keys(rows).map(Number).sort(function(a,b){return b-a;});
+  return ys.map(function(y){ return rows[y].sort(function(a,b){return a.x-b.x;}).map(function(o){return o.s;}).join(" ").replace(/\s+/g," ").trim(); }).filter(function(l){return l;}).join("\n");
+}
+function finishImport(text, subj){ IMPORTED=parseImport(text, skillsFor(subj)); IMPORTED.raw=text; renderImportPreview(); }
+function reparseImport(subj){ if(IMPORTED && IMPORTED.raw!=null){ finishImport(IMPORTED.raw, subj); } }
+function renderImportPreview(){
+  var el=document.getElementById("imp_preview"); if(!el)return;
+  if(!IMPORTED || !IMPORTED.questions.length){ el.innerHTML='<div class="notice">No questions could be detected in this file. Make sure it follows the format above — one question per line, each option on its own line, and the correct answer marked with a leading <b>*</b> or an <b>Answer:</b> line.</div>'; return; }
+  var res=IMPORTED;
+  var html='<p style="font-size:13px;margin:0 0 8px"><b>'+res.questions.length+' question(s) detected.</b> Review below, then Save.</p>';
+  html+=res.questions.slice(0,8).map(function(qq,i){ return '<div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px"><b>Q'+(i+1)+'.</b> '+qq.q.replace(/</g,"&lt;")+' <span class="tag">'+qq.skill+'</span><div style="margin-top:4px">'+qq.options.map(function(o,oi){ return (oi===qq.answer?'✅ ':'• ')+o.replace(/</g,"&lt;"); }).join('<br>')+'</div></div>'; }).join("");
+  if(res.questions.length>8) html+='<p class="muted" style="font-size:12px">…and '+(res.questions.length-8)+' more.</p>';
+  if(res.warnings.length) html+='<div class="notice" style="margin-top:8px">⚠ '+res.warnings.length+' note(s):<br>'+res.warnings.map(function(w){return "• "+w.replace(/</g,"&lt;");}).join("<br>")+'</div>';
+  el.innerHTML=html;
+}
+function saveImportedTest(){
+  var title=document.getElementById("imp_title").value.trim();
+  var subj=document.getElementById("imp_subject").value, grade=document.getElementById("imp_grade").value;
+  var msg=document.getElementById("imp_msg");
+  if(!title){ msg.style.color="var(--red)"; msg.textContent="Give your test a name."; return; }
+  if(!IMPORTED || !IMPORTED.questions.length){ msg.style.color="var(--red)"; msg.textContent="Upload a PDF or Word file first — no questions detected yet."; return; }
+  msg.style.color="var(--muted)"; msg.textContent="Saving…";
+  db.collection("tests").add({teacherUid:AUTH.uid, title:title, subject:subj, grade:grade, questions:IMPORTED.questions, createdAt:Date.now()})
+    .then(function(){ var m=document.getElementById("imp_msg"); if(m){ m.style.color="var(--ok)"; m.textContent="Saved “"+title+"” ("+IMPORTED.questions.length+" questions). Assign it under “Assign & share”."; } IMPORTED=null; })
+    .catch(function(e){ var m=document.getElementById("imp_msg"); if(m){ m.style.color="var(--red)"; m.textContent=fbErr(e); } });
+}
+function deleteTest(id){ if(!confirm("Delete this imported test? Diagnostics already assigned with it are not affected."))return; db.collection("tests").doc(id).delete().catch(function(e){alert(fbErr(e));}); }
+function importCard(){
+  var grades=GRADES.map(function(g){return '<option value="'+g.id+'">'+g.label+'</option>';}).join("");
+  var ts=teacherTests();
+  var list=ts.length? '<table><thead><tr><th>Test</th><th>Subject</th><th>Grade</th><th>Qs</th><th></th></tr></thead><tbody>'+ts.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);}).map(function(t){ return '<tr><td><b>'+(t.title||"Untitled")+'</b></td><td>'+subjChip(t.subject)+'</td><td>'+gLabel(t.grade)+'</td><td>'+((t.questions||[]).length)+'</td><td><button class="btn ghost sm" onclick="deleteTest(\''+t.id+'\')">Delete</button></td></tr>'; }).join("")+'</tbody></table>' : '<p class="muted" style="font-size:13px">No imported tests yet — paste one below.</p>';
+  return '<div class="card"><h2>⚡ Quick import — upload your own test</h2><p class="sub">Upload a PDF or Word file of a test you wrote and Adeptly turns it into an online diagnostic automatically. Then assign it under “Assign &amp; share”.</p>'
+    + list
+    + '<h3 style="font-size:14px;margin:18px 0 6px">Import a new test</h3>'
+    + '<div class="row"><div class="col"><label>Test name</label><input id="imp_title" placeholder="e.g. Grade 7 Algebra check"></div>'
+    + '<div class="col"><label>Subject</label><select id="imp_subject" onchange="reparseImport(this.value)"><option value="English">English</option><option value="Math">Mathematics</option></select></div>'
+    + '<div class="col"><label>Grade it tests</label><select id="imp_grade">'+grades+'</select></div></div>'
+    + '<label style="margin-top:10px">Upload your test file (PDF or Word .docx)</label>'
+    + '<input type="file" id="imp_file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="handleImportFile(this)" style="width:100%;padding:14px;border:1px dashed var(--green);border-radius:10px;font-size:13px;background:#f3f4ff;cursor:pointer">'
+    + '<p class="muted" style="font-size:11px;margin:6px 0 0">Adeptly reads your file and builds the questions automatically. For best results, format each question on its own line with each option on a separate line below it, and mark the <b>correct answer</b> with a leading <b>*</b> (e.g. <code>* 96</code>) <i>or</i> an <b>Answer:</b> line (e.g. <code>Answer: B</code>). An optional <b>[skill: …]</b> line tags the skill; untagged questions are spread across skills automatically. If no answer is marked, the first option is used and flagged so you can fix it.</p>'
+    + '<div style="margin-top:10px"><button class="btn" onclick="saveImportedTest()">Save test</button> <span id="imp_msg" style="font-size:12px;color:var(--ok)"></span></div>'
+    + '<div id="imp_preview" style="margin-top:12px"></div>'
+    + '</div>';
+}
+
+/* ===== PROGRESS GRAPHS (per subject: year-by-term + term-by-skill) ===== */
+function subjectsForStudent(email){ const set={}; assignments().filter(a=>a.studentEmail===email).forEach(a=>{set[a.subject]=1;}); return Object.keys(set); }
+function termAssignmentFor(email,subject,term){
+  const cand=assignments().filter(a=>a.studentEmail===email&&a.subject===subject&&aTerm(a)===String(term));
+  cand.sort((a,b)=>(b.completedAt||b.createdAt||0)-(a.completedAt||a.createdAt||0));
+  return cand.find(a=>a.progress)||cand.find(a=>a.status==="completed")||cand[0]||null;
+}
+function pgLatestTerm(email,subject){ for(let t=3;t>=1;t--){const a=termAssignmentFor(email,subject,t); if(a&&a.status==="completed")return String(t);} return "1"; }
+function setPgTerm(v){ S.pgTerm=v; if(AUTH&&AUTH.role==="student")save(); render(); }
+function progressGraphsHTML(email){
+  const subs=subjectsForStudent(email);
+  if(!subs.length) return `<div class="card"><h2>📊 Progress graphs</h2><p class="muted" style="margin:0">No diagnostics yet, so there's no progress to chart.</p></div>`;
+  const order=["English","Math"].filter(s=>subs.indexOf(s)>=0).concat(subs.filter(s=>["English","Math"].indexOf(s)<0));
+  return order.map(subject=>{
+    const termVals=[1,2,3].map(t=>{const a=termAssignmentFor(email,subject,t);return {t:t,pct:(a&&a.progress)?a.progress.yearPct:0,has:!!(a&&a.status==="completed")};});
+    const yearBars=`<div class="chartwrap">${termVals.map(tv=>`<div class="colbar"><span style="font-size:11px;font-weight:700">${tv.has?tv.pct+"%":"—"}</span><div class="vb" style="height:${tv.pct}%"></div><span style="font-size:11px;color:var(--muted)">Term ${tv.t}</span></div>`).join("")}</div>`;
+    const selTerm=String(S.pgTerm||pgLatestTerm(email,subject));
+    const aSel=termAssignmentFor(email,subject,selTerm);
+    let skillBars;
+    if(aSel&&aSel.progress&&aSel.progress.focus&&aSel.progress.focus.length){
+      skillBars=aSel.progress.focus.map(f=>`<div style="margin-bottom:11px"><div class="flex-between" style="font-size:12px"><span><b>${f.skill}</b> <span class="muted">from ${f.baseline}%</span></span><span style="font-weight:700">${f.planPct}%</span></div><div class="bar"><span style="width:${f.planPct}%;background:${f.planPct>=60?'var(--ok)':f.planPct>0?'var(--amber)':'var(--line)'}"></span></div></div>`).join("");
+    } else if(aSel&&((aSel.goals&&aSel.goals.length)||(aSel.status==="completed"))){
+      const gs=(aSel.goals&&aSel.goals.length)?aSel.goals:computeGoalsFor(aSel);
+      skillBars=gs.length?gs.map(g=>`<div style="margin-bottom:11px"><div class="flex-between" style="font-size:12px"><span><b>${g.skill}</b> <span class="muted">target ${g.t3}%</span></span><span class="muted">0%</span></div><div class="bar"><span style="width:0%"></span></div></div>`).join(""):`<p class="muted" style="font-size:13px">No targeted goals this term.</p>`;
+    } else {
+      skillBars=`<p class="muted" style="font-size:13px">Term ${selTerm} hasn't been completed yet — no goal progress to show.</p>`;
+    }
+    const termSel=`<select style="width:auto;display:inline-block" onchange="setPgTerm(this.value)">${[1,2,3].map(t=>`<option value="${t}" ${selTerm===String(t)?"selected":""}>Term ${t}</option>`).join("")}</select>`;
+    return `<div class="card"><h2>${subjChip(subject)} progress</h2>
+      <h3 style="font-size:14px;margin:12px 0 2px">Year progress — completion by term</h3>
+      <p class="sub">Overall share of each term's skill-plan activities completed across the year.</p>
+      ${yearBars}
+      <div class="flex-between" style="margin:20px 0 2px"><h3 style="font-size:14px;margin:0">Term progress — by targeted goal &amp; skill</h3><div><label style="display:inline;margin-right:6px">Term</label>${termSel}</div></div>
+      <p class="sub">Progress on each targeted skill's activities within the selected term.</p>
+      ${skillBars}
+    </div>`;
+  }).join("");
+}
+/* ===== PARENT REPORTS — WhatsApp one-click, English + Arabic ===== */
+var AR_SKILL={"Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات"};
+var AR_LEVEL={"On Track / Advanced":"على المسار الصحيح / متقدّم","Approaching":"يقترب من المستوى","Developing":"قيد التطوّر","Needs Intensive Support":"يحتاج إلى دعم مكثّف"};
+function arSkill(k){return AR_SKILL[k]||k;}
+function arGrade(id){return gLabel(id).replace("Grade","الصف").replace("Advanced","المتقدّم").replace("General","العام");}
+function buildParentReport(a,lang){
+  const sp=a.skillPct||{}, areas=skillsFor(a.subject);
+  const gaps=areas.filter(k=>sp[k]!=null&&sp[k]<55);
+  const goals=computeGoalsFor(a);
+  if(lang==="ar"){
+    const subj=a.subject==="Math"?"الرياضيات":"اللغة الإنجليزية";
+    let t="📄 تقرير الطالب من تطبيق Adeptly\n\n";
+    t+="الطالب: "+(a.studentName||"")+"\n";
+    t+="المادة: "+subj+(a.term?(" — الفصل "+a.term):"")+"\n";
+    t+="المستوى: "+(AR_LEVEL[a.level]||a.level||"")+" ("+(a.score!=null?a.score:"-")+"%)\n";
+    t+="التقييم مبني على منهج "+arGrade(a.prevGrade)+"\n\n";
+    t+="النتائج حسب المهارة:\n";
+    areas.forEach(k=>{ if(sp[k]!=null) t+="• "+arSkill(k)+": "+sp[k]+"%\n"; });
+    if(gaps.length) t+="\nمجالات تحتاج إلى دعم: "+gaps.map(arSkill).join("، ")+"\n";
+    if(goals.length){ t+="\nالأهداف القادمة:\n"; goals.forEach(g=>{ t+="• تحسين "+arSkill(g.skill)+" إلى "+g.t3+"%\n"; }); }
+    t+="\nمع تحيات: "+(a.teacherName||"المعلّم");
+    return t;
+  }
+  const subj=a.subject==="Math"?"Mathematics":"English";
+  let t="📄 Student report — Adeptly\n\n";
+  t+="Student: "+(a.studentName||"")+"\n";
+  t+="Subject: "+subj+(a.term?(" — Term "+a.term):"")+"\n";
+  t+="Level: "+(a.level||"")+" ("+(a.score!=null?a.score:"-")+"%)\n";
+  t+="Based on the "+gLabel(a.prevGrade)+" curriculum\n\n";
+  t+="Results by skill:\n";
+  areas.forEach(k=>{ if(sp[k]!=null) t+="• "+k+": "+sp[k]+"%\n"; });
+  if(gaps.length) t+="\nAreas needing support: "+gaps.join(", ")+"\n";
+  if(goals.length){ t+="\nNext goals:\n"; goals.forEach(g=>{ t+="• Improve "+g.skill+" to "+g.t3+"%\n"; }); }
+  t+="\nFrom: "+(a.teacherName||"Teacher");
+  return t;
+}
+function sendParentReport(id,lang){
+  const a=assignments().find(x=>x.id===id); if(!a)return;
+  const phone=a.parentPhone?(""+a.parentPhone).replace(/[^0-9]/g,""):"";
+  if(!phone){ alert("No valid parent WhatsApp number is on file for this student."); return; }
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(buildParentReport(a,lang)),"_blank");
+}
+function sendWA(id,lang){
+  const a=assignments().find(x=>x.id===id); if(!a)return;
+  const inp=document.getElementById("pr_phone");
+  const phone=((inp?inp.value:(a.parentPhone||""))+"").replace(/[^0-9]/g,"");
+  if(!phone||phone.length<8){ alert("Enter the parent's WhatsApp number with country code (e.g. 9715XXXXXXXX)."); return; }
+  assignments().filter(x=>x.studentEmail===a.studentEmail && (((""+(x.parentPhone||"")).replace(/[^0-9]/g,""))!==phone)).forEach(x=>db.collection("assignments").doc(x.id).update({parentPhone:phone}).catch(()=>{}));
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(buildParentReport(a,lang)),"_blank");
+}
+function copyReport(id,lang){ const a=assignments().find(x=>x.id===id); if(!a)return; const t=buildParentReport(a,lang); if(navigator.clipboard){navigator.clipboard.writeText(t).then(()=>alert("Report copied — paste it into WhatsApp, email or a document.")).catch(()=>prompt("Copy the report:",t));}else{prompt("Copy the report:",t);} }
+function sendReportMenu(id){
+  const a=assignments().find(x=>x.id===id); const m=document.getElementById("exModal"); if(!a||!m)return;
+  const phone=a.parentPhone?(""+a.parentPhone).replace(/[^0-9]/g,""):"";
+  const enPrev=buildParentReport(a,"en").replace(/</g,"&lt;"), arPrev=buildParentReport(a,"ar").replace(/</g,"&lt;");
+  m.innerHTML='<div class="ovl"><div class="ex">'+
+    '<div class="flex-between"><h2 style="margin:0">Send report to parent</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>'+
+    '<p class="sub">'+(a.studentName||a.studentEmail)+' · '+subjChip(a.subject)+' · '+(a.score!=null?a.score+"%":"")+'</p>'+
+    '<div class="row" style="margin:4px 0 6px"><div class="col"><label>Parent\'s WhatsApp number (with country code)</label><input id="pr_phone" value="'+phone+'" placeholder="e.g. 9715XXXXXXXX"></div></div>'+
+    (phone?'':'<p class="muted" style="font-size:11px;margin:0 0 6px">No number was on file — type it above to enable sending. It’s saved for next time.</p>')+
+    '<div class="row"><div class="col"><h3 style="font-size:13px;margin:6px 0">English</h3><pre style="white-space:pre-wrap;font-family:inherit;font-size:12px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:0">'+enPrev+'</pre></div>'+
+    '<div class="col"><h3 style="font-size:13px;margin:6px 0">العربية</h3><pre dir="rtl" style="white-space:pre-wrap;font-family:inherit;font-size:12px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:0">'+arPrev+'</pre></div></div>'+
+    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+    '<button class="btn" onclick="sendWA(\''+id+'\',\'en\')">📲 Send in English</button>'+
+    '<button class="btn gold" onclick="sendWA(\''+id+'\',\'ar\')">📲 إرسال بالعربية</button>'+
+    '<button class="btn ghost" onclick="copyReport(\''+id+'\',\'en\')">Copy EN</button>'+
+    '<button class="btn ghost" onclick="copyReport(\''+id+'\',\'ar\')">Copy AR</button></div>'+
+    '<p class="muted" style="font-size:11px;margin-top:8px">This opens WhatsApp with the message ready — you tap send. Adeptly doesn’t send messages on its own.</p>'+
+    '</div></div>'; m.style.display="block";
+}
+function viewProgressGraphs(){
+  const email=(VIEWING&&VIEWING.studentEmail)?VIEWING.studentEmail:AUTH.email;
+  return `<div class="card"><h2>📊 Progress graphs</h2><p class="sub">Two separate bar charts per subject: <b>year progress</b> (completion by term) and <b>term progress</b> (by targeted goal &amp; skill). English and Mathematics are shown separately.</p></div>${progressGraphsHTML(email)}`;
+}
+function removeStudent(email){
+  if(!confirm("Remove this student from your roster?\n\n(Their diagnostics are kept — delete those separately if you also want them gone.)"))return;
+  const list=(AUTH.students||[]).filter(s=>s.email!==email);
+  db.collection("users").doc(AUTH.uid).update({students:list}).catch(e=>alert(fbErr(e)));
+}
+function deleteAssignment(id){
+  if(!confirm("Delete this diagnostic and its result permanently? This cannot be undone."))return;
+  db.collection("assignments").doc(id).delete().catch(e=>alert(fbErr(e)));
+}
+function allowRetake(id){
+  const a=assignments().find(x=>x.id===id); if(!a)return;
+  const now=!a.retakeAllowed;
+  db.collection("assignments").doc(id).update({retakeAllowed:now})
+    .then(()=>{ if(now) alert("Retake unlocked — the student can now redo this diagnostic once."); })
+    .catch(e=>alert(fbErr(e)));
+}
+function deleteClass(id){
+  if(!confirm("Delete this class and all the diagnostics created in it? This cannot be undone."))return;
+  const cas=assignments().filter(a=>a.classId===id);
+  Promise.all([db.collection("classes").doc(id).delete().catch(()=>{})].concat(cas.map(a=>db.collection("assignments").doc(a.id).delete().catch(()=>{})))).then(()=>{S.openClassId=null;render();}).catch(e=>alert(fbErr(e)));
+}
+function resetDashboard(){
+  if(!confirm("Reset your WHOLE dashboard?\n\nThis permanently deletes ALL your students, classes and diagnostics."))return;
+  if(!confirm("Are you absolutely sure? Every diagnostic result you've created will be gone for good."))return;
+  const as=assignments().slice(), cs=classesList().slice();
+  Promise.all(
+    as.map(a=>db.collection("assignments").doc(a.id).delete().catch(()=>{}))
+      .concat(cs.map(c=>db.collection("classes").doc(c.id).delete().catch(()=>{})))
+      .concat([db.collection("users").doc(AUTH.uid).update({students:[]}).catch(()=>{})])
+  ).then(()=>{S.openClassId=null;alert("Your dashboard has been reset.");}).catch(e=>alert(fbErr(e)));
+}
+
+/* ============================================================
+   CLASSES — a teacher gives one diagnostic to a whole class;
+   Adeptly auto-filters low achievers and builds goals,
+   comparative analysis and activities for each.
+   ============================================================ */
+function genCode(){var c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",s="";for(var i=0;i<6;i++)s+=c.charAt(Math.floor(Math.random()*c.length));return s;}
+function classMembers(id){ const seen={},out=[]; assignments().filter(a=>a.classId===id).forEach(a=>{ if(!seen[a.studentEmail]){seen[a.studentEmail]=1; out.push({email:a.studentEmail,name:a.studentName});} }); return out; }
+function priorSummaryFor(email,classId,term){
+  const pt=Number(term)-1; if(pt<1) return null;
+  const p=assignments().find(a=>a.classId===classId&&a.studentEmail===email&&aTerm(a)===String(pt)&&a.status==="completed");
+  if(!p) return null;
+  return {term:String(pt),score:p.score,level:p.level||"",skillPct:p.skillPct||{},goals:p.goals||[]};
+}
+function generateTerm(classId,term){
+  const c=classesList().find(x=>x.id===classId); if(!c)return;
+  const t=String(term);
+  const members=classMembers(classId);
+  if(!members.length){ alert("No students have joined this class yet. Share the join code (Term 1 is created when a student joins), then generate later terms."); return; }
+  const pending=members.filter(m=>!assignments().find(a=>a.classId===classId&&a.studentEmail===m.email&&aTerm(a)===t));
+  if(!pending.length){ alert("Every enrolled student already has the Term "+t+" diagnostic."); return; }
+  if(!confirm("Generate the Term "+t+" diagnostic for "+pending.length+" student(s)?"+(Number(t)>1?" It will build on each student's Term "+(Number(t)-1)+" results.":""))) return;
+  const td=c.termDates||{};
+  Promise.all(pending.map(m=>{
+    const prior=priorSummaryFor(m.email,classId,t);
+    return db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:m.email,studentName:m.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,status:"pending",createdAt:Date.now()}).catch(()=>{});
+  })).then(()=>{ S.classTerm=t; render(); });
+}
+function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fmtDate(s){ if(!s)return ""; const dt=new Date(s+"T00:00:00"); return isNaN(dt)?s:dt.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}); }
+function aTerm(a){return String((a&&a.term)||"1");}
+function isPublished(a){ return !a.publishDate || a.publishDate<=todayISO(); }
+function classCompleted(id,term){return assignments().filter(a=>a.classId===id&&a.status==="completed"&&(!term||aTerm(a)===String(term)));}
+function classSkillAvg(id,term){
+  const c=classesList().find(x=>x.id===id); if(!c)return {};
+  const done=classCompleted(id,term), areas=skillsFor(c.subject), out={};
+  areas.forEach(k=>{let s=0,n=0;done.forEach(a=>{const v=(a.skillPct||{})[k];if(v!=null){s+=v;n++;}});out[k]=n?Math.round(s/n):null;});
+  return out;
+}
+function flaggedFor(id,term){
+  const done=classCompleted(id,term); if(!done.length)return [];
+  const sorted=done.slice().sort((a,b)=>(a.score||0)-(b.score||0));
+  const bottomN=Math.max(1,Math.ceil(done.length*0.3)), bottomIds={};
+  sorted.slice(0,bottomN).forEach(a=>bottomIds[a.id]=true);
+  return done.filter(a=>(a.score||0)<80 || bottomIds[a.id]).map(a=>{
+    const reasons=[];
+    if((a.score||0)<80)reasons.push("Below grade level");
+    if(bottomIds[a.id])reasons.push("Bottom 30% of class");
+    return Object.assign({_reasons:reasons},a);
+  });
+}
+function computeGoalsFor(a){
+  if(a.goals&&a.goals.length)return a.goals;
+  const areas=skillsFor(a.subject), sp=a.skillPct||{};
+  const focus=areas.filter(k=>sp[k]!=null&&sp[k]<80).sort((x,y)=>(sp[x]||0)-(sp[y]||0)).slice(0,4);
+  return focus.map(k=>{const b=sp[k]||0;const t1=Math.min(90,Math.max(b+15,55)),t2=Math.min(95,Math.max(t1+10,65)),t3=Math.min(98,Math.max(t2+10,75));return {skill:k,baseline:b,t1:t1,t2:t2,t3:t3,statement:`Improve ${k} from ${b}% to ${t3}% across the three terms.`};});
+}
+function classCard(){
+  const as=assignments(); let cs=classesList();
+  const fSub=S.fSubject||"";
+  if(fSub) cs=cs.filter(c=>c.subject===fSub);
+  const grades=GRADES.map(g=>`<option value="${g.id}">${g.label}</option>`).join("");
+  const rows=cs.length?cs.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(c=>{
+    const ca=as.filter(a=>a.classId===c.id), done=ca.filter(a=>a.status==="completed");
+    const students=new Set(ca.map(a=>a.studentEmail)).size;
+    const avg=done.length?Math.round(done.reduce((s,a)=>s+(a.score||0),0)/done.length):null;
+    const flagged=flaggedFor(c.id).length;
+    const td=c.termDates||{};
+    const sched=[1,2,3].map(t=>td[t]?`T${t} ${fmtDate(td[t])}`:`T${t} —`).join("<br>");
+    return `<tr><td><b>${c.name}</b><div class="muted" style="font-size:11px">Join code <b style="letter-spacing:1px">${c.joinCode}</b></div></td><td>${subjChip(c.subject)}</td><td style="font-size:11px;line-height:1.6">${sched}</td><td>${students} students · ${done.length} done</td><td>${avg!=null?avg+"%":"—"}</td><td>${flagged?`<span class="pill red">${flagged} flagged</span>`:(done.length?`<span class="pill green">All on track</span>`:`<span class="muted">—</span>`)}</td><td><button class="btn sm" onclick="openClass('${c.id}')">Open →</button> <button class="btn ghost sm" onclick="deleteClass('${c.id}')">Delete</button></td></tr>`;
+  }).join(""):`<tr><td colspan="7" class="muted">No classes${fSub?" for this subject":" yet. Create one below"}.</td></tr>`;
+  return `<div class="card"><div class="flex-between"><h2 style="margin:0">My classes</h2>
+      <div><label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setFilterSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option></select></div></div>
+    <p class="sub">Create a class, set when each term's diagnostic publishes, and share the join code. The class takes one diagnostic per term; Adeptly flags who needs skill development.</p>
+    <table><thead><tr><th>Class</th><th>Subject</th><th>Term schedule</th><th>Enrolment</th><th>Avg</th><th>Flagged</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <h3 style="font-size:14px;margin:18px 0 6px">Create a class</h3>
+    <div class="row"><div class="col"><label>Class name</label><input id="c_name" placeholder="e.g. Grade 7B — English"></div>
+      <div class="col"><label>Subject</label><select id="c_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div></div>
+    <div class="row" style="margin-top:10px"><div class="col"><label>Diagnostic grade (previous)</label><select id="c_prev">${grades}</select></div>
+      <div class="col"><label>Current grade</label><select id="c_cur">${grades}</select></div></div>
+    <label style="margin-top:12px">Publish dates — pick when each term's diagnostic opens (calendar)</label>
+    <div class="row"><div class="col"><label style="font-weight:600;text-transform:none">Term 1</label><input type="date" id="c_t1"></div>
+      <div class="col"><label style="font-weight:600;text-transform:none">Term 2</label><input type="date" id="c_t2"></div>
+      <div class="col"><label style="font-weight:600;text-transform:none">Term 3</label><input type="date" id="c_t3"></div></div>
+    <div style="margin-top:12px"><button class="btn" onclick="createClass()">+ Create class</button> <span id="cmsg" style="font-size:12px;color:var(--ok)"></span></div>
+  </div>`;
+}
+function setFilterSubject(v){S.fSubject=v;render();}
+function createClass(){
+  const name=document.getElementById("c_name").value.trim();
+  const subject=document.getElementById("c_subject").value, prev=document.getElementById("c_prev").value, cur=document.getElementById("c_cur").value;
+  const msg=document.getElementById("cmsg");
+  if(!name){msg.style.color="var(--red)";msg.textContent="Enter a class name.";return;}
+  msg.style.color="var(--muted)";msg.textContent="Creating…";
+  const termDates={1:document.getElementById("c_t1").value||"",2:document.getElementById("c_t2").value||"",3:document.getElementById("c_t3").value||""};
+  db.collection("classes").add({teacherUid:AUTH.uid,teacherName:AUTH.name,name:name,subject:subject,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
+    .then(()=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--ok)";m.textContent="Class created — share its join code.";}})
+    .catch(e=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
+}
+function openClass(id){S.openClassId=id;render();}
+function closeClass(){S.openClassId=null;render();}
+function addToClass(id){
+  const c=classesList().find(x=>x.id===id); if(!c)return;
+  const name=document.getElementById("cs_name").value.trim(), email=document.getElementById("cs_email").value.trim().toLowerCase();
+  const parent=((document.getElementById("cs_parent")||{}).value||"").replace(/[^0-9]/g,"");
+  const msg=document.getElementById("csmsg");
+  if(!name||!email){msg.style.color="var(--red)";msg.textContent="Enter name and email.";return;}
+  if(assignments().find(a=>a.classId===id&&a.studentEmail===email)){msg.style.color="var(--red)";msg.textContent="That student is already in this class.";return;}
+  msg.style.color="var(--muted)";msg.textContent="Adding…";
+  const td=c.termDates||{};
+  db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:email,studentName:name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,status:"pending",createdAt:Date.now()})
+    .then(()=>db.collection("users").doc(AUTH.uid).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(()=>{}))
+    .then(()=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--ok)";m.textContent="Added — their Term 1 diagnostic is on their dashboard. Generate later terms from the class view.";}})
+    .catch(e=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
+}
+function joinClass(){
+  const code=(document.getElementById("joinCode").value||"").trim().toUpperCase();
+  const parent=((document.getElementById("joinParent")||{}).value||"").replace(/[^0-9]/g,"");
+  const msg=document.getElementById("joinMsg");
+  if(!code){msg.style.color="var(--red)";msg.textContent="Enter a class code.";return;}
+  if(!parent||parent.length<8){msg.style.color="var(--red)";msg.textContent="Enter your parent's WhatsApp number with country code.";return;}
+  msg.style.color="var(--muted)";msg.textContent="Looking up class…";
+  db.collection("users").doc(AUTH.uid).update({parentPhone:parent}).catch(()=>{}); AUTH.parentPhone=parent;
+  db.collection("classes").where("joinCode","==",code).limit(1).get().then(qs=>{
+    const m=document.getElementById("joinMsg");
+    if(qs.empty){if(m){m.style.color="var(--red)";m.textContent="No class found with that code.";}return;}
+    const d=qs.docs[0], c=Object.assign({id:d.id},d.data());
+    if(assignments().find(a=>a.classId===c.id)){if(m){m.style.color="var(--red)";m.textContent="You're already in "+c.name+".";}return;}
+    const td=c.termDates||{};
+    return db.collection("assignments").add({teacherUid:c.teacherUid,teacherName:c.teacherName,studentEmail:AUTH.email,studentName:AUTH.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,status:"pending",createdAt:Date.now()})
+      .then(()=>{const m2=document.getElementById("joinMsg");if(m2){m2.style.color="var(--ok)";m2.textContent="Joined "+c.name+"! Your Term 1 diagnostic is in the list below.";}});
+  }).catch(e=>{const m=document.getElementById("joinMsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
+}
+function viewClass(id){
+  const c=classesList().find(x=>x.id===id);
+  if(!c){S.openClassId=null;return viewTeacher();}
+  const term=String(S.classTerm||"1");
+  const td=c.termDates||{};
+  const caAll=assignments().filter(a=>a.classId===id);
+  const ca=caAll.filter(a=>aTerm(a)===term);
+  const done=ca.filter(a=>a.status==="completed");
+  const areas=skillsFor(c.subject);
+  const avg=done.length?Math.round(done.reduce((s,a)=>s+(a.score||0),0)/done.length):null;
+  const skAvg=classSkillAvg(id,term);
+  const flagged=flaggedFor(id,term);
+  const flaggedIds={}; flagged.forEach(a=>flaggedIds[a.id]=true);
+  const students=new Set(caAll.map(a=>a.studentEmail)).size;
+  const rosterRows=ca.length?ca.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map(a=>{
+    const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
+    const flag=flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`);
+    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
+    return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}× during assessment</div>`:""}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
+  }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
+  const benchmark=80;
+  const detail=flagged.length?flagged.slice().sort((a,b)=>(a.score||0)-(b.score||0)).map(a=>{
+    const sp=a.skillPct||{};
+    const compRows=areas.map(k=>{
+      const sv=sp[k], cav=skAvg[k], gap=(sv!=null&&cav!=null)?sv-cav:null;
+      return `<tr><td>${k}</td><td>${sv!=null?sv+"%":"—"}</td><td>${cav!=null?cav+"%":"—"}</td><td>${benchmark}%</td><td>${sv!=null?`<span class="pill ${rag(sv)}">${sv>=80?"On track":sv>=55?"Developing":"Gap"}</span>`:""}</td><td>${gap!=null?`<span style="color:${gap>=0?'var(--ok)':'var(--red)'};font-weight:700">${gap>=0?'+':''}${gap}</span>`:"—"}</td></tr>`;
+    }).join("");
+    const goals=computeGoalsFor(a);
+    const goalRows=goals.length?goals.map(g=>`<div style="border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;font-size:13px"><b>${g.skill}</b> — ${g.statement} <span class="muted">(targets ${g.t1}% → ${g.t2}% → ${g.t3}%)</span></div>`).join(""):`<p class="muted" style="font-size:12px">No gap skills — flagged on class ranking only.</p>`;
+    const focusSkills=goals.map(g=>g.skill);
+    const act=focusSkills.length?`<p style="font-size:13px;margin:10px 0 6px"><b>Targeted activities</b> for: ${focusSkills.map(s=>`<span class="tag">${s}</span>`).join(" ")}</p><p class="muted" style="font-size:12px;margin:0">Weekly practice exercises and games for these skills are generated in the student's plan. ${a.snapshot?`<a href="#" onclick="teacherOpenStudent('${a.id}');return false">Open their full plan &amp; activities →</a>`:"They appear once the student opens their Skill Development Plan."}</p>`:"";
+    return `<div class="card" style="border-left:4px solid var(--red)">
+      <div class="flex-between"><h3 style="margin:0;font-size:16px">${a.studentName||a.studentEmail}</h3><div>${a._reasons.map(r=>`<span class="pill red" style="margin-left:4px">${r}</span>`).join("")}</div></div>
+      <p class="sub" style="margin:6px 0 12px">Term ${term} · overall ${a.score}% · measured ${gLabel(c.prevGrade)} mastery · ${gLabel(c.curGrade)} expects ≥80%</p>
+      <b style="font-size:13px">Comparative analysis</b>
+      <table style="margin:6px 0 4px"><thead><tr><th>Skill</th><th>Student</th><th>Class avg</th><th>Benchmark</th><th>Status</th><th>vs class</th></tr></thead><tbody>${compRows}</tbody></table>
+      <div style="margin:10px 0 12px"><b style="font-size:13px">🎯 Goals</b><div style="margin-top:6px">${goalRows}</div></div>
+      ${act}
+    </div>`;
+  }).join(""):(done.length?`<div class="card"><p class="muted" style="margin:0">No students flagged for Term ${term} — everyone is at or above grade level. 🎉</p></div>`:`<div class="card"><p class="muted" style="margin:0">No completed Term ${term} tests yet. As students take this term's diagnostic, those needing skill development appear here automatically.</p></div>`);
+  const termSel=`<select style="width:auto;display:inline-block" onchange="setClassTerm(this.value)">${[1,2,3].map(t=>`<option value="${t}" ${term===String(t)?"selected":""}>Term ${t}${td[t]?" · "+fmtDate(td[t]):""}</option>`).join("")}</select>`;
+  return `<div class="card"><div class="flex-between"><h2 style="margin:0">${c.name}</h2><button class="btn ghost sm" onclick="closeClass()">← All classes</button></div>
+    <p class="sub">${subjChip(c.subject)} · ${gLabel(c.prevGrade)} → ${gLabel(c.curGrade)}</p>
+    <div class="flex-between" style="margin:10px 0;gap:10px;flex-wrap:wrap"><div><label style="display:inline;margin-right:8px">View term</label>${termSel}</div>
+      <div class="muted" style="font-size:12px">${td[term]?`Term ${term} ${td[term]<=todayISO()?"opened":"opens"} ${fmtDate(td[term])}`:`Term ${term} — no publish date set`}</div></div>
+    <div class="notice" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#eef2ff;border-color:#d6dbff;color:var(--ink)">Join code: <b style="font-size:18px;letter-spacing:2px">${c.joinCode}</b> <span class="muted" style="font-size:12px">— students enter this under “Join a class” on their dashboard</span></div>
+    <div class="kpi"><div class="box"><div class="n">${students}</div><div class="l">Enrolled</div></div><div class="box"><div class="n">${done.length}</div><div class="l">Term ${term} done</div></div><div class="box"><div class="n">${avg!=null?avg+"%":"—"}</div><div class="l">Term ${term} average</div></div><div class="box"><div class="n" style="color:var(--red)">${flagged.length}</div><div class="l">Need support</div></div></div>
+    <h3 style="font-size:14px;margin:16px 0 6px">Term schedule — publish dates (calendar)</h3>
+    <div class="row">${[1,2,3].map(t=>`<div class="col"><label style="font-weight:600;text-transform:none">Term ${t}</label><input type="date" value="${td[t]||""}" onchange="updateTermDate('${c.id}','${t}',this.value)"></div>`).join("")}</div>
+    <p class="muted" style="font-size:11px;margin-top:6px">Changing a date updates when that term's diagnostic opens for every student in the class.</p>
+  </div>
+  ${(function(){
+    const has=ca.length>0;
+    if(term==="1") return has?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">✅ Term 1 is created automatically when a student joins. ${students} enrolled.</div>`:`<div class="notice">Share the join code so students can enrol — each student's Term 1 diagnostic is created automatically when they join.</div>`;
+    if(has) return `<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">✅ Term ${term} diagnostic generated for ${ca.length} student(s)${Number(term)>1?`, built on their Term ${Number(term)-1} results`:""}. <button class="btn ghost sm" onclick="generateTerm('${c.id}','${term}')">Generate for newly-joined students</button></div>`;
+    return `<div class="card" style="border:1px solid #c7b8f5;background:#faf8ff"><h3 style="margin:0 0 4px;font-size:15px">⚡ Term ${term} not generated yet</h3><p class="sub" style="margin:0 0 10px">Students see Term ${term} only after you generate it. It will be built on each student's Term ${Number(term)-1} results, so the goals and activities continue from where they left off.</p><button class="btn" onclick="generateTerm('${c.id}','${term}')">Generate Term ${term} diagnostic for the class</button></div>`;
+  })()}
+  <div class="card"><h2>Class roster — Term ${term}</h2><p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish.</p>
+    <table><thead><tr><th>Student</th><th>Result</th><th>Status</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
+    <h3 style="font-size:14px;margin:18px 0 6px">Add a student to this class</h3>
+    <div class="row"><div class="col"><label>Name</label><input id="cs_name" placeholder="Student name"></div><div class="col"><label>School email</label><input id="cs_email" type="email" placeholder="student@school.ae"></div><div class="col"><label>Parent's WhatsApp (optional)</label><input id="cs_parent" placeholder="9715XXXXXXXX"></div></div>
+    <div style="margin-top:10px"><button class="btn" onclick="addToClass('${c.id}')">+ Add to class</button> <span id="csmsg" style="font-size:12px;color:var(--ok)"></span></div>
+  </div>
+  ${done.length?`<div class="card"><h2>Class skill averages — Term ${term}</h2><p class="sub">Average mastery per ${c.subject==="Math"?"strand":"skill"} across ${done.length} completed test(s).</p>
+    ${areas.map(k=>{const v=skAvg[k];return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px"><span style="width:140px;font-size:13px;color:var(--muted)">${k}</span><div class="bar" style="flex:1"><span style="width:${v||0}%;background:${v!=null&&v<55?'var(--red)':v!=null&&v<80?'var(--amber)':'var(--ok)'}"></span></div><span style="width:42px;text-align:right;font-size:13px;font-weight:700">${v!=null?v+"%":"—"}</span></div>`;}).join("")}
+  </div>`:""}
+  <div class="card"><h2>Students needing skill development — Term ${term}</h2><p class="sub">Auto-filtered: below grade level (under 80%) <b>or</b> in the bottom 30% of the class. Each card has a comparative analysis, measurable goals, and targeted activities for this term.</p></div>
+  ${detail}`;
+}
+function setClassTerm(t){S.classTerm=String(t);render();}
+function updateTermDate(id,term,val){
+  const c=classesList().find(x=>x.id===id); if(!c)return;
+  const ntd=Object.assign({},c.termDates||{}); ntd[term]=val||"";
+  db.collection("classes").doc(id).update({termDates:ntd}).catch(e=>alert(fbErr(e)));
+  assignments().filter(a=>a.classId===id&&aTerm(a)===String(term)).forEach(a=>{ if(a.status!=="completed") db.collection("assignments").doc(a.id).update({publishDate:val||""}).catch(()=>{}); });
+}
+function viewHome(){
+  const me=AUTH;
+  const fSub=S.sSubject||"", fTerm=S.sTerm||"";
+  let list=assignments().slice();
+  if(fSub) list=list.filter(a=>a.subject===fSub);
+  if(fTerm) list=list.filter(a=>aTerm(a)===fTerm);
+  list.sort((a,b)=>{const ca=(a.className||"~"),cb=(b.className||"~"); if(ca!==cb)return ca.localeCompare(cb); const ta=aTerm(a),tb=aTerm(b); if(ta!==tb)return ta.localeCompare(tb); return (b.createdAt||0)-(a.createdAt||0);});
+  const rows=list.length?list.map(a=>{
+    const meta=`<div class="muted" style="font-size:11px;margin-top:3px"><span class="tag">Term ${aTerm(a)}</span> ${a.publishDate?fmtDate(a.publishDate):"Available now"}${a.className?` · ${a.className}`:""}</div>`;
+    let status, btn;
+    if(a.status==="completed"){
+      status=`<span class="pill green">Completed · ${a.score}%</span>`;
+      btn=`<button class="btn ghost sm" onclick="openCompleted('${a.id}')">View results</button>${a.retakeAllowed?` <button class="btn gold sm" onclick="openAssignment('${a.id}',false)">Retake (allowed)</button>`:""}`;
+    } else if(!isPublished(a)){
+      status=`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`;
+      btn=`<button class="btn gold sm" disabled>Opens ${fmtDate(a.publishDate)}</button>`;
+    } else {
+      status=`<span class="pill amber">Not started</span>`;
+      btn=`<button class="btn gold sm" onclick="openAssignment('${a.id}',false)">Start test</button>`;
+    }
+    return `<tr><td>${subjChip(a.subject)}${meta}<div class="muted" style="font-size:11px">shared by ${a.teacherName||a.teacherEmail}</div></td><td>Based on ${gLabel(a.prevGrade)}</td><td>${status}</td><td>${btn}</td></tr>`;
+  }).join(""):`<tr><td colspan="4" class="muted">No diagnostics${(fSub||fTerm)?" match this filter":" yet. Your teacher will share one with you here"}.</td></tr>`;
+  return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">${me.email} · Student dashboard</p></div>
+  <div class="card"><h2>Join a class</h2><p class="sub">Got a class code from your teacher? Enter it, and add your parent's WhatsApp number so your teacher can send them your reports.</p>
+    <div class="row"><div class="col"><label>Class code</label><input id="joinCode" placeholder="e.g. K7P2QX" style="text-transform:uppercase;letter-spacing:2px"></div>
+    <div class="col"><label>Parent's WhatsApp number (with country code)</label><input id="joinParent" placeholder="e.g. 9715XXXXXXXX" value="${AUTH.parentPhone||''}"></div></div>
+    <div style="margin-top:10px"><button class="btn" onclick="joinClass()">Join class</button> <span id="joinMsg" style="font-size:12px"></span></div>
+  </div>
+  <div class="card"><div class="flex-between"><h2 style="margin:0">My diagnostics</h2>
+      <div><label style="display:inline;margin-right:6px">Term</label><select style="width:auto;display:inline-block;margin-right:10px" onchange="setSTerm(this.value)"><option value="" ${!fTerm?"selected":""}>All</option>${[1,2,3].map(t=>`<option value="${t}" ${fTerm===String(t)?"selected":""}>Term ${t}</option>`).join("")}</select>
+      <label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setSSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option></select></div></div>
+    <p class="sub">Every term's diagnostic, with its term and publish date. Open any completed one to review that term's results, goals, plan and activities.</p>
+    <table><thead><tr><th>Subject / term</th><th>Diagnostic</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
+}
+function setSSubject(v){S.sSubject=v;save();render();}
+function setSTerm(v){S.sTerm=v;save();render();}
+function openCompleted(id){
+  const a=assignments().find(x=>x.id===id); if(!a)return;
+  if(!a.snapshot){ alert("No saved results for this diagnostic yet."); return; }
+  S=Object.assign(freshState(), JSON.parse(JSON.stringify(a.snapshot)));
+  if(!S.taskDone)S.taskDone={};
+  S.activeAssignment=id; S.activeTab="results";
+  save(); render();
+}
+function openAssignment(id,completed){
+  const a=assignments().find(x=>x.id===id); if(!a)return;
+  if(completed){ showAssignmentResult(id); return; }
+  if(a.status==="completed" && !a.retakeAllowed){ alert("You've already completed this diagnostic. Ask your teacher to allow a retake."); return; }
+  if(a.status!=="completed" && !isPublished(a)){ alert("This diagnostic opens on "+fmtDate(a.publishDate)+"."); return; }
+  S.activeAssignment=id;
+  S.student={name:AUTH.name,subject:a.subject,prevGrade:a.prevGrade,curGrade:a.curGrade};
+  S.prior=a.prior||null; S.curTerm=a.term||"1";
+  S.customQuestions=a.customQuestions||null; S.customTitle=a.customTitle||null;
+  S.answers={};S.result=null;S.plan=null;S.taskDone={};S.writeResponse="";S.activeTab="diagnostic";
+  save(); render(); lockdownStart();
+}
+
+function viewSetup(){
+  const s=S.student||{};
+  const opts=GRADES.map(g=>`<option value="${g.id}" ${s.curGrade===g.id?"selected":""}>${g.label}</option>`).join("");
+  const optsPrev=GRADES.map(g=>`<option value="${g.id}" ${s.prevGrade===g.id?"selected":""}>${g.label}</option>`).join("");
+  return `
+  <div class="card">
+    <h2>Student Setup</h2>
+    <p class="sub">The diagnostic is built from the <b>previous grade</b> curriculum. Gap analysis compares it to the <b>current grade</b>.</p>
+    <div class="notice">📁 <b>Full curriculum loaded:</b> Official MOE <b>English (Terms 1–3)</b> and <b>Mathematics (Terms 1–3)</b> are embedded for <b>Grades 6–12</b>, Advanced and General. Grades 9–12 Maths is by unit; Grades 6–8 Maths is translated from the Arabic guides. Browse it all in the <b>📚 Curriculum</b> tab.</div>
+    <div class="row">
+      <div class="col"><label>Student name</label><input id="f_name" value="${s.name||""}" placeholder="e.g. Ahmed Al Mansoori"></div>
+      <div class="col"><label>Subject</label>
+        <select id="f_subject"><option value="English" ${s.subject==="English"?"selected":""}>English</option><option value="Math" ${s.subject==="Math"?"selected":""}>Mathematics</option></select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="col"><label>Previous grade (completed)</label><select id="f_prev">${optsPrev}</select></div>
+      <div class="col"><label>Current grade (promoted to)</label><select id="f_cur">${opts}</select></div>
+    </div>
+    <div style="margin-top:20px"><button class="btn" onclick="saveStudent()">Save &amp; continue →</button></div>
+  </div>
+  ${S.student?`<div class="card"><h2>Current student</h2><p class="sub">Saved profile</p>
+    <div class="kpi">
+      <div class="box"><div class="n" style="font-size:18px">${S.student.name||"—"}</div><div class="l">Name</div></div>
+      <div class="box"><div class="n" style="font-size:16px">${subjChip(S.student.subject)}</div><div class="l">Subject</div></div>
+      <div class="box"><div class="n" style="font-size:18px">${gLabel(S.student.prevGrade)}</div><div class="l">Previous</div></div>
+      <div class="box"><div class="n" style="font-size:18px">${gLabel(S.student.curGrade)}</div><div class="l">Current</div></div>
+    </div></div>`:""}
+  `;
+}
+function saveStudent(){
+  const name=document.getElementById("f_name").value.trim();
+  const subject=document.getElementById("f_subject").value;
+  const prevGrade=document.getElementById("f_prev").value;
+  const curGrade=document.getElementById("f_cur").value;
+  if(!name){alert("Please enter the student's name.");return;}
+  const changed=!S.student||S.student.prevGrade!==prevGrade||S.student.subject!==subject;
+  S.student={name,subject,prevGrade,curGrade};
+  if(changed){S.answers={};S.result=null;S.plan=null;S.taskDone={};S.writeResponse="";}
+  S.activeTab="diagnostic";save();render();
+}
+
+function getQuestions(){
+  if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
+  const g=S.student.prevGrade, subj=S.student.subject;
+  return (QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
+}
+function viewDiagnostic(){
+  if(S.result){return `<div class="card"><h2>Diagnostic submitted ✓</h2>
+    <div class="empty"><div class="big">✅</div>
+    You've already completed this diagnostic. Your results are in <b>3 · Level &amp; Results</b>.<br>
+    The test can't be retaken unless your teacher unlocks it.</div></div>`;}
+  const qs=getQuestions();
+  if(!qs){return `<div class="card"><h2>Diagnostic Test</h2>
+    <div class="empty"><div class="big">📝</div>
+    A question bank for <b>${gLabel(S.student.prevGrade)} · ${S.student.subject}</b> hasn't been added yet.<br>
+    The curriculum for this grade is loaded (see Gap Analysis &amp; Curriculum), but diagnostic <b>items</b> still need to be authored.<br>
+    To try the full demo now, set <b>previous = Grade 6</b> and <b>current = Grade 7</b>.</div></div>`;}
+  let html=`<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
+    <p class="sub">${S.student.name} is entering ${gLabel(S.student.curGrade)}. This test checks mastery of the prior grade before measuring readiness for the new one.</p>
+    ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">This is your <b>Term ${S.curTerm||""}</b> diagnostic — it builds on your <b>Term ${S.prior.term}</b> results (overall ${S.prior.score}%). Your plan continues to target the skills you were still developing.</div>`:""}`;
+  qs.forEach((q,i)=>{
+    html+=`<div class="q"><div class="meta">${q.skill}</div><div class="stem">Q${i+1}. ${q.q}</div>`;
+    q.options.forEach((o,oi)=>{
+      const sel=S.answers[i]===oi;
+      html+=`<label class="opt ${sel?"sel":""}" id="opt-${i}-${oi}"><input type="radio" name="q${i}" ${sel?"checked":""} onchange="pick(${i},${oi})">${o}</label>`;
+    });
+    html+=`</div>`;
+  });
+  if(!(S.customQuestions&&S.customQuestions.length) && S.student.subject==="English" && typeof WRITING_PROMPTS!=="undefined" && WRITING_PROMPTS[S.student.prevGrade]){
+    html+=`<div class="q"><div class="meta">Writing · Written Response</div>
+      <div class="stem">✍️ Writing Task — write a full response in the box below:</div>
+      <p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:0 0 10px">${WRITING_PROMPTS[S.student.prevGrade]}</p>
+      <textarea id="writeResp" rows="7" oninput="saveWrite(this.value)" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(S.writeResponse||"").replace(/</g,"&lt;")}</textarea>
+      <div class="muted" style="font-size:12px;margin-top:6px">Saved for the teacher to assess with a rubric (this written response is not auto-scored).</div></div>`;
+  }
+  const answered=Object.keys(S.answers).length;
+  html+=`<div class="flex-between"><span class="muted">${answered}/${qs.length} answered</span>
+    <button class="btn gold" onclick="grade()" ${answered<qs.length?"disabled":""}>Submit &amp; analyse →</button></div></div>`;
+  return html;
+}
+function pick(i,oi){S.answers[i]=oi;save();
+  const qs=getQuestions();qs[i].options.forEach((_,k)=>{const el=document.getElementById(`opt-${i}-${k}`);if(el)el.classList.toggle("sel",k===oi);});
+  const answered=Object.keys(S.answers).length;const btn=document.querySelector(".btn.gold");if(btn)btn.disabled=answered<qs.length;
+  const span=document.querySelector(".flex-between .muted");if(span)span.textContent=`${answered}/${qs.length} answered`;
+}
+
+function saveWrite(v){ S.writeResponse = v; save(); }
+// Provisional, transparent auto-estimate of a written response (0-100), pending teacher rubric review.
+function writingScore(text){
+  text=(text||"").trim(); if(!text) return 0;
+  const words=text.split(/\s+/).filter(Boolean).length;
+  const sentences=(text.match(/[.!?]+/g)||[]).length || (words>0?1:0);
+  const linkers=["however","because","therefore","first","second","finally","also","for example","in addition","although","moreover","as a result","in conclusion","on the other hand","furthermore","meanwhile","since","while","but ","so "];
+  const lc=" "+text.toLowerCase()+" ";
+  const transCount=linkers.filter(t=>lc.includes(t)).length;
+  let score=0;
+  score += Math.min(40, words/50*40);
+  score += sentences>=3?25:(sentences===2?14:5);
+  score += Math.min(20, transCount*10);
+  if(/^[A-Z]/.test(text)) score+=8;
+  if(/[.!?]$/.test(text)) score+=7;
+  return Math.max(0,Math.min(100,Math.round(score)));
+}
+function grade(){
+  if(READONLY) return;
+  if(S.result){ S.activeTab="results"; save(); render(); return; }
+  const qs=getQuestions();
+  const subj=S.student.subject, areas=skillsFor(subj);
+  const per={}; areas.forEach(a=>per[a]={correct:0,total:0});
+  let correct=0;
+  qs.forEach((q,i)=>{ per[q.skill].total++; if(S.answers[i]===q.answer){correct++;per[q.skill].correct++;} });
+  const overallPct=Math.round(correct/qs.length*100);
+  const skillPct={}; areas.forEach(a=>{ skillPct[a]= per[a].total? Math.round(per[a].correct/per[a].total*100):0; });
+  let writingProvisional=null;
+  if(subj==="English"){ const wr=(S.writeResponse||"").trim(); if(wr){ writingProvisional=writingScore(wr); skillPct["Writing"]=writingProvisional; } }
+  S.result={ when:new Date().toISOString(), overallPct, correct, total:qs.length, skillPct, per, level:levelFromPct(overallPct) };
+  S.result.writePrompt=(subj==="English"&&typeof WRITING_PROMPTS!=="undefined")?(WRITING_PROMPTS[S.student.prevGrade]||null):null;
+  S.result.writeResponse=S.writeResponse||"";
+  S.result.writingProvisional=writingProvisional;
+  S.plan=generatePlan();
+  lockdownEnd();
+  S.activeTab="results"; save(); render();
+}
+
+function viewResults(){
+  const r=S.result, subj=S.student.subject, areas=skillsFor(subj);
+  const lvl=r.level;
+  let rows=areas.map(a=>{
+    const p=r.skillPct[a]; const c=rag(p);
+    const isProvW=(a==="Writing" && r.writingProvisional!=null);
+    const items=isProvW?"essay":`${r.per[a].correct}/${r.per[a].total}`;
+    return `<tr class="skillrow"><td><b>${a}</b>${isProvW?` <span class="muted" style="font-size:10px">(provisional)</span>`:""}</td>
+      <td style="width:45%"><div class="bar"><span style="width:${p}%;background:var(--${c==='green'?'ok':c==='amber'?'amber':'red'})"></span></div></td>
+      <td>${p}%</td><td>${items}</td>
+      <td><span class="pill ${c}">${p>=80?"Strong":p>=55?"Developing":"Gap"}</span></td></tr>`;
+  }).join("");
+  return `
+  <div class="card">
+    <h2>Diagnostic Results — ${S.student.name}</h2>
+    <p class="sub">Based on ${gLabel(S.student.prevGrade)} ${subj} · taken ${new Date(r.when).toLocaleDateString()}</p>
+    <div class="kpi">
+      <div class="box"><div class="n">${r.overallPct}%</div><div class="l">Overall Score</div></div>
+      <div class="box"><div class="n">${r.correct}/${r.total}</div><div class="l">Correct</div></div>
+      <div class="box"><div class="n"><span class="pill ${lvl.cls}" style="font-size:13px">${lvl.name}</span></div><div class="l">Placed Level</div></div>
+      <div class="box"><div class="n" style="font-size:18px">${gLabel(S.student.curGrade)}</div><div class="l">Current Grade</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Skill breakdown</h2>
+    <p class="sub">${subjChip(subj)} mastery of prior-grade skills, by ${subj==="Math"?"strand":"language skill"}</p>
+    <table><thead><tr><th>Skill</th><th>Mastery</th><th>%</th><th>Items</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="muted" style="font-size:12px;margin-top:14px">Placement logic: ≥80% Advanced/On-track · 60–79% Approaching · 40–59% Developing · &lt;40% Needs intensive support. Any skill below 55% is flagged as a gap and targeted in the development plan.</p>
+  </div>
+  ${(subj==="English"&&r.writePrompt)?`<div class="card">
+    <h2>Writing sample — written response</h2>
+    <p class="sub">The student's own writing in response to the prompt — for teacher assessment (not auto-scored).</p>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px"><b>Prompt:</b> ${r.writePrompt}</p>
+    <div style="border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;min-height:60px">${(r.writeResponse&&r.writeResponse.trim())?r.writeResponse.replace(/</g,"&lt;"):"<span class='muted'>(No response was written during the test.)</span>"}</div>
+    <p class="muted" style="font-size:12px;margin-top:8px">The three Writing multiple-choice items above are a quick auto-scored check. This paragraph is the authentic writing sample — assess it with a rubric to set the true Writing level. The Writing % above is a provisional automated estimate (length, structure and cohesion) — pending teacher review.</p>
+  </div>`:""}`;
+}
+
+function gapData(){
+  const subj=S.student.subject, areas=skillsFor(subj);
+  const prevG=S.student.prevGrade, curG=S.student.curGrade;
+  return areas.map(a=>{
+    const p=S.result.skillPct[a];
+    return {skill:a,pct:p,status:rag(p),prev:curriculumFor(prevG,subj,a),cur:curriculumFor(curG,subj,a),gap:p<55};
+  });
+}
+function termList(items){
+  if(!items.length) return `<li>—</li>`;
+  return items.map(o=>`<li><span class="termtag">T${o.term}</span>${o.text}</li>`).join("");
+}
+function viewGaps(){
+  const data=gapData(), subj=S.student.subject;
+  let blocks=data.map(d=>{
+    return `<div class="card">
+      <div class="flex-between"><h2>${d.skill}</h2><span class="pill ${d.status}">${d.pct}% mastery · ${d.gap?"GAP":"OK"}</span></div>
+      <p class="sub">Bridging from ${gLabel(S.student.prevGrade)} to ${gLabel(S.student.curGrade)} · outcomes across loaded terms</p>
+      <div class="row">
+        <div class="col"><label>Where the student is (prior grade)</label>
+          <ul style="margin:6px 0;padding-left:18px;font-size:13px">${termList(d.prev)}</ul></div>
+        <div class="col"><label>Where they must be (current grade)</label>
+          <ul style="margin:6px 0;padding-left:18px;font-size:13px">${termList(d.cur)}</ul></div>
+      </div>
+      ${d.gap?`<div class="notice" style="margin-top:8px">⚠ Priority gap — diagnostic mastery ${d.pct}%. The current-grade outcomes are at risk without targeted support. Included in the development plan.</div>`:`<div class="muted" style="font-size:13px;margin-top:6px">✓ Solid foundation — the student is ready to build the current-grade skills with normal classroom pacing.</div>`}
+    </div>`;
+  }).join("");
+  const gapCount=data.filter(d=>d.gap).length;
+  return `<div class="card"><h2>Gap Analysis</h2><p class="sub">Comparing prior mastery against current-grade demands for ${subj} (Term 1–3 outcomes shown where loaded).</p>
+    <div class="kpi"><div class="box"><div class="n">${gapCount}</div><div class="l">Priority gaps</div></div>
+    <div class="box"><div class="n">${data.length-gapCount}</div><div class="l">Solid skills</div></div>
+    <div class="box"><div class="n">${S.result.overallPct}%</div><div class="l">Overall readiness</div></div></div></div>${blocks}`;
+}
+
+function viewReport(){
+  const r=S.result, data=gapData(), subj=S.student.subject;
+  const gaps=data.filter(d=>d.gap), strong=data.filter(d=>!d.gap);
+  const narrative=`${S.student.name} completed a diagnostic based on the ${gLabel(S.student.prevGrade)} ${subj} curriculum, scoring <b>${r.overallPct}%</b> overall, which places the student at the <b>${r.level.name}</b> level entering ${gLabel(S.student.curGrade)}. `+
+    (gaps.length? `The student shows strength in ${strong.map(s=>s.skill).join(", ")||"few areas"}, but needs targeted support in <b>${gaps.map(g=>g.skill).join(", ")}</b> to meet the demands of the new grade.`:
+    `The student demonstrates a solid foundation across all assessed skills and is well-positioned for ${gLabel(S.student.curGrade)}.`);
+  let rows=data.map(d=>`<tr><td><b>${d.skill}</b></td><td>${d.pct}%</td>
+    <td><span class="pill ${d.status}">${d.gap?"Needs support":"On track"}</span></td>
+    <td style="font-size:12px">${d.gap?"Targeted activities in weekly plan":"Maintain via classroom work"}</td></tr>`).join("");
+  return `<div class="card no-print"><div class="flex-between"><h2>Parent &amp; Teacher Report</h2>
+    <button class="btn ghost sm" onclick="window.print()">🖨 Print / Save PDF</button></div>
+    <p class="sub">Shareable summary of where the student is and where they need to be.</p></div>
+  <div class="card">
+    <div class="print-only" style="margin-bottom:10px"><b>ADEPTLY — Student Diagnostic Report</b></div>
+    <div class="flex-between"><div><h2 style="margin-bottom:2px">${S.student.name}</h2>
+      <span class="tag">${subj}</span> <span class="tag">${gLabel(S.student.prevGrade)} → ${gLabel(S.student.curGrade)}</span> <span class="tag">${new Date(r.when).toLocaleDateString()}</span></div>
+      <span class="pill ${r.level.cls}" style="font-size:14px">${r.level.name}</span></div>
+    <h3 style="margin:18px 0 6px;font-size:14px">Summary</h3>
+    <p style="font-size:14px">${narrative}</p>
+    <h3 style="margin:18px 0 6px;font-size:14px">Comparative analysis — current vs target</h3>
+    <table><thead><tr><th>Skill</th><th>Mastery</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>
+    <h3 style="margin:18px 0 6px;font-size:14px">What happens next</h3>
+    <p style="font-size:14px">A 3-term skill development plan has been generated targeting the gap areas. Each term is broken into weekly folders of activities. Progress is tracked against the plan so parents and teachers can see, week by week, whether ${S.student.name.split(" ")[0]} is on pace to close the gaps before the end of the year.</p>
+    ${r.writePrompt?`<h3 style="margin:18px 0 6px;font-size:14px">Written response — for teacher assessment</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 6px"><b>Prompt:</b> ${r.writePrompt}</p>
+    <div style="border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;white-space:pre-wrap">${(r.writeResponse&&r.writeResponse.trim())?r.writeResponse.replace(/</g,"&lt;"):"<span class='muted'>(No response was written.)</span>"}</div>`:""}
+    <p class="muted" style="font-size:12px;margin-top:18px">Generated by Adeptly · This report reflects a diagnostic snapshot and should be read alongside classroom assessment.</p>
+  </div>`;
+}
+
+const ACTIVITY_LIB={
+  Reading:["Read a short text and write the main idea + 2 supporting details","Highlight 3 pieces of evidence that support an inference","Compare two short articles and note 2 similarities and 2 differences","Summarise a one-page passage in 3–4 sentences","Answer 5 comprehension questions on a levelled text","Identify the author's purpose and tone in a short article","Make 3 predictions about a story and check them after reading","Work out 5 unfamiliar words using context clues","Put the main events of a story in the correct order","Sort 4 facts from 4 opinions in a short text","Write 3 questions about a passage, then find the answers in it","Identify the cause and effect of 3 events in a text","Explain the theme of a short story in 2–3 sentences","Make a story map: characters, setting, problem, solution","Read a news article and summarise the 5 Ws (who, what, when, where, why)"],
+  Writing:["Write a full response (8–10 sentences) to a given writing prompt","Write a paragraph with a topic sentence, 3 details, and a conclusion","Add transition words to a paragraph to improve its flow","Revise a paragraph for punctuation, capitals, and run-ons","Plan and draft a short multi-paragraph piece from an outline","Write an opinion with a clear claim and two supporting reasons","Combine 6 short sentences into smoother, varied sentences","Write a descriptive paragraph using 5 sensory details","Write a 5-sentence summary of something you read this week","Draft an email or letter for a real purpose","Write a counter-argument to a given opinion","Edit a sample paragraph and suggest 3 improvements","Expand a single sentence into a full paragraph","Write a short narrative with a clear beginning, middle, and end"],
+  Vocabulary:["Learn 5 new academic words and use each in a sentence","Match 8 synonyms and 8 antonyms","Break 5 words into prefix / root / suffix and give meanings","Use context clues to define 5 unknown words","Identify and explain 6 examples of figurative language","Sort 10 words by connotation (positive / negative / neutral)","Make a word web for 5 new words (synonyms, antonyms, examples)","Use 6 new words correctly in a short paragraph","Find 5 words with the same root and explain the link","Replace 8 weak words with stronger, more precise choices","Make flashcards for 10 subject-specific words","Find the multiple meanings of 5 common words"],
+  Grammar:["Label nouns, verbs, and adjectives in 8 sentences","Fix subject–verb agreement in 6 sentences","Convert 6 sentences between different tenses","Punctuate a short paragraph correctly","Combine simple sentences using conjunctions","Correct 6 sentences with fragments or misplaced modifiers","Add correct capitalisation to 8 sentences","Identify and fix 6 comma errors","Rewrite 5 sentences from passive to active voice","Use apostrophes correctly in 8 sentences","Identify the clauses and phrases in 6 sentences","Correct pronoun–antecedent agreement in 6 sentences"],
+  "Number & Operations":["Complete 20 mixed multi-digit +/− problems","Solve 15 multiplication and division problems","Practise 10 fraction operations (add, subtract, multiply)","Convert 10 numbers between fractions, decimals, and percents","Solve 8 word problems involving rates or ratios","Order and compare 10 rational numbers","Round 10 numbers to a given place value","Find the GCF and LCM of 6 number pairs","Simplify 8 fractions to lowest terms","Solve 6 multi-step word problems"],
+  "Algebra":["Solve 10 one- and two-step equations","Evaluate 8 algebraic expressions","Continue and describe 6 patterns or sequences","Build and complete an input/output (function) table","Solve 6 inequalities and graph the solutions","Write an expression or equation for 6 word problems","Graph 4 linear equations","Simplify 8 expressions by combining like terms","Solve 6 proportion problems","Factor 6 simple expressions"],
+  "Geometry":["Find the perimeter and area of 8 figures","Find the surface area or volume of 6 solids","Classify 10 shapes or angles by their properties","Measure and draw 5 shapes accurately","Solve 5 problems using the Pythagorean theorem or similarity","Plot and identify 8 points on the coordinate plane","Calculate missing angles in 6 figures","Find missing side lengths in 5 right triangles","Identify the transformation in 6 figures","Find the volume of 5 prisms or cylinders"],
+  "Data & Probability":["Read and answer questions on 3 graphs","Find the mean, median, mode, and range of 4 data sets","Calculate the probability of 8 simple events","Build a bar graph or line plot from given data","Interpret a scatter plot and describe the trend","Compare two data sets and write 2 conclusions","Create a frequency table from raw data","Find the probability of 6 compound events","Calculate the mean of 5 larger data sets","Draw and interpret a box plot"]
+};
+function generatePlan(){
+  const subj=S.student.subject, areas=skillsFor(subj);
+  const gaps=areas.filter(a=>S.result.skillPct[a]<55);
+  let focus = gaps.length?gaps:areas.slice();
+  if(S.prior&&S.prior.skillPct){ areas.forEach(a=>{ if(S.prior.skillPct[a]!=null && S.prior.skillPct[a]<55 && focus.indexOf(a)<0) focus.push(a); }); }
+  const WEEKS=6;
+  const terms={};
+  ["1","2","3"].forEach((t,ti)=>{
+    const weeks=[];
+    for(let w=1;w<=WEEKS;w++){
+      const skill=focus[(w-1)%focus.length];
+      const lib=ACTIVITY_LIB[skill]||["Practice activity"];
+      const L=lib.length; const base=((ti*WEEKS)+(w-1))*3;
+      const tasks=[lib[base%L], lib[(base+1)%L], lib[(base+2)%L]];
+      weeks.push({week:w,skill,tasks});
+    }
+    terms[t]={ goal:`By end of Term ${t}: raise ${focus.join(", ")} toward grade-level mastery (target ${60+ti*10}%+).`, weeks };
+  });
+  const goals=focus.map(a=>{
+    const b=S.result.skillPct[a]||0;
+    const t1=Math.min(90,Math.max(b+15,55)), t2=Math.min(95,Math.max(t1+10,65)), t3=Math.min(98,Math.max(t2+10,75));
+    return {skill:a, baseline:b, t1:t1, t2:t2, t3:t3,
+      statement:`Improve ${a} from ${b}% to ${t3}% (grade-level) by year-end — term targets ${t1}% → ${t2}% → ${t3}%.`};
+  });
+  return {focus,termWeeks:WEEKS,terms,goals,createdFrom:S.result.when};
+}
+
+function viewGoals(){
+  const goals=(S.plan&&S.plan.goals)||[];
+  if(!goals.length) return `<div class="card"><h2>My Goals</h2><div class="empty"><div class="big">🎯</div>No gap areas were flagged in your diagnostic — keep up the great work! Goals appear here automatically when there are skills to lift.</div></div>`;
+  function skillPlanPct(sk){let d=0,tt=0;["1","2","3"].forEach(t=>S.plan.terms[t].weeks.forEach(w=>{if(w.skill===sk)w.tasks.forEach((_,i)=>{tt++;if(S.taskDone[t+"-"+w.week+"-"+i])d++;});}));return tt?Math.round(d/tt*100):0;}
+  const cards=goals.map(g=>{
+    const eff=skillPlanPct(g.skill);
+    return `<div class="card"><div class="flex-between"><h2>🎯 ${g.skill}</h2><span class="pill ${eff>=60?'green':eff>0?'amber':'grey'}">${eff}% of activities done</span></div>
+      <p style="font-size:14px;margin:0 0 12px">${g.statement}</p>
+      <div class="kpi"><div class="box"><div class="n">${g.baseline}%</div><div class="l">Start now</div></div>
+        <div class="box"><div class="n">${g.t1}%</div><div class="l">Term 1 target</div></div>
+        <div class="box"><div class="n">${g.t2}%</div><div class="l">Term 2 target</div></div>
+        <div class="box"><div class="n">${g.t3}%</div><div class="l">Year target</div></div></div>
+      <p class="muted" style="font-size:12px;margin-top:10px">Your activities to reach this goal are in <b>Weekly Folders</b> — open the ${g.skill} weeks and tap <b>▶ Practice</b>.</p>
+    </div>`;
+  }).join("");
+  return `<div class="card"><h2>My Goals</h2><p class="sub">Set automatically from your diagnostic. Reach each target by completing the matching activities in your weekly plan.</p></div>${cards}`;
+}
+function viewPlan(){
+  const p=S.plan, subj=S.student.subject;
+  let terms=["1","2","3"].map(t=>{
+    const tm=p.terms[t];
+    return `<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${p.termWeeks} weeks</span></div>
+      <p class="sub">${tm.goal}</p>
+      <table><thead><tr><th>Week</th><th>Focus skill</th><th>Activities</th></tr></thead><tbody>
+      ${tm.weeks.map(w=>`<tr><td>W${w.week}</td><td><b>${w.skill}</b></td><td style="font-size:13px">${w.tasks.join("<br>")}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  }).join("");
+  return `<div class="card"><h2>Skill Development Plan</h2>
+    <p class="sub">3 terms · targeting ${p.focus.length} focus ${p.focus.length===1?"skill":"skills"} for ${S.student.name} in ${subj}.</p>
+    <div class="kpi">${p.focus.map(f=>`<div class="box"><div class="n" style="font-size:14px">${f}</div><div class="l">${S.result.skillPct[f]}% → target</div></div>`).join("")}</div>
+    <p class="muted" style="font-size:12px;margin-top:14px">Focus skills are those below 55% on the diagnostic. The plan distributes practice across 3 terms, raising the target band each term. Open <b>Weekly Folders</b> to work through tasks and the <b>Tracker</b> to monitor pace.</p>
+  </div>${terms}`;
+}
+
+function viewFolders(){
+  const p=S.plan;
+  let html=`<div class="card"><h2>Weekly Folders</h2><p class="sub">Each term holds weekly folders. Tick tasks as ${S.student.name.split(" ")[0]} completes them — progress feeds the tracker.</p></div>`;
+  ["1","2","3"].forEach(t=>{
+    html+=`<div class="card"><h2 style="margin-bottom:12px">Term ${t}</h2>`;
+    p.terms[t].weeks.forEach(w=>{
+      const id=`f-${t}-${w.week}`;
+      const done=w.tasks.filter((_,i)=>S.taskDone[`${t}-${w.week}-${i}`]).length;
+      html+=`<div class="folder open" id="${id}">
+        <div class="fh" onclick="document.getElementById('${id}').classList.toggle('open')">
+          <div class="ft">📁 Week ${w.week} — ${w.skill}</div>
+          <span class="pill ${done===w.tasks.length?"green":done>0?"amber":"grey"}">${done}/${w.tasks.length} done</span>
+        </div>
+        <div class="body">
+          ${w.tasks.map((tk,i)=>{const key=`${t}-${w.week}-${i}`;const ck=!!S.taskDone[key];
+            return `<div class="task"><input type="checkbox" ${ck?"checked":""} onchange="toggleTask('${key}','${id}')">
+            <div style="flex:1"><div class="tt" style="${ck?'text-decoration:line-through;color:#8a94a3':''}">${tk}</div>
+            <div class="ts">${w.skill} · Week ${w.week} activity</div></div>
+            <button class="btn sm ${ck?'green':'gold'}" style="white-space:nowrap" onclick="launchExercise('${key}','${w.skill}')">${ck?'✓ Done':'▶ Practice'}</button></div>`;}).join("")}
+        </div></div>`;
+    });
+    html+=`</div>`;
+  });
+  return html;
+}
+function toggleTask(key,folderId){
+  if(READONLY) return;
+  S.taskDone[key]=!S.taskDone[key];save();
+  const open=document.querySelectorAll(".folder.open");const openIds=[...open].map(o=>o.id);
+  render();
+  openIds.forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add("open");});
+}
+
+function termProgress(t){
+  const p=S.plan;let total=0,done=0;
+  p.terms[t].weeks.forEach(w=>w.tasks.forEach((_,i)=>{total++;if(S.taskDone[`${t}-${w.week}-${i}`])done++;}));
+  return {done,total,pct:total?Math.round(done/total*100):0};
+}
+function viewTracker(){
+  const p=S.plan;
+  const t1=termProgress("1"),t2=termProgress("2"),t3=termProgress("3");
+  const totalDone=t1.done+t2.done+t3.done, totalAll=t1.total+t2.total+t3.total;
+  const yearPct=totalAll?Math.round(totalDone/totalAll*100):0;
+  const terms=[{k:"1",d:t1},{k:"2",d:t2},{k:"3",d:t3}];
+  const planTarget=[100,100,100];
+  const chart=`<div class="chartwrap">${terms.map((x,i)=>`
+    <div class="colbar"><span style="font-size:11px;font-weight:700">${x.d.pct}%</span>
+      <div style="display:flex;gap:4px;align-items:flex-end;height:100%;width:100%;justify-content:center">
+        <div class="vb" style="height:${x.d.pct}%" title="Actual"></div>
+        <div class="vb plan" style="height:${planTarget[i]}%;opacity:.5" title="Plan target"></div>
+      </div>
+      <span style="font-size:11px;color:var(--muted)">Term ${x.k}</span></div>`).join("")}</div>
+    <div class="legend"><span><i style="background:var(--green)"></i>Actual completion</span><span><i style="background:var(--gold)"></i>Plan target</span></div>`;
+  const onPace = yearPct>=Math.round((t1.total/totalAll)*100*0.6);
+  let skillBreak = p.focus.map(f=>{
+    let d=0,tt=0;
+    ["1","2","3"].forEach(t=>p.terms[t].weeks.forEach(w=>{if(w.skill===f)w.tasks.forEach((_,i)=>{tt++;if(S.taskDone[`${t}-${w.week}-${i}`])d++;});}));
+    const pct=tt?Math.round(d/tt*100):0;
+    return `<tr><td><b>${f}</b></td><td>${S.result.skillPct[f]}%</td>
+      <td style="width:40%"><div class="bar"><span style="width:${pct}%"></span></div></td><td>${pct}%</td>
+      <td><span class="pill ${pct>=60?"green":pct>0?"amber":"grey"}">${pct>=60?"Improving":pct>0?"Started":"Not started"}</span></td></tr>`;
+  }).join("");
+  return `<div class="card"><h2>Progress Tracker</h2><p class="sub">Achievement across each term and the full year, against the development plan.</p>
+    <div class="kpi">
+      <div class="box"><div class="n">${yearPct}%</div><div class="l">Year completion</div></div>
+      <div class="box"><div class="n">${totalDone}/${totalAll}</div><div class="l">Tasks done</div></div>
+      <div class="box"><div class="n">${t1.pct}%</div><div class="l">Term 1</div></div>
+      <div class="box"><div class="n"><span class="pill ${yearPct>0?(onPace?'green':'amber'):'grey'}">${yearPct===0?"Not started":onPace?"On pace":"Behind pace"}</span></div><div class="l">Status</div></div>
+    </div></div>
+    <div class="card"><h2>Completion by term</h2><p class="sub">Actual vs plan target</p>${chart}</div>
+    <div class="card"><h2>Improvement by focus skill</h2><p class="sub">Diagnostic baseline → activities completed</p>
+    <table><thead><tr><th>Skill</th><th>Baseline</th><th>Plan progress</th><th>%</th><th>Trend</th></tr></thead><tbody>${skillBreak}</tbody></table>
+    <p class="muted" style="font-size:12px;margin-top:12px">As tasks are ticked in Weekly Folders, this view updates automatically. In the production version, periodic re-tests re-measure mastery and plot the real skill-growth curve against the target line.</p></div>`;
+}
+
+function curState(){ S.curView=S.curView||{grade:(S.student?S.student.curGrade:"6"),subject:(S.student?S.student.subject:"English")}; return S.curView; }
+function setCur(k,v){ const c=curState(); c[k]=v; save(); render(); }
+function viewCurriculum(){
+  const c=curState();
+  const gopts=GRADES.map(g=>`<option value="${g.id}" ${c.grade===g.id?"selected":""}>${g.label}</option>`).join("");
+  let loadedTerms=0, body="";
+  ["1","2","3"].forEach(t=>{
+    const data=(CURRICULUM[c.grade]&&CURRICULUM[c.grade][t]&&CURRICULUM[c.grade][t][c.subject])||{};
+    const strands=Object.keys(data);
+    const anyReal=strands.some(st=>(data[st]||[]).some(x=>x&&!x.startsWith("(")));
+    if(anyReal) loadedTerms++;
+    let inner=strands.map(st=>{
+      const items=(data[st]||[]).filter(x=>x);
+      const real=items.length && !items[0].startsWith("(");
+      return `<div style="margin-bottom:12px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">${st}</div>
+        <ul style="margin:4px 0;padding-left:18px;font-size:13px;color:${real?'var(--ink)':'var(--muted)'}">${(items.length?items:["—"]).map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+    }).join("");
+    body+=`<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${strands.length} ${c.subject==="Math"?"unit(s)/strand(s)":"skill(s)"}</span></div>${inner||'<p class="muted" style="font-size:13px">No data yet.</p>'}</div>`;
+  });
+  return `<div class="card"><h2>Curriculum Browser</h2>
+    <p class="sub">Official MOE outcomes embedded in the app — ${loadedTerms} of 3 terms loaded for ${gLabel(c.grade)} ${c.subject==="Math"?"Mathematics":"English"}.</p>
+    <div class="row">
+      <div class="col"><label>Grade</label><select onchange="setCur('grade',this.value)">${gopts}</select></div>
+      <div class="col"><label>Subject</label><select onchange="setCur('subject',this.value)"><option value="English" ${c.subject==='English'?'selected':''}>English</option><option value="Math" ${c.subject==='Math'?'selected':''}>Mathematics</option></select></div>
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:12px">English: Reading, Writing, Vocabulary, Grammar (Terms 1–3). Mathematics: Grades 9–12 organised by unit; Grades 6–8 translated from the official Arabic guides and grouped by domain (Terms 1–3).</p>
+  </div>${body}`;
+}
+
+/* ===== INTERACTIVE PRACTICE EXERCISES ===== */
+const READING_PASSAGES=[
+ {title:"The Great Barrier Reef",text:"The Great Barrier Reef, off the coast of Australia, is the world's largest coral reef system. It is made of thousands of reefs and hundreds of islands, and is home to many fish, turtles and sharks. However, rising sea temperatures threaten the coral, causing it to lose its colour in a process called bleaching.",qs:[{q:"What is the main idea of the passage?",options:["Australia has many islands","The reef is large, diverse and under threat","Sharks are dangerous","Coral is colourful"],answer:1},{q:"What causes coral bleaching?",options:["Too many fish","Rising sea temperatures","Tourists","Islands"],answer:1},{q:"The word 'threaten' suggests the reef is:",options:["safe","in danger","growing","new"],answer:1}]},
+ {title:"Bees and Their Importance",text:"Bees are small insects that play a huge role in nature. As they move from flower to flower collecting nectar, they carry pollen, which helps plants make seeds and fruit. Without bees, many crops would fail. Sadly, bee populations are falling because of pesticides and loss of habitat.",qs:[{q:"Why are bees important?",options:["They make noise","They pollinate plants","They are colourful","They sleep a lot"],answer:1},{q:"What is harming bees?",options:["Flowers","Pesticides and habitat loss","Rain","Other insects"],answer:1},{q:"What is nectar?",options:["a sweet liquid in flowers","a type of bee","a season","a crop"],answer:0}]},
+ {title:"A Surprising Discovery",text:"When Mariam opened the dusty old box in the attic, she did not expect to find anything special. Inside were letters tied with ribbon, written by her great-grandmother fifty years ago. As she read them, Mariam learned about a family she had never known and felt a deep connection to her past.",qs:[{q:"What did Mariam find in the box?",options:["money","old letters","toys","photos only"],answer:1},{q:"How did Mariam feel after reading the letters?",options:["bored","connected to her past","angry","afraid"],answer:1},{q:"Where did she find the box?",options:["the garden","the attic","school","a shop"],answer:1}]},
+ {title:"The Water Cycle",text:"Water is always moving in a cycle. The sun heats water in oceans and lakes, turning it into vapour that rises into the air. As the vapour cools, it forms clouds. Eventually the water falls back to Earth as rain or snow, and the cycle begins again.",qs:[{q:"What starts the water cycle?",options:["the wind","the sun heating water","clouds","rivers"],answer:1},{q:"What forms when water vapour cools?",options:["rain only","clouds","caves","oceans"],answer:1},{q:"This passage is mainly:",options:["a story","an explanation","an opinion","a poem"],answer:1}]}
+];
+const GRAMMAR_POOL=[
+ {q:"Choose the correct verb: \"The group of students ___ ready.\"",options:["are","is","were","be"],answer:1},
+ {q:"Choose the correct tense: \"Yesterday, she ___ to the market.\"",options:["go","goes","went","gone"],answer:2},
+ {q:"Which sentence is punctuated correctly?",options:["Its raining today.","It's raining today.","Its' raining today.","Its raining, today"],answer:1},
+ {q:"Choose the best correction: \"Me and him went home.\"",options:["Me and him went home.","Him and me went home.","He and I went home.","I and he went home."],answer:2},
+ {q:"Choose the correct word: \"They left ___ books at home.\"",options:["there","their","they're","theyre"],answer:1},
+ {q:"Which is a complete sentence?",options:["Running fast.","Because it rained.","The dog barked.","After the game."],answer:2},
+ {q:"Choose the plural: \"one child, two ___\"",options:["childs","children","childes","child"],answer:1},
+ {q:"Subject-verb agreement: \"Neither answer ___ correct.\"",options:["are","is","were","be"],answer:1},
+ {q:"Apostrophe: \"the ___ toys\" (toys belonging to the dogs)",options:["dogs","dog's","dogs'","dogses"],answer:2},
+ {q:"Choose the adverb: \"She sang ___.\"",options:["beautiful","beauty","beautifully","beautify"],answer:2},
+ {q:"Comma use: \"After dinner ___ we watched a film.\"",options:["After dinner we","After dinner, we","After, dinner we","After dinner; we"],answer:1},
+ {q:"Pronoun: \"Each student must bring ___ own pen.\"",options:["their","his or her","them","they"],answer:1},
+ {q:"Choose the correct word: \"I have ___ apples than you.\"",options:["less","fewer","lesser","few"],answer:1},
+ {q:"Rewrite in the active voice: \"The ball was thrown by Sam.\"",options:["The ball was thrown.","Sam threw the ball.","The ball, thrown by Sam.","Thrown the ball Sam."],answer:1},
+ {q:"Which is capitalised correctly?",options:["i visited london in july.","I visited London in July.","I visited london in July.","i visited London in july."],answer:1}
+];
+const VOCAB_POOL=[
+ {q:"Synonym of \"rapid\":",options:["slow","quick","heavy","quiet"],answer:1},
+ {q:"Antonym of \"ancient\":",options:["old","modern","huge","dark"],answer:1},
+ {q:"\"Generous\" means:",options:["selfish","giving","tired","loud"],answer:1},
+ {q:"The prefix \"un-\" means:",options:["again","not","before","under"],answer:1},
+ {q:"\"Brave\" is closest to:",options:["fearful","courageous","weak","silent"],answer:1},
+ {q:"Antonym of \"expand\":",options:["grow","shrink","stretch","widen"],answer:1},
+ {q:"\"Fragile\" means:",options:["strong","easily broken","heavy","fast"],answer:1},
+ {q:"The root \"aqua\" relates to:",options:["fire","water","air","earth"],answer:1},
+ {q:"\"Reluctant\" means:",options:["eager","unwilling","happy","quick"],answer:1},
+ {q:"Synonym of \"enormous\":",options:["tiny","huge","average","narrow"],answer:1},
+ {q:"\"Optimistic\" means:",options:["hopeful","gloomy","angry","tired"],answer:0},
+ {q:"Antonym of \"increase\":",options:["raise","decrease","add","grow"],answer:1},
+ {q:"\"Vital\" means:",options:["unimportant","essential","colourful","late"],answer:1},
+ {q:"The suffix \"-less\" means:",options:["full of","without","again","before"],answer:1},
+ {q:"\"Curious\" means:",options:["bored","eager to learn","sleepy","angry"],answer:1}
+];
+const WRITING_PRACTICE_PROMPTS=[
+ "Write a short paragraph (at least 40 words) about a place you would like to visit and why.",
+ "Describe your typical school day. Use a topic sentence and at least three details.",
+ "Do you think students should have longer breaks? Give your opinion with two reasons.",
+ "Write about a time you helped someone. What happened, and how did you feel?",
+ "Describe your favourite season using sensory details (sights, sounds and smells)."
+];
+function exRnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function exPickN(arr,k){const c=arr.slice(),o=[];while(o.length<k&&c.length)o.push(c.splice(exRnd(0,c.length-1),1)[0]);return o;}
+function genMath(strand){
+  const items=[];
+  for(let i=0;i<5;i++){
+    if(strand.indexOf("Number")>=0){
+      const t=exRnd(0,3);
+      if(t===0){const a=exRnd(12,99),b=exRnd(12,99);items.push({q:`${a} + ${b} = ?`,answer:a+b});}
+      else if(t===1){const a=exRnd(50,99),b=exRnd(10,49);items.push({q:`${a} − ${b} = ?`,answer:a-b});}
+      else if(t===2){const a=exRnd(3,12),b=exRnd(3,12);items.push({q:`${a} × ${b} = ?`,answer:a*b});}
+      else {const b=exRnd(2,9),x=exRnd(2,12);items.push({q:`${b*x} ÷ ${b} = ?`,answer:x});}
+    } else if(strand.indexOf("Algebra")>=0){
+      const a=exRnd(2,6),x=exRnd(1,9),b=exRnd(1,9);items.push({q:`Solve for x:  ${a}x + ${b} = ${a*x+b}`,answer:x});
+    } else if(strand.indexOf("Geometry")>=0){
+      const t=exRnd(0,2);
+      if(t===0){const w=exRnd(3,12),hh=exRnd(3,12);items.push({q:`Area of a rectangle ${w} × ${hh} = ?`,answer:w*hh});}
+      else if(t===1){const w=exRnd(3,12),hh=exRnd(3,12);items.push({q:`Perimeter of a rectangle ${w} × ${hh} = ?`,answer:2*(w+hh)});}
+      else {const b=exRnd(4,12),hh=exRnd(2,10);items.push({q:`Area of a triangle with base ${b} and height ${hh} = ?`,answer:b*hh/2});}
+    } else {
+      const arr=Array.from({length:4},()=>exRnd(2,20));const sum=arr.reduce((a,b)=>a+b,0);
+      items.push({q:`Find the mean of ${arr.join(", ")}`,answer:Math.round(sum/4*100)/100});
+    }
+  }
+  return items;
+}
+function buildExercise(skill){
+  if(skill==="Reading"){const p=READING_PASSAGES[exRnd(0,READING_PASSAGES.length-1)];return {type:"mcq",intro:`<b>${p.title}</b><br>${p.text}`,items:p.qs};}
+  if(skill==="Grammar")return {type:"mcq",items:exPickN(GRAMMAR_POOL,5)};
+  if(skill==="Vocabulary")return {type:"mcq",items:exPickN(VOCAB_POOL,5)};
+  if(skill==="Writing")return {type:"writing",prompt:WRITING_PRACTICE_PROMPTS[exRnd(0,WRITING_PRACTICE_PROMPTS.length-1)]};
+  return {type:"mathinput",items:genMath(skill)};
+}
+let EX=null;
+function launchExercise(key,skill){ if(READONLY) return; EX={key,skill,def:buildExercise(skill),resp:{},submitted:false}; renderExercise(); lockdownStart(); }
+function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
+function exInput(i,v){ EX.resp[i]=v; }
+function exWrite(v){ EX.resp.text=v; }
+function submitExercise(){
+  const d=EX.def;
+  if(d.type==="mcq"){let c=0; d.items.forEach((it,i)=>{ if(EX.resp[i]===it.answer)c++; }); EX.correct=c; EX.total=d.items.length; EX.score=Math.round(c/d.items.length*100);}
+  else if(d.type==="mathinput"){let c=0; d.items.forEach((it,i)=>{ const v=parseFloat(String(EX.resp[i]==null?"":EX.resp[i]).replace(/[^0-9.\-]/g,"")); if(!isNaN(v)&&Math.abs(v-it.answer)<0.02)c++; }); EX.correct=c; EX.total=d.items.length; EX.score=Math.round(c/d.items.length*100);}
+  else { const t=(EX.resp.text||""); EX.words=t.trim()?t.trim().split(/\s+/).length:0; EX.score=writingScore(t); }
+  EX.submitted=true; renderExercise();
+}
+function finishExercise(){ if(EX){ S.taskDone[EX.key]=true; save(); } closeExercise(); render(); }
+function closeExercise(){ lockdownEnd(); EX=null; const m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
+function renderExercise(){
+  const m=document.getElementById("exModal"); const d=EX.def; let body="";
+  if(d.type==="writing"){
+    body=`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
+      <textarea oninput="exWrite(this.value)" rows="8" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(EX.resp.text||"").replace(/</g,"&lt;")}</textarea>`;
+  } else {
+    if(d.intro) body+=`<div class="exq" style="background:#f9fbfc">${d.intro}</div>`;
+    if(d.type==="mcq"){
+      d.items.forEach((it,i)=>{
+        body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">Q${i+1}. ${it.q}</div>`;
+        it.options.forEach((o,oi)=>{
+          let cls="opt"; if(EX.resp[i]===oi)cls+=" sel";
+          if(EX.submitted){ if(oi===it.answer)cls+=" exok"; else if(EX.resp[i]===oi)cls+=" exbad"; }
+          body+=`<label class="${cls}" onclick="exPick(${i},${oi})">${o}</label>`;
+        });
+        body+=`</div>`;
+      });
+    } else {
+      d.items.forEach((it,i)=>{
+        let mark="";
+        if(EX.submitted){ const v=parseFloat(String(EX.resp[i]==null?"":EX.resp[i]).replace(/[^0-9.\-]/g,"")); const ok=!isNaN(v)&&Math.abs(v-it.answer)<0.02; mark=` <span style="font-weight:700;color:${ok?'var(--ok)':'var(--red)'}">${ok?'✓':'✗ ('+it.answer+')'}</span>`; }
+        body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">Q${i+1}. ${it.q}</div>
+          <input ${EX.submitted?"disabled":""} value="${EX.resp[i]!=null?EX.resp[i]:""}" oninput="exInput(${i},this.value)" placeholder="Your answer" style="max-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">${mark}</div>`;
+      });
+    }
+  }
+  let footer="";
+  if(!EX.submitted){ footer=`<button class="btn gold" onclick="submitExercise()">Check answers</button><button class="btn ghost" onclick="closeExercise()">Cancel</button>`; }
+  else{
+    const msg = d.type==="writing"
+      ? `You wrote <b>${EX.words}</b> words — provisional score <b>${EX.score}%</b> (your teacher gives the final mark).`
+      : `You scored <b>${EX.correct}/${EX.total}</b> &nbsp;(<b>${EX.score}%</b>).`;
+    footer=`<div class="notice" style="margin:0;background:${EX.score>=60?'#ccfbf1':'#fef3c7'};border-color:#cbd5e1;flex:1 1 100%">${msg} ${EX.score>=60?'Great work! 🎉':'Keep practising — try again any time.'}</div>
+      <button class="btn" onclick="finishExercise()">✓ Finish &amp; mark complete</button>
+      <button class="btn ghost" onclick="closeExercise()">Close</button>`;
+  }
+  m.innerHTML=`<div class="ovl"><div class="ex">
+    <div class="flex-between"><h2 style="margin:0">Practice — ${EX.skill}</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
+    <p class="sub">Complete the activity below. When you finish, it is ticked off and your progress updates automatically.</p>
+    ${body}
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">${footer}</div>
+  </div></div>`;
+  m.style.display="block";
+}
+
+/* ---- PWA: inline icon + manifest (works in browser; harmless in Electron) ---- */
+const ADEPTLY_ICON="data:image/png;base64,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";
+(function(){
+  try{
+    var base=location.href, dir=base.replace(/[^\/]*$/,"");
+    var mani={name:"Adeptly — Curriculum Diagnostic & Skill Development",short_name:"Adeptly",start_url:base,scope:dir,display:"standalone",background_color:"#4f46e5",theme_color:"#4f46e5",icons:[{src:ADEPTLY_ICON,sizes:"512x512",type:"image/png",purpose:"any"},{src:ADEPTLY_ICON,sizes:"512x512",type:"image/png",purpose:"maskable"}]};
+    var m=document.createElement("link");m.rel="manifest";m.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(mani));document.head.appendChild(m);
+    var a=document.createElement("link");a.rel="apple-touch-icon";a.href=ADEPTLY_ICON;document.head.appendChild(a);
+    var f=document.createElement("link");f.rel="icon";f.href=ADEPTLY_ICON;document.head.appendChild(f);
+  }catch(e){}
+})();
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt", e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const b=document.getElementById("installBtn"); if(b) b.style.display="inline-block";
+});
+var ib=document.getElementById("installBtn");
+if(ib) ib.addEventListener("click", async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt(); await deferredPrompt.userChoice;
+  deferredPrompt=null; ib.style.display="none";
+});
+window.addEventListener("appinstalled", ()=>{ const b=document.getElementById("installBtn"); if(b)b.style.display="none"; });
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+
+fbAuth.onAuthStateChanged(function(user){
+  _unsub.forEach(u=>{try{u()}catch(e){}}); _unsub=[];
+  if(!user){ AUTH=null; CACHE={assignments:[],classes:[],tests:[]}; S=freshState(); render(); return; }
+  db.collection("users").doc(user.uid).get().then(doc=>{
+    AUTH=Object.assign({uid:user.uid,email:(user.email||"").toLowerCase()}, doc.exists?doc.data():{role:"student",name:user.email});
+    CACHE={assignments:[],classes:[],tests:[]};
+    startListeners();
+    if(AUTH.role==="student") loadStateForUser();
+    render();
+  }).catch(e=>{ console.warn(e); render(); });
+});
+render();
+</script>
+</body>
+</html>
