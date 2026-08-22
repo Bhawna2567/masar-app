@@ -2,36 +2,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // An admin is any signed-in user whose own profile has  admin: true.
-    function isAdmin() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
-    }
-
     // ---- Profiles ----
-    // A user can read their own profile; an admin can read everyone's.
-    // A user can edit their own profile; an admin can edit anyone's (e.g. block/unblock).
     match /users/{uid} {
-      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
-      allow create: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null && (request.auth.uid == uid || isAdmin());
-    }
-
-    // ---- Imported tests (teacher's own question library) ----
-    match /tests/{id} {
-      allow read: if request.auth != null && (resource.data.teacherUid == request.auth.uid || isAdmin());
-      allow create: if request.auth != null && request.resource.data.teacherUid == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.teacherUid == request.auth.uid || isAdmin());
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
     }
 
     // ---- Assignments (diagnostics + results + parent phone) ----
-    // Readable by the assigned student, the owning teacher, or an admin.
     match /assignments/{id} {
       allow read: if request.auth != null && (
         resource.data.studentEmail == request.auth.token.email ||
-        resource.data.teacherUid == request.auth.uid ||
-        isAdmin()
+        resource.data.teacherUid == request.auth.uid
       );
       allow create: if request.auth != null && (
         request.resource.data.teacherUid == request.auth.uid ||
@@ -39,18 +20,23 @@ service cloud.firestore {
       );
       allow update: if request.auth != null && (
         resource.data.teacherUid == request.auth.uid ||
-        resource.data.studentEmail == request.auth.token.email ||
-        isAdmin()
+        resource.data.studentEmail == request.auth.token.email
       );
-      allow delete: if request.auth != null && (resource.data.teacherUid == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
+    }
+
+    // ---- Imported tests (teacher's own question library) ----
+    match /tests/{id} {
+      allow read: if request.auth != null && resource.data.teacherUid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.teacherUid == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
     }
 
     // ---- Classes ----
-    // Any signed-in user can read (a student looks up a class by its join code).
     match /classes/{id} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.teacherUid == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.teacherUid == request.auth.uid || isAdmin());
+      allow update, delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
     }
   }
 }
