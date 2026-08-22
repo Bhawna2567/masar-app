@@ -1140,7 +1140,7 @@ function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
   const g=S.student.prevGrade, subj=S.student.subject;
   var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
-  if(subj==="English" && bank){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return cq.concat(bank); }
+  if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
   return bank;
 }
 function viewDiagnostic(){
@@ -1157,7 +1157,7 @@ function viewDiagnostic(){
   let html=`<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
     <p class="sub">${S.student.name} is entering ${gLabel(S.student.curGrade)}. This test checks mastery of the prior grade before measuring readiness for the new one.</p>
     ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">This is your <b>Term ${S.curTerm||""}</b> diagnostic — it builds on your <b>Term ${S.prior.term}</b> results (overall ${S.prior.score}%). Your plan continues to target the skills you were still developing.</div>`:""}`;
-  if(S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length) && (QUESTION_BANK[S.student.prevGrade]&&QUESTION_BANK[S.student.prevGrade]["English"])){
+  if(S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length)){
     var _rc=readingCompFor(S.student.prevGrade);
     html+=`<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 14px">
       <h3 style="margin:0 0 6px;font-size:15px">📖 Reading passage — ${_rc.title}</h3>
