@@ -339,7 +339,13 @@ function viewTeacher(){
     +`<button class="btn ${sec==='tests'?'':'ghost'} sm" onclick="setTSection('tests')">📝 Import a test</button>`
     +`<button class="btn ${sec==='settings'?'':'ghost'} sm" onclick="setTSection('settings')">⚙️ Backup &amp; reset</button>`
     +`</div>`;
-  const studentsBody=`<div class="card"><h2>My students</h2><p class="sub">For assigning a diagnostic to an <b>individual</b> student. (For a whole class, use the Classes tab instead.)</p>
+  const studentsBody=`<div class="card"><h2>👁 Preview a diagnostic</h2><p class="sub">See exactly what students will get — including the reading passage — before you assign it.</p>
+    <div class="row"><div class="col"><label>Subject</label><select id="pv_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div>
+      <div class="col"><label>Grade</label><select id="pv_grade">${grades}</select></div>
+      <div class="col"><label>Test</label><select id="pv_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
+    <div style="margin-top:10px"><button class="btn" onclick="previewDiagnostic()">Open preview</button></div>
+  </div>
+  <div class="card"><h2>My students</h2><p class="sub">For assigning a diagnostic to an <b>individual</b> student. (For a whole class, use the Classes tab instead.)</p>
     <table><thead><tr><th>Student</th><th>Diagnostics</th><th>Latest result</th><th>Plan progress</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
     <h3 style="font-size:14px;margin:18px 0 6px">Add a student</h3>
     <div class="row"><div class="col"><label>Name</label><input id="t_sname" placeholder="Student name"></div>
@@ -605,6 +611,27 @@ function saveImportedTest(){
     .catch(function(e){ var m=document.getElementById("imp_msg"); if(m){ m.style.color="var(--red)"; m.textContent=fbErr(e); } });
 }
 function deleteTest(id){ if(!confirm("Delete this imported test? Diagnostics already assigned with it are not affected."))return; db.collection("tests").doc(id).delete().catch(function(e){alert(fbErr(e));}); }
+function previewDiagnostic(){
+  var subj=(document.getElementById("pv_subject")||{}).value||"English";
+  var grade=(document.getElementById("pv_grade")||{}).value||"6";
+  var testId=(document.getElementById("pv_test")||{}).value||"";
+  var ct=testId?teacherTests().find(function(x){return x.id===testId;}):null;
+  var qs, passage=null, title;
+  if(ct){ qs=ct.questions||[]; subj=ct.subject; grade=ct.grade; title=(ct.title||"Imported test")+" (imported)"; }
+  else {
+    var bank=(QUESTION_BANK[grade]&&QUESTION_BANK[grade][subj])?QUESTION_BANK[grade][subj]:null;
+    if(subj==="English"){ var rc=readingCompFor(grade); passage=rc; var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); qs=bank?cq.concat(bank):cq; }
+    else { qs=bank; }
+    title="Diagnostic — "+gLabel(grade)+" "+(subj==="Math"?"Mathematics":"English");
+  }
+  var m=document.getElementById("exModal"); if(!m)return;
+  if(!qs||!qs.length){ m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">Preview</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="muted" style="margin:0">No questions available for this selection yet.</p></div></div>'; m.style.display="block"; return; }
+  var body="";
+  if(passage){ body+='<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px"><b>📖 Reading passage — '+passage.title+'</b><div style="font-size:13px;line-height:1.7;margin-top:6px">'+passage.passage.replace(/</g,"&lt;")+'</div></div>'; }
+  body+=qs.map(function(q,i){ return '<div class="q"><div class="meta">'+(q.skill||"")+'</div><div class="stem">Q'+(i+1)+'. '+((q.q||"")+"").replace(/</g,"&lt;")+'</div>'+(q.options||[]).map(function(o,oi){ return '<label class="opt '+(oi===q.answer?"exok":"")+'">'+(oi===q.answer?"✅ ":"")+(""+o).replace(/</g,"&lt;")+'</label>'; }).join("")+'</div>'; }).join("");
+  m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">👁 Preview — '+title+'</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="sub">'+qs.length+' question(s) · correct answers are highlighted here for you. Students do not see the answers.</p>'+body+'</div></div>';
+  m.style.display="block";
+}
 function importCard(){
   var grades=GRADES.map(function(g){return '<option value="'+g.id+'">'+g.label+'</option>';}).join("");
   var ts=teacherTests();
