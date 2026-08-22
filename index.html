@@ -433,43 +433,73 @@ function teacherCloseStudent(){ VIEWING=null; READONLY=false; S=freshState(); re
    - Soft in-browser measures run regardless (fullscreen, block
      copy/paste/right-click, and flag tab-switching to the teacher).
    ============================================================ */
-var LOCK={active:false, leaves:0, handlers:null};
+var LOCK={active:false, leaves:0, handlers:null, context:null, kicked:false, last:0};
+var MAX_VIOLATIONS=3;
 function ccBridge(){ return (typeof window!=="undefined" && window.ClassCurio) ? window.ClassCurio : null; }
 function inClassCurio(){ return !!ccBridge() || /ClassCurio/i.test((typeof navigator!=="undefined"&&navigator.userAgent)||""); }
 function ccCall(names){ const b=ccBridge(); if(!b)return false; for(var i=0;i<names.length;i++){ var n=names[i]; if(typeof b[n]==="function"){ try{ b[n](); return true; }catch(e){} } } return false; }
-function lockdownStart(){
+function lockdownStart(context){
   if(LOCK.active) return;
   if(!(AUTH&&AUTH.role==="student")||READONLY) return;
-  LOCK.active=true; LOCK.leaves=0;
-  ccCall(["startLockdown","start","lock","enterLockdown","enable"]);
+  LOCK.active=true; LOCK.leaves=0; LOCK.kicked=false; LOCK.last=0; LOCK.context=context||"diagnostic";
+  ccCall(["startLockdown","start","lock","enterLockdown","enable"]);   // real OS screenshot block + kiosk when inside ClassCurio
   try{ var el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen().catch(function(){}); }catch(e){}
   var block=function(e){ e.preventDefault(); return false; };
-  var onLeave=function(){ if(document.hidden){ LOCK.leaves++; flagLeave(); } };
-  var onBlur=function(){ LOCK.leaves++; flagLeave(); };
+  var onLeave=function(){ if(document.hidden){ registerViolation(); } };
+  var onBlur=function(){ showScreenGuard(true); registerViolation(); };
+  var onFocus=function(){ showScreenGuard(false); };
+  var onKey=function(e){ var k=e.key||""; if(k==="PrintScreen" || ((e.metaKey||e.ctrlKey)&&e.shiftKey&&/^[0-9]$/.test(k))){ try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(" "); }catch(_){} registerViolation(); } };
   document.addEventListener("contextmenu",block);
   document.addEventListener("copy",block); document.addEventListener("cut",block); document.addEventListener("paste",block);
   document.addEventListener("visibilitychange",onLeave);
+  document.addEventListener("keyup",onKey);
   window.addEventListener("blur",onBlur);
-  LOCK.handlers={block:block,onLeave:onLeave,onBlur:onBlur};
+  window.addEventListener("focus",onFocus);
+  LOCK.handlers={block:block,onLeave:onLeave,onBlur:onBlur,onFocus:onFocus,onKey:onKey};
   renderLockBadge();
 }
 function lockdownEnd(){
   if(!LOCK.active) return;
   ccCall(["stopLockdown","stop","unlock","exitLockdown","disable"]);
   var h=LOCK.handlers;
-  if(h){ document.removeEventListener("contextmenu",h.block); document.removeEventListener("copy",h.block); document.removeEventListener("cut",h.block); document.removeEventListener("paste",h.block); document.removeEventListener("visibilitychange",h.onLeave); window.removeEventListener("blur",h.onBlur); }
+  if(h){ document.removeEventListener("contextmenu",h.block); document.removeEventListener("copy",h.block); document.removeEventListener("cut",h.block); document.removeEventListener("paste",h.block); document.removeEventListener("visibilitychange",h.onLeave); document.removeEventListener("keyup",h.onKey); window.removeEventListener("blur",h.onBlur); window.removeEventListener("focus",h.onFocus); }
+  showScreenGuard(false);
   try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){}); }catch(e){}
   LOCK.active=false; LOCK.handlers=null; removeLockBadge();
 }
-function flagLeave(){
+function registerViolation(){
+  if(!LOCK.active || LOCK.kicked) return;
+  var now=Date.now(); if(now-LOCK.last<1200) return;   // one action can fire blur+visibilitychange; count once
+  LOCK.last=now; LOCK.leaves++;
   if(AUTH&&AUTH.role==="student"&&S.activeAssignment){ db.collection("assignments").doc(S.activeAssignment).update({leaveCount:LOCK.leaves,lastLeftAt:Date.now()}).catch(function(){}); }
   var b=document.getElementById("lockBadge"); if(b){ var c=b.querySelector(".lk-leaves"); if(c)c.textContent=LOCK.leaves; }
+  if(LOCK.context==="diagnostic"){
+    if(LOCK.leaves>=MAX_VIOLATIONS){ kickOut(); return; }
+    var left=MAX_VIOLATIONS-LOCK.leaves;
+    try{ alert("⚠ Warning "+LOCK.leaves+" of "+MAX_VIOLATIONS+"\n\nLeaving the test, switching tabs, or taking a screenshot is not allowed. After "+left+" more, your test will be submitted automatically and you'll be removed."); }catch(e){}
+  }
+}
+function kickOut(){
+  if(LOCK.kicked) return;
+  LOCK.kicked=true;
+  try{ if(AUTH&&AUTH.role==="student"&&S.activeAssignment){ db.collection("assignments").doc(S.activeAssignment).update({violations:LOCK.leaves,kicked:true,kickedAt:Date.now()}).catch(function(){}); } }catch(e){}
+  try{ if(typeof S!=="undefined" && S.result==null){ grade(); } }catch(e){}   // auto-submit current answers so the attempt is recorded
+  lockdownEnd();
+  try{ alert("You left the test screen "+MAX_VIOLATIONS+" times.\n\nFor test integrity, your diagnostic has been ended and submitted. Please ask your teacher if you need to retake it."); }catch(e){}
+}
+function showScreenGuard(on){
+  var id="scrGuard";
+  if(on){ if(document.getElementById(id))return; var d=document.createElement("div"); d.id=id;
+    d.style.cssText="position:fixed;inset:0;z-index:400;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;padding:24px;flex-direction:column;gap:8px";
+    d.innerHTML="🔒 Return to the test window to continue<br><span style=\"font-size:13px;opacity:.85\">Leaving the test is recorded and counts as a violation.</span>";
+    document.body.appendChild(d);
+  } else { var e=document.getElementById(id); if(e&&e.parentNode)e.parentNode.removeChild(e); }
 }
 function renderLockBadge(){
   removeLockBadge();
   var d=document.createElement("div"); d.id="lockBadge";
   d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:200;background:#0f172a;color:#fff;font-size:12px;text-align:center;padding:6px 10px;letter-spacing:.3px";
-  d.innerHTML="🔒 Secure assessment mode"+(inClassCurio()?" — ClassCurio lockdown active":" — stay on this screen; leaving is recorded")+" · screen exits: <b class=\"lk-leaves\">0</b>";
+  d.innerHTML="🔒 Secure assessment mode"+(inClassCurio()?" — ClassCurio lockdown active":" — stay on this screen")+" · violations: <b class=\"lk-leaves\">0</b> / "+MAX_VIOLATIONS;
   document.body.appendChild(d);
 }
 function removeLockBadge(){ var b=document.getElementById("lockBadge"); if(b&&b.parentNode)b.parentNode.removeChild(b); }
@@ -881,7 +911,8 @@ function viewClass(id){
     const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
     const flag=flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`);
     const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
-    return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}× during assessment</div>`:""}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
+    const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
+    return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
   const benchmark=80;
   const detail=flagged.length?flagged.slice().sort((a,b)=>(a.score||0)-(b.score||0)).map(a=>{
@@ -994,7 +1025,7 @@ function openAssignment(id,completed){
   S.prior=a.prior||null; S.curTerm=a.term||"1";
   S.customQuestions=a.customQuestions||null; S.customTitle=a.customTitle||null;
   S.answers={};S.result=null;S.plan=null;S.taskDone={};S.writeResponse="";S.activeTab="diagnostic";
-  save(); render(); lockdownStart();
+  save(); render(); lockdownStart("diagnostic");
 }
 
 function viewSetup(){
@@ -1039,10 +1070,30 @@ function saveStudent(){
   S.activeTab="diagnostic";save();render();
 }
 
+/* Reading-comprehension passages for the English diagnostic (feeds the Reading skill). */
+var READING_COMP_A={ title:"A Visit to the Oasis",
+  passage:"Layla had never seen an oasis before. As the car bumped along the desert road, she pressed her face to the window, watching the endless golden dunes. Then, quite suddenly, a patch of green appeared on the horizon. Tall date palms swayed around a still, silver pool of water. “People have stopped here for a thousand years,” her grandfather said. “The water comes from deep underground.” Layla dipped her hand into the cool pool and understood why travellers had always been grateful to find such places.",
+  qs:[
+    {q:"Where is Layla travelling?",options:["Through a desert","Across a sea","Inside a city","Up a mountain"],answer:0},
+    {q:"According to her grandfather, where does the oasis water come from?",options:["A nearby river","Deep underground","The rain that day","The sea"],answer:1},
+    {q:"How does Layla feel about the oasis by the end?",options:["Bored","Frightened","Grateful and impressed","Angry"],answer:2},
+    {q:"In the passage, the word “still” (a still, silver pool) means:",options:["moving quickly","calm and not moving","noisy","frozen solid"],answer:1}
+  ]};
+var READING_COMP_B={ title:"The Power of Habit",
+  passage:"Psychologists have long been fascinated by how much of daily life runs on habit rather than conscious choice. Studies suggest that nearly half of our actions each day are habitual — performed automatically, with little deliberate thought. This efficiency frees the mind for more demanding tasks, but it carries a cost: once a habit forms, it can be surprisingly hard to change, because the behaviour no longer depends on motivation. Researchers argue that the most effective way to change a habit is not to rely on willpower alone, but to redesign the cues and routines that trigger it.",
+  qs:[
+    {q:"What is the main idea of the passage?",options:["Habits are always harmful","Much of daily behaviour is automatic and hard to change","Willpower alone easily changes habits","People rarely form habits"],answer:1},
+    {q:"According to the passage, why can habits be hard to change?",options:["They demand constant motivation","They no longer depend on motivation","They are against the law","They only form in childhood"],answer:1},
+    {q:"What do researchers recommend for changing a habit?",options:["Using willpower alone","Redesigning the cues and routines that trigger it","Ignoring it completely","Punishing yourself"],answer:1},
+    {q:"In context, the word “deliberate” most nearly means:",options:["accidental","careful and intentional","slow","public"],answer:1}
+  ]};
+function readingCompFor(grade){ return parseInt(String(grade),10)<=8 ? READING_COMP_A : READING_COMP_B; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
   const g=S.student.prevGrade, subj=S.student.subject;
-  return (QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
+  var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
+  if(subj==="English" && bank){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return cq.concat(bank); }
+  return bank;
 }
 function viewDiagnostic(){
   if(S.result){return `<div class="card"><h2>Diagnostic submitted ✓</h2>
@@ -1058,6 +1109,13 @@ function viewDiagnostic(){
   let html=`<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
     <p class="sub">${S.student.name} is entering ${gLabel(S.student.curGrade)}. This test checks mastery of the prior grade before measuring readiness for the new one.</p>
     ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">This is your <b>Term ${S.curTerm||""}</b> diagnostic — it builds on your <b>Term ${S.prior.term}</b> results (overall ${S.prior.score}%). Your plan continues to target the skills you were still developing.</div>`:""}`;
+  if(S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length) && (QUESTION_BANK[S.student.prevGrade]&&QUESTION_BANK[S.student.prevGrade]["English"])){
+    var _rc=readingCompFor(S.student.prevGrade);
+    html+=`<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 14px">
+      <h3 style="margin:0 0 6px;font-size:15px">📖 Reading passage — ${_rc.title}</h3>
+      <div style="font-size:14px;line-height:1.75">${_rc.passage.replace(/</g,"&lt;")}</div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">Read the passage, then answer the reading questions that follow.</p></div>`;
+  }
   qs.forEach((q,i)=>{
     html+=`<div class="q"><div class="meta">${q.skill}</div><div class="stem">Q${i+1}. ${q.q}</div>`;
     q.options.forEach((o,oi)=>{
@@ -1480,7 +1538,7 @@ function buildExercise(skill){
   return {type:"mathinput",items:genMath(skill)};
 }
 let EX=null;
-function launchExercise(key,skill){ if(READONLY) return; EX={key,skill,def:buildExercise(skill),resp:{},submitted:false}; renderExercise(); lockdownStart(); }
+function launchExercise(key,skill){ if(READONLY) return; EX={key,skill,def:buildExercise(skill),resp:{},submitted:false}; renderExercise(); lockdownStart("activity"); }
 function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
 function exInput(i,v){ EX.resp[i]=v; }
 function exWrite(v){ EX.resp.text=v; }
