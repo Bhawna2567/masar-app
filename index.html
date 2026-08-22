@@ -252,6 +252,10 @@ function render(){
   let inner=(map[S.activeTab]||viewHome)();
   if(VIEWING) inner=`<div class="notice" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">👁 Viewing <b>${VIEWING.studentName}</b>'s dashboard (read-only) <button class="btn ghost sm" onclick="teacherCloseStudent()">← Back to my dashboard</button></div>`+inner;
   v.innerHTML=verifyBanner()+inner;
+  try{
+    if(AUTH.role==="student" && !READONLY && S.activeTab==="diagnostic" && S.student && !S.result){ lockdownStart("diagnostic"); }
+    else if(LOCK.active && LOCK.context==="diagnostic" && (S.activeTab!=="diagnostic" || S.result)){ lockdownEnd(); }
+  }catch(e){}
   window.scrollTo(0,0);
 }
 
@@ -449,20 +453,22 @@ function lockdownStart(context){
   var onBlur=function(){ showScreenGuard(true); registerViolation(); };
   var onFocus=function(){ showScreenGuard(false); };
   var onKey=function(e){ var k=e.key||""; if(k==="PrintScreen" || ((e.metaKey||e.ctrlKey)&&e.shiftKey&&/^[0-9]$/.test(k))){ try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(" "); }catch(_){} registerViolation(); } };
-  document.addEventListener("contextmenu",block);
-  document.addEventListener("copy",block); document.addEventListener("cut",block); document.addEventListener("paste",block);
+  var onKeyDown=function(e){ var k=(e.key||"").toLowerCase(); if((e.metaKey||e.ctrlKey) && ["c","v","x","a","s","p","u"].indexOf(k)>=0){ try{e.preventDefault();}catch(_){} return false; } };
+  document.addEventListener("contextmenu",block,true);
+  document.addEventListener("copy",block,true); document.addEventListener("cut",block,true); document.addEventListener("paste",block,true);
   document.addEventListener("visibilitychange",onLeave);
-  document.addEventListener("keyup",onKey);
+  document.addEventListener("keyup",onKey,true);
+  document.addEventListener("keydown",onKeyDown,true);
   window.addEventListener("blur",onBlur);
   window.addEventListener("focus",onFocus);
-  LOCK.handlers={block:block,onLeave:onLeave,onBlur:onBlur,onFocus:onFocus,onKey:onKey};
+  LOCK.handlers={block:block,onLeave:onLeave,onBlur:onBlur,onFocus:onFocus,onKey:onKey,onKeyDown:onKeyDown};
   renderLockBadge();
 }
 function lockdownEnd(){
   if(!LOCK.active) return;
   ccCall(["stopLockdown","stop","unlock","exitLockdown","disable"]);
   var h=LOCK.handlers;
-  if(h){ document.removeEventListener("contextmenu",h.block); document.removeEventListener("copy",h.block); document.removeEventListener("cut",h.block); document.removeEventListener("paste",h.block); document.removeEventListener("visibilitychange",h.onLeave); document.removeEventListener("keyup",h.onKey); window.removeEventListener("blur",h.onBlur); window.removeEventListener("focus",h.onFocus); }
+  if(h){ document.removeEventListener("contextmenu",h.block,true); document.removeEventListener("copy",h.block,true); document.removeEventListener("cut",h.block,true); document.removeEventListener("paste",h.block,true); document.removeEventListener("visibilitychange",h.onLeave); document.removeEventListener("keyup",h.onKey,true); document.removeEventListener("keydown",h.onKeyDown,true); window.removeEventListener("blur",h.onBlur); window.removeEventListener("focus",h.onFocus); }
   showScreenGuard(false);
   try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){}); }catch(e){}
   LOCK.active=false; LOCK.handlers=null; removeLockBadge();
