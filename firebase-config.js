@@ -11,3 +11,9 @@ var firebaseConfig = {
 // App Check (anti-bot). Paste your reCAPTCHA v3 site key from Firebase Console here,
 // then re-upload this file. Leave as-is to keep App Check off for now.
 var APPCHECK_SITE_KEY = "6LdlFiwtAAAAAK6ctAPdpLuU7J0pCvMF0Au66zl-";
+
+// Admin: the real control is a field  admin: true  on a user's document in Firestore.
+// You can also list emails here to show the Admin menu (database access still needs the
+// admin:true flag). To make yourself admin: Firebase Console → Firestore → users →
+// your user document → add field  admin  (boolean) = true.
+var ADMIN_EMAILS = [];

@@ -2443,3 +2443,7 @@ var WRITING_PROMPTS = {
  "11A": "Write an argumentative response (2 paragraphs) to: \"Schools should replace exams with project-based assessment.\" Make a clear claim, support it with evidence and reasoning, and acknowledge a counterargument.",
  "11G": "Write a short essay giving your opinion on whether young people should do volunteer work. Include an introduction, reasons with examples, and a conclusion."
 };
+
+/* Grade 12 diagnostic banks (added) — reuse the Grade 11 sets so every class has a full test. */
+try{ if(typeof QUESTION_BANK!=="undefined"){ if(QUESTION_BANK["11A"]) QUESTION_BANK["12A"]=QUESTION_BANK["11A"]; if(QUESTION_BANK["11G"]) QUESTION_BANK["12G"]=QUESTION_BANK["11G"]; } }catch(e){}
+try{ if(typeof WRITING_PROMPTS!=="undefined"){ if(WRITING_PROMPTS["11A"]) WRITING_PROMPTS["12A"]=WRITING_PROMPTS["11A"]; if(WRITING_PROMPTS["11G"]) WRITING_PROMPTS["12G"]=WRITING_PROMPTS["11G"]; } }catch(e){}
