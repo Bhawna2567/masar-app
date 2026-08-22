@@ -1077,23 +1077,65 @@ function saveStudent(){
 }
 
 /* Reading-comprehension passages for the English diagnostic (feeds the Reading skill). */
-var READING_COMP_A={ title:"A Visit to the Oasis",
+var READING_COMP={
+ "6":{ title:"A Visit to the Oasis",
   passage:"Layla had never seen an oasis before. As the car bumped along the desert road, she pressed her face to the window, watching the endless golden dunes. Then, quite suddenly, a patch of green appeared on the horizon. Tall date palms swayed around a still, silver pool of water. “People have stopped here for a thousand years,” her grandfather said. “The water comes from deep underground.” Layla dipped her hand into the cool pool and understood why travellers had always been grateful to find such places.",
   qs:[
     {q:"Where is Layla travelling?",options:["Through a desert","Across a sea","Inside a city","Up a mountain"],answer:0},
     {q:"According to her grandfather, where does the oasis water come from?",options:["A nearby river","Deep underground","The rain that day","The sea"],answer:1},
     {q:"How does Layla feel about the oasis by the end?",options:["Bored","Frightened","Grateful and impressed","Angry"],answer:2},
-    {q:"In the passage, the word “still” (a still, silver pool) means:",options:["moving quickly","calm and not moving","noisy","frozen solid"],answer:1}
-  ]};
-var READING_COMP_B={ title:"The Power of Habit",
+    {q:"The word “still” (a still, silver pool) here means:",options:["moving quickly","calm and not moving","noisy","frozen solid"],answer:1}
+  ]},
+ "7":{ title:"The Clever Crow",
+  passage:"In a long, dry summer, a thirsty crow found a tall jug with only a little water at the very bottom. However hard she stretched, her beak could not reach it. The crow did not give up. She noticed small pebbles scattered nearby and, one by one, dropped them into the jug. Slowly the water rose higher and higher, until at last she could drink her fill. The crow flew away content, having solved her problem not with strength, but with patience and clever thinking.",
+  qs:[
+    {q:"What is the main lesson of the passage?",options:["Crows can fly far","Problems can be solved with clever thinking","Summers are dangerous","Water is heavy"],answer:1},
+    {q:"Why couldn't the crow reach the water at first?",options:["The jug was empty","Her beak couldn't reach the low water","The water was frozen","The jug had a lid"],answer:1},
+    {q:"How did the crow raise the water level?",options:["By tipping the jug over","By dropping pebbles into it","By waiting for rain","By calling other crows"],answer:1},
+    {q:"The word “content” in the last line means:",options:["angry","pleased and satisfied","exhausted","still thirsty"],answer:1}
+  ]},
+ "8":{ title:"Coral Reefs",
+  passage:"Coral reefs are among the most colourful and crowded places in the ocean. Although they cover less than one percent of the sea floor, they are home to about a quarter of all marine species. Corals themselves are tiny animals that build hard skeletons, which slowly form the reef over thousands of years. Today many reefs are in danger. When the sea grows too warm, corals lose the colourful algae that feed them and turn white — a process called bleaching. Protecting reefs matters, because so much ocean life depends on them.",
+  qs:[
+    {q:"What is the passage mainly about?",options:["How to scuba dive","Coral reefs and why they matter","Types of algae","Ocean currents"],answer:1},
+    {q:"About how much marine life lives in reefs?",options:["Half of it","About a quarter","One percent","Almost none"],answer:1},
+    {q:"What causes coral bleaching?",options:["Too many fish","Water that is too warm","Heavy rainfall","Lack of sunlight"],answer:1},
+    {q:"The word “crowded” here means:",options:["empty","full of living things","very quiet","extremely cold"],answer:1}
+  ]},
+ "9":{ title:"The Invention of Writing",
+  passage:"For most of human history, knowledge lived only in memory and speech. Writing changed that. First developed by ancient societies to record trade and taxes, written symbols allowed information to be stored outside the human mind and passed accurately across time and distance. This had consequences far beyond accounting: laws could be fixed, stories preserved, and ideas debated by people who had never met. Some thinkers of the time worried that writing would weaken memory. Yet by freeing the mind from the need to remember everything, writing arguably made deeper thinking possible.",
+  qs:[
+    {q:"What is the main idea of the passage?",options:["Writing was first used for poetry","Writing let knowledge be stored and shared beyond memory","Ancient people had weak memories","Trade always leads to conflict"],answer:1},
+    {q:"What was writing first developed to record?",options:["Songs and poems","Trade and taxes","Religious laws","Family histories"],answer:1},
+    {q:"Why did some thinkers worry about writing?",options:["It was expensive","They feared it would weaken memory","It was difficult to read","It caused arguments"],answer:1},
+    {q:"The word “preserved” most nearly means:",options:["destroyed","kept safe over time","translated","forgotten"],answer:1}
+  ]},
+ "10":{ title:"The Rise of Renewable Energy",
+  passage:"As concerns about climate change have grown, renewable sources such as solar and wind power have shifted from the margins to the mainstream. Supporters argue that they generate electricity without the carbon emissions of coal or gas, and that their costs have fallen dramatically over the past decade. Critics counter that the sun does not always shine and the wind does not always blow, making supply less reliable. In response, engineers are developing better batteries to store energy for when it is needed. The debate is no longer whether renewables work, but how quickly they can replace older sources.",
+  qs:[
+    {q:"What is the main idea of the passage?",options:["Renewable energy does not work","Renewables are now mainstream, with debate over how fast they can expand","Batteries are too costly to use","Coal produces no pollution"],answer:1},
+    {q:"What is one criticism of renewables the passage mentions?",options:["They are far too cheap","Their supply can be less reliable","They create heavy pollution","They are banned in most countries"],answer:1},
+    {q:"How are engineers responding to the reliability problem?",options:["Building more coal plants","Developing better batteries to store energy","Ignoring the issue","Reducing electricity use"],answer:1},
+    {q:"The word “mainstream” here means:",options:["rejected by most people","widely accepted and common","kept secret","only temporary"],answer:1}
+  ]},
+ "11":{ title:"The Power of Habit",
   passage:"Psychologists have long been fascinated by how much of daily life runs on habit rather than conscious choice. Studies suggest that nearly half of our actions each day are habitual — performed automatically, with little deliberate thought. This efficiency frees the mind for more demanding tasks, but it carries a cost: once a habit forms, it can be surprisingly hard to change, because the behaviour no longer depends on motivation. Researchers argue that the most effective way to change a habit is not to rely on willpower alone, but to redesign the cues and routines that trigger it.",
   qs:[
     {q:"What is the main idea of the passage?",options:["Habits are always harmful","Much of daily behaviour is automatic and hard to change","Willpower alone easily changes habits","People rarely form habits"],answer:1},
     {q:"According to the passage, why can habits be hard to change?",options:["They demand constant motivation","They no longer depend on motivation","They are against the law","They only form in childhood"],answer:1},
     {q:"What do researchers recommend for changing a habit?",options:["Using willpower alone","Redesigning the cues and routines that trigger it","Ignoring it completely","Punishing yourself"],answer:1},
-    {q:"In context, the word “deliberate” most nearly means:",options:["accidental","careful and intentional","slow","public"],answer:1}
-  ]};
-function readingCompFor(grade){ return parseInt(String(grade),10)<=8 ? READING_COMP_A : READING_COMP_B; }
+    {q:"The word “deliberate” most nearly means:",options:["accidental","careful and intentional","slow","public"],answer:1}
+  ]},
+ "12":{ title:"Artificial Intelligence and Work",
+  passage:"Few technologies have provoked as much hope and anxiety as artificial intelligence. Optimists point to its capacity to automate tedious tasks, accelerate scientific discovery, and widen access to expertise once reserved for specialists. Sceptics warn of disrupted labour markets, embedded bias, and an over-reliance on systems that few people fully understand. What most analysts agree on is subtler: AI is unlikely to simply replace human workers wholesale, but rather to reshape the skills those jobs demand. The workers who thrive, they suggest, will be those who learn to collaborate with these tools rather than compete against them.",
+  qs:[
+    {q:"What is the main idea of the passage?",options:["AI will soon replace all human workers","AI is likely to reshape the skills jobs require rather than simply replace workers","AI carries no real risks","AI cannot automate any tasks"],answer:1},
+    {q:"What do sceptics warn about?",options:["Cheaper products","Disrupted labour markets and embedded bias","Faster internet speeds","Improved memory"],answer:1},
+    {q:"According to analysts, who will thrive with AI?",options:["Those who avoid it entirely","Those who learn to collaborate with the tools","Those who compete against it","Those who resist any change"],answer:1},
+    {q:"The word “provoked” most nearly means:",options:["prevented","stirred up or caused","reduced","concealed"],answer:1}
+  ]}
+};
+function readingCompFor(grade){ var n=parseInt(String(grade),10); return READING_COMP[String(n)] || READING_COMP["6"]; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
   const g=S.student.prevGrade, subj=S.student.subject;
