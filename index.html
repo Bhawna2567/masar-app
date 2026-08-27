@@ -133,6 +133,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="firebase-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}catch(e){}</script>
 <script>
 /* ============================================================
@@ -142,6 +143,7 @@ if (typeof CURRICULUM === "undefined") { window.CURRICULUM = {}; }
 if (typeof WRITING_PROMPTS === "undefined") { var WRITING_PROMPTS = {}; }
 
 const GRADES = [
+  {id:"5",label:"Grade 5"},
   {id:"6",label:"Grade 6"},{id:"7",label:"Grade 7"},{id:"8",label:"Grade 8"},
   {id:"9A",label:"Grade 9 Advanced"},{id:"9G",label:"Grade 9 General"},
   {id:"10A",label:"Grade 10 Advanced"},{id:"10G",label:"Grade 10 General"},
@@ -345,7 +347,8 @@ function viewTeacher(){
     <div class="row"><div class="col"><label>Subject</label><select id="pv_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div>
       <div class="col"><label>Grade</label><select id="pv_grade">${grades}</select></div>
       <div class="col"><label>Test</label><select id="pv_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
-    <div style="margin-top:10px"><button class="btn" onclick="previewDiagnostic()">Open preview</button></div>
+    <div style="margin-top:10px"><button class="btn" onclick="previewDiagnostic()">Open preview</button> <button class="btn gold" onclick="downloadDiagnosticPDF()">⬇ Download as PDF</button></div>
+    <p class="muted" style="font-size:12px;margin-top:8px">The PDF includes the full test (and reading passage) plus an answer key on the last page for you.</p>
   </div>
   <div class="card"><h2>My students</h2><p class="sub">For assigning a diagnostic to an <b>individual</b> student. (For a whole class, use the Classes tab instead.)</p>
     <table><thead><tr><th>Student</th><th>Diagnostics</th><th>Latest result</th><th>Plan progress</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
@@ -688,7 +691,7 @@ function saveImportedTest(){
     .catch(function(e){ var m=document.getElementById("imp_msg"); if(m){ m.style.color="var(--red)"; m.textContent=fbErr(e); } });
 }
 function deleteTest(id){ if(!confirm("Delete this imported test? Diagnostics already assigned with it are not affected."))return; db.collection("tests").doc(id).delete().catch(function(e){alert(fbErr(e));}); }
-function previewDiagnostic(){
+function buildDiagnosticData(){
   var subj=(document.getElementById("pv_subject")||{}).value||"English";
   var grade=(document.getElementById("pv_grade")||{}).value||"6";
   var testId=(document.getElementById("pv_test")||{}).value||"";
@@ -701,12 +704,42 @@ function previewDiagnostic(){
     else { qs=bank; }
     title="Diagnostic — "+gLabel(grade)+" "+(subj==="Math"?"Mathematics":"English");
   }
+  return {subj:subj,grade:grade,qs:qs,passage:passage,title:title};
+}
+function downloadDiagnosticPDF(){
+  try{
+    var d=buildDiagnosticData();
+    if(!d.qs||!d.qs.length){ alert("No questions available for this selection yet."); return; }
+    var JS=(window.jspdf&&window.jspdf.jsPDF); if(!JS){ alert("The PDF writer didn't load — check your internet and try again."); return; }
+    var doc=new JS({unit:"pt",format:"a4"}); var W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+    var M=48, x=M, y=M, LW=W-2*M; var LET=["A","B","C","D","E","F"];
+    function nl(h){ y+=h; if(y>H-M){ doc.addPage(); y=M; } }
+    function wrap(txt,size,style,indent){ doc.setFont("helvetica",style||"normal"); doc.setFontSize(size);
+      var lines=doc.splitTextToSize(String(txt),LW-(indent||0)); for(var i=0;i<lines.length;i++){ if(y>H-M){doc.addPage();y=M;} doc.text(lines[i],x+(indent||0),y); y+=size+3; } }
+    doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.text("Adeptly",x,y); y+=20;
+    wrap(d.title,13,"bold",0); wrap("Name: ______________________________     Class: ____________     Date: __________",10,"normal",0); nl(6);
+    doc.setDrawColor(200); doc.line(x,y,x+LW,y); nl(12);
+    if(d.passage){ wrap("Reading passage — "+d.passage.title,12,"bold",0); nl(2); wrap(d.passage.passage,11,"normal",0); nl(6);
+      wrap("Read the passage, then answer the questions below.",9,"italic",0); nl(10); }
+    d.qs.forEach(function(q,i){ wrap("Q"+(i+1)+". "+(q.q||""),11,"bold",0); nl(1);
+      (q.options||[]).forEach(function(o,oi){ wrap(LET[oi]+")  "+o,10,"normal",14); }); nl(8); });
+    // Answer key (teacher copy) on a fresh page
+    doc.addPage(); y=M; x=M;
+    doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.text("Answer Key — teacher copy",x,y); y+=22;
+    var keyLine=""; d.qs.forEach(function(q,i){ keyLine+="Q"+(i+1)+": "+(LET[q.answer]||"?")+"    "; if((i+1)%6===0){ wrap(keyLine,11,"normal",0); keyLine=""; } });
+    if(keyLine) wrap(keyLine,11,"normal",0);
+    var fname=("Adeptly diagnostic - "+d.title).replace(/[^a-z0-9 \-]/gi,"").slice(0,80)+".pdf";
+    doc.save(fname);
+  }catch(e){ alert("Sorry — couldn't build the PDF: "+((e&&e.message)||e)); }
+}
+function previewDiagnostic(){
+  var d=buildDiagnosticData(); var subj=d.subj, grade=d.grade, qs=d.qs, passage=d.passage, title=d.title;
   var m=document.getElementById("exModal"); if(!m)return;
   if(!qs||!qs.length){ m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">Preview</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="muted" style="margin:0">No questions available for this selection yet.</p></div></div>'; m.style.display="block"; return; }
   var body="";
   if(passage){ body+='<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px"><b>📖 Reading passage — '+passage.title+'</b><div style="font-size:13px;line-height:1.7;margin-top:6px">'+passage.passage.replace(/</g,"&lt;")+'</div></div>'; }
   body+=qs.map(function(q,i){ return '<div class="q"><div class="meta">'+(q.skill||"")+'</div><div class="stem">Q'+(i+1)+'. '+((q.q||"")+"").replace(/</g,"&lt;")+'</div>'+(q.options||[]).map(function(o,oi){ return '<label class="opt '+(oi===q.answer?"exok":"")+'">'+(oi===q.answer?"✅ ":"")+(""+o).replace(/</g,"&lt;")+'</label>'; }).join("")+'</div>'; }).join("");
-  m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">👁 Preview — '+title+'</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="sub">'+qs.length+' question(s) · correct answers are highlighted here for you. Students do not see the answers.</p>'+body+'</div></div>';
+  m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">👁 Preview — '+title+'</h2><div><button class="btn gold sm" style="margin-right:6px" onclick="downloadDiagnosticPDF()">⬇ Download PDF</button><button class="btn ghost sm" onclick="closeExercise()">✕</button></div></div><p class="sub">'+qs.length+' question(s) · correct answers are highlighted here for you. Students do not see the answers.</p>'+body+'</div></div>';
   m.style.display="block";
 }
 function importCard(){
@@ -1182,13 +1215,29 @@ function saveStudent(){
 
 /* Reading-comprehension passages for the English diagnostic (feeds the Reading skill). */
 var READING_COMP={
+ "5":{ title:"The Lost Hikers",
+  passage:"Sara and her brother Ali were hiking with their class in the Hajar Mountains. While the others stopped to rest, the two of them wandered a little further to look at a bright blue bird. When they turned around, the group was gone. The narrow path split in two directions, and they were not sure which way to go. Ali wanted to run and search, but Sara remembered their teacher's advice: if you are lost, stay calm and stay in one place. They sat on a large rock, blew their safety whistle three times, and waited. Before long, their teacher and the class appeared around the bend. Sara was glad she had made a wise decision instead of a fast one.",
+  qs:[
+    {q:"Where were Sara and Ali hiking?",options:["By the sea","In the Hajar Mountains","In a city park","In a forest"],answer:1},
+    {q:"Why did they wander away from the group?",options:["To find water","To look at a bright blue bird","To rest","To eat lunch"],answer:1},
+    {q:"What was the problem in the story?",options:["They lost their bags","They got lost from the group","They were hungry","It started to rain"],answer:1},
+    {q:"What advice did Sara remember from her teacher?",options:["Run and search quickly","If you are lost, stay calm and stay in one place","Shout for help and keep walking","Climb higher to see"],answer:1},
+    {q:"How did they signal for help?",options:["They lit a fire","They blew a safety whistle three times","They waved a flag","They called on a phone"],answer:1},
+    {q:"The word 'wise' in the last sentence means:",options:["fast","sensible and smart","funny","loud"],answer:1},
+    {q:"What is the main lesson of the passage?",options:["Birds are dangerous","Staying calm and making good decisions keeps you safe","Never go hiking","Brothers and sisters argue"],answer:1},
+    {q:"How did Sara feel at the end?",options:["Angry","Glad about her good decision","Frightened","Bored"],answer:1}
+  ]},
  "6":{ title:"A Visit to the Oasis",
   passage:"Layla had never seen an oasis before. As the car bumped along the desert road, she pressed her face to the window, watching the endless golden dunes. Then, quite suddenly, a patch of green appeared on the horizon. Tall date palms swayed around a still, silver pool of water. “People have stopped here for a thousand years,” her grandfather said. “The water comes from deep underground.” Layla dipped her hand into the cool pool and understood why travellers had always been grateful to find such places.",
   qs:[
     {q:"Where is Layla travelling?",options:["Through a desert","Across a sea","Inside a city","Up a mountain"],answer:0},
     {q:"According to her grandfather, where does the oasis water come from?",options:["A nearby river","Deep underground","The rain that day","The sea"],answer:1},
     {q:"How does Layla feel about the oasis by the end?",options:["Bored","Frightened","Grateful and impressed","Angry"],answer:2},
-    {q:"The word “still” (a still, silver pool) here means:",options:["moving quickly","calm and not moving","noisy","frozen solid"],answer:1}
+    {q:"The word “still” (a still, silver pool) here means:",options:["moving quickly","calm and not moving","noisy","frozen solid"],answer:1},
+    {q:"What did Layla see first on the horizon?",options:["A patch of green","A city","A river","A mountain"],answer:0},
+    {q:"What grew around the pool of water?",options:["Tall date palms","Pine trees","Cactus flowers","Nothing"],answer:0},
+    {q:"For about how long have people stopped at this oasis?",options:["A few days","About a hundred years","About a thousand years","Only recently"],answer:2},
+    {q:"What is the main idea of the passage?",options:["Deserts have no water","Finding an oasis has always been precious to travellers","Cars break down in deserts","Layla dislikes travelling"],answer:1}
   ]},
  "7":{ title:"The Clever Crow",
   passage:"In a long, dry summer, a thirsty crow found a tall jug with only a little water at the very bottom. However hard she stretched, her beak could not reach it. The crow did not give up. She noticed small pebbles scattered nearby and, one by one, dropped them into the jug. Slowly the water rose higher and higher, until at last she could drink her fill. The crow flew away content, having solved her problem not with strength, but with patience and clever thinking.",
@@ -1196,7 +1245,11 @@ var READING_COMP={
     {q:"What is the main lesson of the passage?",options:["Crows can fly far","Problems can be solved with clever thinking","Summers are dangerous","Water is heavy"],answer:1},
     {q:"Why couldn't the crow reach the water at first?",options:["The jug was empty","Her beak couldn't reach the low water","The water was frozen","The jug had a lid"],answer:1},
     {q:"How did the crow raise the water level?",options:["By tipping the jug over","By dropping pebbles into it","By waiting for rain","By calling other crows"],answer:1},
-    {q:"The word “content” in the last line means:",options:["angry","pleased and satisfied","exhausted","still thirsty"],answer:1}
+    {q:"The word “content” in the last line means:",options:["angry","pleased and satisfied","exhausted","still thirsty"],answer:1},
+    {q:"What season was it in the story?",options:["A cold winter","A long, dry summer","A rainy spring","A windy autumn"],answer:1},
+    {q:"What did the crow notice nearby?",options:["Other birds","Small pebbles","A river","A farmer"],answer:1},
+    {q:"Which two qualities helped the crow succeed?",options:["Speed and strength","Patience and clever thinking","Luck and noise","Anger and force"],answer:1},
+    {q:"How did the water finally reach the top?",options:["It rained into the jug","The pebbles raised the water level","The crow tipped the jug","Another crow helped"],answer:1}
   ]},
  "8":{ title:"Coral Reefs",
   passage:"Coral reefs are among the most colourful and crowded places in the ocean. Although they cover less than one percent of the sea floor, they are home to about a quarter of all marine species. Corals themselves are tiny animals that build hard skeletons, which slowly form the reef over thousands of years. Today many reefs are in danger. When the sea grows too warm, corals lose the colourful algae that feed them and turn white — a process called bleaching. Protecting reefs matters, because so much ocean life depends on them.",
@@ -1204,7 +1257,11 @@ var READING_COMP={
     {q:"What is the passage mainly about?",options:["How to scuba dive","Coral reefs and why they matter","Types of algae","Ocean currents"],answer:1},
     {q:"About how much marine life lives in reefs?",options:["Half of it","About a quarter","One percent","Almost none"],answer:1},
     {q:"What causes coral bleaching?",options:["Too many fish","Water that is too warm","Heavy rainfall","Lack of sunlight"],answer:1},
-    {q:"The word “crowded” here means:",options:["empty","full of living things","very quiet","extremely cold"],answer:1}
+    {q:"The word “crowded” here means:",options:["empty","full of living things","very quiet","extremely cold"],answer:1},
+    {q:"Corals are actually:",options:["plants","tiny animals","rocks","types of algae"],answer:1},
+    {q:"How much of the sea floor do reefs cover?",options:["Less than one percent","About a quarter","Half","Most of it"],answer:0},
+    {q:"When corals bleach, they turn:",options:["green","white","blue","red"],answer:1},
+    {q:"Why does protecting reefs matter, according to the text?",options:["They are pretty to look at","So much ocean life depends on them","They produce oil","They are easy to build"],answer:1}
   ]},
  "9":{ title:"The Invention of Writing",
   passage:"For most of human history, knowledge lived only in memory and speech. Writing changed that. First developed by ancient societies to record trade and taxes, written symbols allowed information to be stored outside the human mind and passed accurately across time and distance. This had consequences far beyond accounting: laws could be fixed, stories preserved, and ideas debated by people who had never met. Some thinkers of the time worried that writing would weaken memory. Yet by freeing the mind from the need to remember everything, writing arguably made deeper thinking possible.",
@@ -1212,7 +1269,11 @@ var READING_COMP={
     {q:"What is the main idea of the passage?",options:["Writing was first used for poetry","Writing let knowledge be stored and shared beyond memory","Ancient people had weak memories","Trade always leads to conflict"],answer:1},
     {q:"What was writing first developed to record?",options:["Songs and poems","Trade and taxes","Religious laws","Family histories"],answer:1},
     {q:"Why did some thinkers worry about writing?",options:["It was expensive","They feared it would weaken memory","It was difficult to read","It caused arguments"],answer:1},
-    {q:"The word “preserved” most nearly means:",options:["destroyed","kept safe over time","translated","forgotten"],answer:1}
+    {q:"The word “preserved” most nearly means:",options:["destroyed","kept safe over time","translated","forgotten"],answer:1},
+    {q:"Before writing, how did knowledge mainly survive?",options:["In memory and speech","In printed books","In pictures only","In museums"],answer:0},
+    {q:"According to the passage, writing allowed laws to be:",options:["ignored","fixed and recorded","spoken only","hidden"],answer:1},
+    {q:"How does the author view writing's effect on thinking?",options:["It made thinking worse","It may have made deeper thinking possible","It had no effect","It stopped debate"],answer:1},
+    {q:"Written symbols let information pass across:",options:["only short distances","time and distance","one city only","spoken language alone"],answer:1}
   ]},
  "10":{ title:"The Rise of Renewable Energy",
   passage:"As concerns about climate change have grown, renewable sources such as solar and wind power have shifted from the margins to the mainstream. Supporters argue that they generate electricity without the carbon emissions of coal or gas, and that their costs have fallen dramatically over the past decade. Critics counter that the sun does not always shine and the wind does not always blow, making supply less reliable. In response, engineers are developing better batteries to store energy for when it is needed. The debate is no longer whether renewables work, but how quickly they can replace older sources.",
@@ -1220,7 +1281,11 @@ var READING_COMP={
     {q:"What is the main idea of the passage?",options:["Renewable energy does not work","Renewables are now mainstream, with debate over how fast they can expand","Batteries are too costly to use","Coal produces no pollution"],answer:1},
     {q:"What is one criticism of renewables the passage mentions?",options:["They are far too cheap","Their supply can be less reliable","They create heavy pollution","They are banned in most countries"],answer:1},
     {q:"How are engineers responding to the reliability problem?",options:["Building more coal plants","Developing better batteries to store energy","Ignoring the issue","Reducing electricity use"],answer:1},
-    {q:"The word “mainstream” here means:",options:["rejected by most people","widely accepted and common","kept secret","only temporary"],answer:1}
+    {q:"The word “mainstream” here means:",options:["rejected by most people","widely accepted and common","kept secret","only temporary"],answer:1},
+    {q:"According to supporters, renewables generate electricity without:",options:["any cost","carbon emissions","sunlight","wind"],answer:1},
+    {q:"What has happened to the cost of renewables over the past decade?",options:["It has risen sharply","It has fallen dramatically","It has stayed the same","It is unknown"],answer:1},
+    {q:"Two examples of renewable sources named are:",options:["coal and gas","solar and wind","oil and wood","nuclear and coal"],answer:1},
+    {q:"The author says the debate is now about:",options:["whether renewables work at all","how quickly they can replace older sources","who invented them","where the sun shines"],answer:1}
   ]},
  "11":{ title:"The Power of Habit",
   passage:"Psychologists have long been fascinated by how much of daily life runs on habit rather than conscious choice. Studies suggest that nearly half of our actions each day are habitual — performed automatically, with little deliberate thought. This efficiency frees the mind for more demanding tasks, but it carries a cost: once a habit forms, it can be surprisingly hard to change, because the behaviour no longer depends on motivation. Researchers argue that the most effective way to change a habit is not to rely on willpower alone, but to redesign the cues and routines that trigger it.",
@@ -1228,7 +1293,11 @@ var READING_COMP={
     {q:"What is the main idea of the passage?",options:["Habits are always harmful","Much of daily behaviour is automatic and hard to change","Willpower alone easily changes habits","People rarely form habits"],answer:1},
     {q:"According to the passage, why can habits be hard to change?",options:["They demand constant motivation","They no longer depend on motivation","They are against the law","They only form in childhood"],answer:1},
     {q:"What do researchers recommend for changing a habit?",options:["Using willpower alone","Redesigning the cues and routines that trigger it","Ignoring it completely","Punishing yourself"],answer:1},
-    {q:"The word “deliberate” most nearly means:",options:["accidental","careful and intentional","slow","public"],answer:1}
+    {q:"The word “deliberate” most nearly means:",options:["accidental","careful and intentional","slow","public"],answer:1},
+    {q:"About how much of our daily actions are habitual, according to studies?",options:["Nearly half","A tenth","Almost none","All of them"],answer:0},
+    {q:"One benefit of habits mentioned is that they:",options:["free the mind for more demanding tasks","use lots of energy","remove all choice","always improve health"],answer:0},
+    {q:"The 'cost' of habits described in the passage is that they:",options:["cost money","can be hard to change once formed","make people tired","require willpower to start"],answer:1},
+    {q:"The overall tone of the passage is:",options:["informative and analytical","angry","humorous","fearful"],answer:0}
   ]},
  "12":{ title:"Artificial Intelligence and Work",
   passage:"Few technologies have provoked as much hope and anxiety as artificial intelligence. Optimists point to its capacity to automate tedious tasks, accelerate scientific discovery, and widen access to expertise once reserved for specialists. Sceptics warn of disrupted labour markets, embedded bias, and an over-reliance on systems that few people fully understand. What most analysts agree on is subtler: AI is unlikely to simply replace human workers wholesale, but rather to reshape the skills those jobs demand. The workers who thrive, they suggest, will be those who learn to collaborate with these tools rather than compete against them.",
@@ -1236,9 +1305,14 @@ var READING_COMP={
     {q:"What is the main idea of the passage?",options:["AI will soon replace all human workers","AI is likely to reshape the skills jobs require rather than simply replace workers","AI carries no real risks","AI cannot automate any tasks"],answer:1},
     {q:"What do sceptics warn about?",options:["Cheaper products","Disrupted labour markets and embedded bias","Faster internet speeds","Improved memory"],answer:1},
     {q:"According to analysts, who will thrive with AI?",options:["Those who avoid it entirely","Those who learn to collaborate with the tools","Those who compete against it","Those who resist any change"],answer:1},
-    {q:"The word “provoked” most nearly means:",options:["prevented","stirred up or caused","reduced","concealed"],answer:1}
+    {q:"The word “provoked” most nearly means:",options:["prevented","stirred up or caused","reduced","concealed"],answer:1},
+    {q:"Which is a benefit optimists point to?",options:["Automating tedious tasks","Rising unemployment","Hidden bias","System failures"],answer:0},
+    {q:"The phrase 'over-reliance on systems that few people fully understand' expresses a:",options:["hope","concern","joke","fact about cost"],answer:1},
+    {q:"Most analysts agree AI will most likely:",options:["replace workers wholesale","reshape the skills jobs demand","have no effect on work","end all scientific discovery"],answer:1},
+    {q:"The passage is best described as:",options:["a balanced discussion of hopes and concerns","an advertisement for AI","a warning to ban AI","a personal story"],answer:0}
   ]}
 };
+
 function readingCompFor(grade){ var n=parseInt(String(grade),10); return READING_COMP[String(n)] || READING_COMP["6"]; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
@@ -1449,15 +1523,18 @@ function generatePlan(){
   const gaps=areas.filter(a=>S.result.skillPct[a]<55);
   let focus = gaps.length?gaps:areas.slice();
   if(S.prior&&S.prior.skillPct){ areas.forEach(a=>{ if(S.prior.skillPct[a]!=null && S.prior.skillPct[a]<55 && focus.indexOf(a)<0) focus.push(a); }); }
-  const WEEKS=6;
+  // UAE calendar: Term 1 runs ~17 weeks with 7 practice folders per week; Terms 2 & 3 are shorter.
+  const WEEKS_BY_TERM={ "1":17, "2":10, "3":10 };
+  const TASKS_BY_TERM={ "1":7, "2":5, "3":5 };
   const terms={};
   ["1","2","3"].forEach((t,ti)=>{
+    const WEEKS=WEEKS_BY_TERM[t], NT=TASKS_BY_TERM[t];
     const weeks=[];
     for(let w=1;w<=WEEKS;w++){
       const skill=focus[(w-1)%focus.length];
       const lib=ACTIVITY_LIB[skill]||["Practice activity"];
-      const L=lib.length; const base=((ti*WEEKS)+(w-1))*3;
-      const tasks=[lib[base%L], lib[(base+1)%L], lib[(base+2)%L]];
+      const L=lib.length; const base=((ti*20)+(w-1))*NT;
+      const tasks=[]; for(let k=0;k<NT;k++){ tasks.push(lib[(base+k)%L]); }
       weeks.push({week:w,skill,tasks});
     }
     terms[t]={ goal:`By end of Term ${t}: raise ${focus.join(", ")} toward grade-level mastery (target ${60+ti*10}%+).`, weeks };
@@ -1468,7 +1545,7 @@ function generatePlan(){
     return {skill:a, baseline:b, t1:t1, t2:t2, t3:t3,
       statement:`Improve ${a} from ${b}% to ${t3}% (grade-level) by year-end — term targets ${t1}% → ${t2}% → ${t3}%.`};
   });
-  return {focus,termWeeks:WEEKS,terms,goals,createdFrom:S.result.when};
+  return {focus,termWeeks:WEEKS_BY_TERM,terms,goals,createdFrom:S.result.when};
 }
 
 function viewGoals(){
@@ -1492,7 +1569,7 @@ function viewPlan(){
   const p=S.plan, subj=S.student.subject;
   let terms=["1","2","3"].map(t=>{
     const tm=p.terms[t];
-    return `<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${p.termWeeks} weeks</span></div>
+    return `<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${tm.weeks.length} weeks · ${(tm.weeks[0]&&tm.weeks[0].tasks.length)||0} folders/week</span></div>
       <p class="sub">${tm.goal}</p>
       <table><thead><tr><th>Week</th><th>Focus skill</th><th>Activities</th></tr></thead><tbody>
       ${tm.weeks.map(w=>`<tr><td>W${w.week}</td><td><b>${w.skill}</b></td><td style="font-size:13px">${w.tasks.join("<br>")}</td></tr>`).join("")}

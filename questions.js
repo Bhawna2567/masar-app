@@ -1,5 +1,363 @@
 /* Adeptly diagnostic question banks — keyed by grade then subject. */
 var QUESTION_BANK = {
+ "5": {
+  "English": [
+   {
+    "skill": "Reading",
+    "q": "An adventure story begins: 'The climbers were lost in the Hajar Mountains.' What is the SETTING?",
+    "options": [
+     "A city street",
+     "The Hajar Mountains",
+     "A school",
+     "The sea"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Reading",
+    "q": "Read: 'The wadi filled with water in seconds, so they ran to higher ground.' Why did they run?",
+    "options": [
+     "They were tired",
+     "A flash flood was coming",
+     "They saw a friend",
+     "It was lunchtime"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Reading",
+    "q": "'The stranded hikers waved at the rescue helicopter.' The word 'stranded' means:",
+    "options": [
+     "happy",
+     "stuck and unable to leave",
+     "hungry",
+     "fast"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Reading",
+    "q": "An information text about the axolotl is mainly written to:",
+    "options": [
+     "tell a funny story",
+     "give facts about an unusual animal",
+     "sell a toy",
+     "write a poem"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Grammar",
+    "q": "Choose the PAST CONTINUOUS sentence:",
+    "options": [
+     "We walked to the wadi.",
+     "We were walking when the rain started.",
+     "We will walk tomorrow.",
+     "We walk every day."
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Grammar",
+    "q": "Complete with the past simple: 'Yesterday the guide ___ us a safe path.'",
+    "options": [
+     "show",
+     "shows",
+     "showed",
+     "showing"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Grammar",
+    "q": "Choose the correct RELATIVE CLAUSE: 'The axolotl is an animal ___ never grows up.'",
+    "options": [
+     "who",
+     "that",
+     "where",
+     "when"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Grammar",
+    "q": "Choose the ZERO CONDITIONAL sentence about safety:",
+    "options": [
+     "If it will rain, we stay inside.",
+     "If it rains, the roads flood.",
+     "If it rained, we stayed.",
+     "If it rain, we flooding."
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Which is the BEST topic sentence for a paragraph about a desert trip?",
+    "options": [
+     "Deserts.",
+     "Our trip to the desert was full of surprises.",
+     "I like it.",
+     "The end of the trip."
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Choose the sentence with correct punctuation:",
+    "options": [
+     "we saw a fox in the sand",
+     "We saw a fox in the sand.",
+     "We saw a fox in the sand",
+     "we saw a fox in the sand?"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "Which word belongs to WEATHER SAFETY?",
+    "options": [
+     "kayak",
+     "sandstorm",
+     "pencil",
+     "sofa"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "Give a simple reason with 'because'. Choose the best ending: 'We packed an emergency bag because ___'",
+    "options": [
+     "it was blue",
+     "a storm was coming",
+     "we like bags",
+     "the bag was big"
+    ],
+    "answer": 1
+   }
+  ],
+  "Math": [
+   {
+    "skill": "Number & Operations",
+    "q": "In the number 3,472,905, what is the VALUE of the digit 4?",
+    "options": [
+     "400,000",
+     "4,000",
+     "40,000",
+     "4,000,000"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Which number is 'six million, forty thousand, seven'?",
+    "options": [
+     "6,400,007",
+     "6,040,070",
+     "6,004,007",
+     "6,040,007"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Which symbol makes it true?  482,619 ___ 482,691",
+    "options": [
+     "=",
+     "≈",
+     "<",
+     ">"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Which list is ordered from LEAST to GREATEST?",
+    "options": [
+     "51,240; 54,120; 51,420",
+     "51,240; 51,420; 54,120",
+     "54,120; 51,420; 51,240",
+     "51,420; 51,240; 54,120"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "In the decimal 6.374, the digit 7 is in which place?",
+    "options": [
+     "tenths",
+     "thousandths",
+     "ones",
+     "hundredths"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Write 0.7 as a fraction.",
+    "options": [
+     "1/7",
+     "70/10",
+     "7/10",
+     "7/100"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Write 3/100 as a decimal.",
+    "options": [
+     "0.03",
+     "0.3",
+     "3.0",
+     "0.003"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Which is greater?",
+    "options": [
+     "0.45",
+     "0.09",
+     "0.499",
+     "0.5"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Write in standard form: 400 + 30 + 0.5 + 0.06",
+    "options": [
+     "400.356",
+     "435.6",
+     "430.56",
+     "430.056"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Multiply: 3.6 × 100",
+    "options": [
+     "3.6",
+     "360",
+     "36",
+     "3600"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Multiply: 24 × 36",
+    "options": [
+     "864",
+     "744",
+     "854",
+     "964"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Best ESTIMATE of 48 × 21 (round each first):",
+    "options": [
+     "800",
+     "1,200",
+     "600",
+     "1,000"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Use the distributive property: 6 × 47 = (6×40) + (6×7) =",
+    "options": [
+     "270",
+     "287",
+     "282",
+     "240"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide (write the remainder): 76 ÷ 5",
+    "options": [
+     "16 r1",
+     "15 r1",
+     "14 r6",
+     "15 r2"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide: 504 ÷ 6",
+    "options": [
+     "74",
+     "86",
+     "94",
+     "84"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide by a 2-digit number: 864 ÷ 24",
+    "options": [
+     "36",
+     "34",
+     "38",
+     "46"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide (notice the zero): 618 ÷ 3",
+    "options": [
+     "26",
+     "260",
+     "206",
+     "216"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Multiply a decimal: 0.4 × 7",
+    "options": [
+     "28",
+     "0.28",
+     "3.2",
+     "2.8"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate the power: 5³",
+    "options": [
+     "25",
+     "150",
+     "125",
+     "15"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Which is the prime factorization of 36?",
+    "options": [
+     "2³ × 3",
+     "2² × 3²",
+     "2 × 18",
+     "6 × 6"
+    ],
+    "answer": 1
+   }
+  ]
+ },
  "6": {
   "English": [
    {
@@ -265,6 +623,94 @@ var QUESTION_BANK = {
      "data grouped in equal numeric intervals",
      "only one value",
      "no data"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Write the ratio 12 to 18 in simplest form.",
+    "options": [
+     "2:3",
+     "3:2",
+     "6:9",
+     "4:6"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "A car travels 150 km in 3 hours. What is the unit rate?",
+    "options": [
+     "45 km/h",
+     "153 km/h",
+     "30 km/h",
+     "50 km/h"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 25% of 240?",
+    "options": [
+     "72",
+     "96",
+     "60",
+     "48"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Multiply: 0.6 × 0.4",
+    "options": [
+     "24",
+     "0.24",
+     "2.4",
+     "0.024"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide: 4.8 ÷ 6",
+    "options": [
+     "0.8",
+     "8",
+     "0.08",
+     "1.2"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Compute: 2/3 × 3/4",
+    "options": [
+     "6/7",
+     "5/12",
+     "2/4",
+     "1/2"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide: 3/4 ÷ 1/2",
+    "options": [
+     "2/3",
+     "1/4",
+     "1 1/2",
+     "3/8"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Which is largest?",
+    "options": [
+     "0.7",
+     "0.75",
+     "1/2",
+     "2/5"
     ],
     "answer": 1
    }
@@ -537,6 +983,94 @@ var QUESTION_BANK = {
      "15"
     ],
     "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Add the integers: −8 + 3",
+    "options": [
+     "−5",
+     "−11",
+     "5",
+     "11"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Subtract: 4 − (−6)",
+    "options": [
+     "−2",
+     "−10",
+     "2",
+     "10"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Multiply: (−5) × (−4)",
+    "options": [
+     "9",
+     "−9",
+     "20",
+     "−20"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Divide: −24 ÷ 6",
+    "options": [
+     "18",
+     "−4",
+     "4",
+     "−18"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 15% of 80?",
+    "options": [
+     "12",
+     "8",
+     "20",
+     "1.2"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the proportion: 3/4 = x/12",
+    "options": [
+     "16",
+     "8",
+     "6",
+     "9"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Compute: 2/5 + 1/3",
+    "options": [
+     "3/15",
+     "2/8",
+     "11/15",
+     "3/8"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "A shirt costs 40 AED with a 10% discount. Sale price?",
+    "options": [
+     "4 AED",
+     "36 AED",
+     "30 AED",
+     "44 AED"
+    ],
+    "answer": 1
    }
   ]
  },
@@ -805,6 +1339,94 @@ var QUESTION_BANK = {
      "1/2",
      "1/3",
      "2/3"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify: 2³ × 2⁴",
+    "options": [
+     "2⁷",
+     "2¹²",
+     "4⁷",
+     "2¹"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate: 5⁻²",
+    "options": [
+     "−25",
+     "−10",
+     "25",
+     "1/25"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Estimate: √50 is closest to",
+    "options": [
+     "25",
+     "8",
+     "7",
+     "5"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Simplify: √81",
+    "options": [
+     "40.5",
+     "9",
+     "8",
+     "18"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Geometry",
+    "q": "A right triangle has legs 3 and 4. The hypotenuse is:",
+    "options": [
+     "5",
+     "7",
+     "6",
+     "12"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Write in scientific notation: 4,500",
+    "options": [
+     "45 × 10²",
+     "4.5 × 10⁴",
+     "0.45 × 10⁴",
+     "4.5 × 10³"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Multiply monomials: x³ · x²",
+    "options": [
+     "x¹",
+     "2x⁵",
+     "x⁵",
+     "x⁶"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve: 3x = 45",
+    "options": [
+     "135",
+     "15",
+     "48",
+     "42"
     ],
     "answer": 1
    }
@@ -1077,6 +1699,94 @@ var QUESTION_BANK = {
      "likely"
     ],
     "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 2 = 12",
+    "options": [
+     "6",
+     "4",
+     "10",
+     "5"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 5",
+    "options": [
+     "15",
+     "1",
+     "11",
+     "19"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 2) and (5, 7).",
+    "options": [
+     "−1",
+     "1",
+     "0",
+     "5"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x⁵",
+     "x⁶",
+     "x¹",
+     "2x⁵"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 20% of 200?",
+    "options": [
+     "20",
+     "60",
+     "4",
+     "40"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/2 = 5",
+    "options": [
+     "7",
+     "3",
+     "10",
+     "5"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 7,  x − y = 3.  Find x.",
+    "options": [
+     "3",
+     "5",
+     "2",
+     "7"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 2 by 5. Its area is:",
+    "options": [
+     "10",
+     "14",
+     "7",
+     "11"
+    ],
+    "answer": 0
    }
   ]
  },
@@ -1344,6 +2054,94 @@ var QUESTION_BANK = {
      "2",
      "3",
      "4",
+     "11"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 2 = 12",
+    "options": [
+     "6",
+     "4",
+     "10",
+     "5"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 5",
+    "options": [
+     "15",
+     "1",
+     "11",
+     "19"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 2) and (5, 7).",
+    "options": [
+     "−1",
+     "1",
+     "0",
+     "5"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x⁵",
+     "x⁶",
+     "x¹",
+     "2x⁵"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 20% of 200?",
+    "options": [
+     "20",
+     "60",
+     "4",
+     "40"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/2 = 5",
+    "options": [
+     "7",
+     "3",
+     "10",
+     "5"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 7,  x − y = 3.  Find x.",
+    "options": [
+     "3",
+     "5",
+     "2",
+     "7"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 2 by 5. Its area is:",
+    "options": [
+     "10",
+     "14",
+     "7",
      "11"
     ],
     "answer": 0
@@ -1617,6 +2415,94 @@ var QUESTION_BANK = {
      "circle"
     ],
     "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 3 = 15",
+    "options": [
+     "5",
+     "12",
+     "6",
+     "7"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 6",
+    "options": [
+     "2",
+     "14",
+     "22",
+     "18"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 3) and (6, 9).",
+    "options": [
+     "1",
+     "0",
+     "6",
+     "−1"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x⁶",
+     "x¹",
+     "2x⁵",
+     "x⁵"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 30% of 200?",
+    "options": [
+     "90",
+     "6",
+     "60",
+     "30"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/3 = 6",
+    "options": [
+     "3",
+     "18",
+     "6",
+     "9"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 9,  x − y = 3.  Find x.",
+    "options": [
+     "6",
+     "3",
+     "9",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 3 by 6. Its area is:",
+    "options": [
+     "18",
+     "9",
+     "19",
+     "18"
+    ],
+    "answer": 0
    }
   ]
  },
@@ -1887,6 +2773,94 @@ var QUESTION_BANK = {
      "range"
     ],
     "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 3 = 15",
+    "options": [
+     "5",
+     "12",
+     "6",
+     "7"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 6",
+    "options": [
+     "2",
+     "14",
+     "22",
+     "18"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 3) and (6, 9).",
+    "options": [
+     "1",
+     "0",
+     "6",
+     "−1"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x⁶",
+     "x¹",
+     "2x⁵",
+     "x⁵"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 30% of 200?",
+    "options": [
+     "90",
+     "6",
+     "60",
+     "30"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/3 = 6",
+    "options": [
+     "3",
+     "18",
+     "6",
+     "9"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 9,  x − y = 3.  Find x.",
+    "options": [
+     "6",
+     "3",
+     "9",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 3 by 6. Its area is:",
+    "options": [
+     "18",
+     "9",
+     "19",
+     "18"
+    ],
+    "answer": 0
    }
   ]
  },
@@ -2157,6 +3131,94 @@ var QUESTION_BANK = {
      "even"
     ],
     "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 4 = 18",
+    "options": [
+     "14",
+     "7",
+     "8",
+     "6"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 7",
+    "options": [
+     "17",
+     "25",
+     "21",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 4) and (7, 11).",
+    "options": [
+     "0",
+     "7",
+     "−1",
+     "1"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x¹",
+     "2x⁵",
+     "x⁵",
+     "x⁶"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 40% of 200?",
+    "options": [
+     "8",
+     "80",
+     "40",
+     "120"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/4 = 7",
+    "options": [
+     "28",
+     "7",
+     "11",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 11,  x − y = 3.  Find x.",
+    "options": [
+     "4",
+     "11",
+     "3",
+     "7"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 4 by 7. Its area is:",
+    "options": [
+     "11",
+     "29",
+     "28",
+     "22"
+    ],
+    "answer": 2
    }
   ]
  },
@@ -2427,12 +3489,817 @@ var QUESTION_BANK = {
      "16"
     ],
     "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 4 = 18",
+    "options": [
+     "14",
+     "7",
+     "8",
+     "6"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 7",
+    "options": [
+     "17",
+     "25",
+     "21",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 4) and (7, 11).",
+    "options": [
+     "0",
+     "7",
+     "−1",
+     "1"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x¹",
+     "2x⁵",
+     "x⁵",
+     "x⁶"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 40% of 200?",
+    "options": [
+     "8",
+     "80",
+     "40",
+     "120"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/4 = 7",
+    "options": [
+     "28",
+     "7",
+     "11",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 11,  x − y = 3.  Find x.",
+    "options": [
+     "4",
+     "11",
+     "3",
+     "7"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 4 by 7. Its area is:",
+    "options": [
+     "11",
+     "29",
+     "28",
+     "22"
+    ],
+    "answer": 2
+   }
+  ]
+ },
+ "12A": {
+  "English": [
+   {
+    "skill": "Reading",
+    "q": "Synthesising sources means:",
+    "options": [
+     "copying one source",
+     "combining ideas from several sources",
+     "ignoring sources",
+     "quoting one line"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Reading",
+    "q": "An author's rhetorical appeals include:",
+    "options": [
+     "ethos, pathos, logos",
+     "only spelling",
+     "page colour",
+     "font size"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Reading",
+    "q": "Bias in a text is:",
+    "options": [
+     "a balanced view",
+     "a leaning toward one side",
+     "a citation",
+     "a summary"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "A literary analysis essay should focus on:",
+    "options": [
+     "a plot summary",
+     "how the author creates meaning through technique",
+     "the book's price",
+     "the number of pages"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "A strong conclusion should:",
+    "options": [
+     "introduce brand-new evidence",
+     "restate the thesis and extend its significance",
+     "copy the introduction exactly",
+     "be left out"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Which sentence best integrates a quotation?",
+    "options": [
+     "The author said a quote about progress.",
+     "The author argues that progress \"demands sacrifice\" (12).",
+     "Progress demands sacrifice, the author.",
+     "\"Demands sacrifice.\""
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "\"Ubiquitous\" means:",
+    "options": [
+     "rare",
+     "present everywhere",
+     "loud",
+     "tiny"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "\"Pragmatic\" means:",
+    "options": [
+     "impractical",
+     "practical",
+     "colourful",
+     "emotional"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "The root \"bene\" (benefit) means:",
+    "options": [
+     "bad",
+     "good",
+     "time",
+     "sound"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Grammar",
+    "q": "A colon is used to:",
+    "options": [
+     "introduce a list or explanation",
+     "join two words",
+     "end a question",
+     "always replace a comma"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Grammar",
+    "q": "Subjunctive: \"If I ___ you, I would go.\"",
+    "options": [
+     "was",
+     "were",
+     "am",
+     "be"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Grammar",
+    "q": "Which is correct? \"Between you and ___.\"",
+    "options": [
+     "I",
+     "me",
+     "myself",
+     "we"
+    ],
+    "answer": 1
+   }
+  ],
+  "Math": [
+   {
+    "skill": "Number & Operations",
+    "q": "Simplify i² (the imaginary unit).",
+    "options": [
+     "-1",
+     "1",
+     "i",
+     "0"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "log₂(8) =",
+    "options": [
+     "3",
+     "2",
+     "4",
+     "8"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "Simplify: (x³)².",
+    "options": [
+     "x⁶",
+     "x⁵",
+     "x⁹",
+     "2x³"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve: x² - 5x + 6 = 0.",
+    "options": [
+     "x = 2 or 3",
+     "x = 1 or 6",
+     "x = -2 or -3",
+     "x = 5"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "The function f(x) = 2ˣ is:",
+    "options": [
+     "linear",
+     "exponential",
+     "quadratic",
+     "constant"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify: (x² - 9) ÷ (x - 3).",
+    "options": [
+     "x + 3",
+     "x - 3",
+     "x²",
+     "9"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "sin²θ + cos²θ =",
+    "options": [
+     "1",
+     "0",
+     "2",
+     "θ"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "A full rotation in radians is:",
+    "options": [
+     "π",
+     "2π",
+     "π/2",
+     "360"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Geometry",
+    "q": "The unit circle has radius:",
+    "options": [
+     "1",
+     "2",
+     "π",
+     "0"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Data & Probability",
+    "q": "Standard deviation measures the:",
+    "options": [
+     "mean",
+     "spread of data",
+     "mode",
+     "range only"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Data & Probability",
+    "q": "\"n choose r\" (nCr) counts:",
+    "options": [
+     "arrangements where order matters",
+     "combinations where order doesn't matter",
+     "sums",
+     "products"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Data & Probability",
+    "q": "A probability of 1 means the event is:",
+    "options": [
+     "impossible",
+     "certain",
+     "unlikely",
+     "even"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 4 = 18",
+    "options": [
+     "14",
+     "7",
+     "8",
+     "6"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 7",
+    "options": [
+     "17",
+     "25",
+     "21",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 4) and (7, 11).",
+    "options": [
+     "0",
+     "7",
+     "−1",
+     "1"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x¹",
+     "2x⁵",
+     "x⁵",
+     "x⁶"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 40% of 200?",
+    "options": [
+     "8",
+     "80",
+     "40",
+     "120"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/4 = 7",
+    "options": [
+     "28",
+     "7",
+     "11",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 11,  x − y = 3.  Find x.",
+    "options": [
+     "4",
+     "11",
+     "3",
+     "7"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 4 by 7. Its area is:",
+    "options": [
+     "11",
+     "29",
+     "28",
+     "22"
+    ],
+    "answer": 2
+   }
+  ]
+ },
+ "12G": {
+  "English": [
+   {
+    "skill": "Reading",
+    "q": "Synthesising means combining ideas from:",
+    "options": [
+     "one source",
+     "several sources",
+     "no sources",
+     "the title"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Reading",
+    "q": "Persuasive writing tries to:",
+    "options": [
+     "entertain only",
+     "convince the reader",
+     "list facts only",
+     "rhyme"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Reading",
+    "q": "A biased text:",
+    "options": [
+     "shows both sides equally",
+     "favours one side",
+     "has no opinion",
+     "is a summary"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "A literary analysis discusses how the author:",
+    "options": [
+     "prices the book",
+     "creates meaning in the text",
+     "designs the cover",
+     "counts the pages"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "A conclusion paragraph should:",
+    "options": [
+     "add brand-new facts",
+     "restate the main idea",
+     "repeat the essay word for word",
+     "be left blank"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Writing",
+    "q": "Which transition shows a result or effect?",
+    "options": [
+     "however",
+     "as a result",
+     "for instance",
+     "meanwhile"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "\"Essential\" means:",
+    "options": [
+     "optional",
+     "necessary",
+     "colourful",
+     "loud"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "\"Generate\" means to:",
+    "options": [
+     "destroy",
+     "create",
+     "hide",
+     "forget"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Vocabulary",
+    "q": "The root \"vis\" (visible) relates to:",
+    "options": [
+     "seeing",
+     "hearing",
+     "time",
+     "life"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Grammar",
+    "q": "A colon introduces a:",
+    "options": [
+     "list",
+     "question",
+     "subject",
+     "verb"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Grammar",
+    "q": "Choose: \"If I ___ rich, I would travel.\"",
+    "options": [
+     "was",
+     "were",
+     "am",
+     "be"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Grammar",
+    "q": "Correct pronoun: \"Give it to ___.\"",
+    "options": [
+     "I",
+     "me",
+     "myself",
+     "we"
+    ],
+    "answer": 1
+   }
+  ],
+  "Math": [
+   {
+    "skill": "Number & Operations",
+    "q": "log₁₀(100) =",
+    "options": [
+     "2",
+     "10",
+     "100",
+     "1"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "2³ =",
+    "options": [
+     "8",
+     "6",
+     "9",
+     "23"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "(x²)² =",
+    "options": [
+     "x⁴",
+     "x²",
+     "x⁶",
+     "2x²"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve: x² = 16.",
+    "options": [
+     "x = ±4",
+     "x = 4",
+     "x = 8",
+     "x = 256"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "If f(x) = 3x + 1, find f(2).",
+    "options": [
+     "7",
+     "6",
+     "9",
+     "5"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Factor: x² + 2x.",
+    "options": [
+     "x(x + 2)",
+     "(x + 2)²",
+     "2x²",
+     "x + 2"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "A triangle's angles sum to:",
+    "options": [
+     "180°",
+     "90°",
+     "360°",
+     "270°"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "Area of a triangle with base 8 and height 3:",
+    "options": [
+     "12",
+     "24",
+     "11",
+     "16"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Geometry",
+    "q": "sin(90°) =",
+    "options": [
+     "1",
+     "0",
+     "0.5",
+     "90"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Data & Probability",
+    "q": "The mean of 4, 4, 4 is:",
+    "options": [
+     "4",
+     "12",
+     "0",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Data & Probability",
+    "q": "P(even number on a die) =",
+    "options": [
+     "1/2",
+     "1/6",
+     "1/3",
+     "2/3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Data & Probability",
+    "q": "The range of 2, 5, 9 is:",
+    "options": [
+     "7",
+     "9",
+     "2",
+     "16"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve for x:  2x + 4 = 18",
+    "options": [
+     "14",
+     "7",
+     "8",
+     "6"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Evaluate  3x − 4  when  x = 7",
+    "options": [
+     "17",
+     "25",
+     "21",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Find the slope through (0, 4) and (7, 11).",
+    "options": [
+     "0",
+     "7",
+     "−1",
+     "1"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Algebra",
+    "q": "Simplify:  x² · x³",
+    "options": [
+     "x¹",
+     "2x⁵",
+     "x⁵",
+     "x⁶"
+    ],
+    "answer": 2
+   },
+   {
+    "skill": "Number & Operations",
+    "q": "What is 40% of 200?",
+    "options": [
+     "8",
+     "80",
+     "40",
+     "120"
+    ],
+    "answer": 1
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve:  x/4 = 7",
+    "options": [
+     "28",
+     "7",
+     "11",
+     "3"
+    ],
+    "answer": 0
+   },
+   {
+    "skill": "Algebra",
+    "q": "Solve the system  x + y = 11,  x − y = 3.  Find x.",
+    "options": [
+     "4",
+     "11",
+     "3",
+     "7"
+    ],
+    "answer": 3
+   },
+   {
+    "skill": "Geometry",
+    "q": "A rectangle is 4 by 7. Its area is:",
+    "options": [
+     "11",
+     "29",
+     "28",
+     "22"
+    ],
+    "answer": 2
    }
   ]
  }
 };
 
 var WRITING_PROMPTS = {
+ "5": "Think of an exciting adventure (real or imagined). Write a short story (6–8 sentences). Use the past simple and past continuous, and give at least one reason with 'because'. Include a clear beginning, middle, and end.",
  "6": "Write a short paragraph (5–6 sentences) about your favourite hobby. Begin with a clear topic sentence and give at least two supporting details.",
  "7": "Some students think homework should be banned. Write a paragraph giving your opinion, with at least two reasons and an example for each.",
  "8": "Should students wear school uniforms? Write a short response (2 paragraphs) stating your view and supporting it with clear reasons.",
@@ -2441,9 +4308,7 @@ var WRITING_PROMPTS = {
  "10A": "In 1–2 paragraphs, analyse how technology has changed the way people communicate. Use specific examples and organise your ideas clearly.",
  "10G": "Write a paragraph describing a memorable event in your life. Organise your ideas in order and use descriptive details.",
  "11A": "Write an argumentative response (2 paragraphs) to: \"Schools should replace exams with project-based assessment.\" Make a clear claim, support it with evidence and reasoning, and acknowledge a counterargument.",
- "11G": "Write a short essay giving your opinion on whether young people should do volunteer work. Include an introduction, reasons with examples, and a conclusion."
+ "11G": "Write a short essay giving your opinion on whether young people should do volunteer work. Include an introduction, reasons with examples, and a conclusion.",
+ "12A": "Write an argumentative response (2 paragraphs) to: \"Schools should replace exams with project-based assessment.\" Make a clear claim, support it with evidence and reasoning, and acknowledge a counterargument.",
+ "12G": "Write a short essay giving your opinion on whether young people should do volunteer work. Include an introduction, reasons with examples, and a conclusion."
 };
-
-/* Grade 12 diagnostic banks (added) — reuse the Grade 11 sets so every class has a full test. */
-try{ if(typeof QUESTION_BANK!=="undefined"){ if(QUESTION_BANK["11A"]) QUESTION_BANK["12A"]=QUESTION_BANK["11A"]; if(QUESTION_BANK["11G"]) QUESTION_BANK["12G"]=QUESTION_BANK["11G"]; } }catch(e){}
-try{ if(typeof WRITING_PROMPTS!=="undefined"){ if(WRITING_PROMPTS["11A"]) WRITING_PROMPTS["12A"]=WRITING_PROMPTS["11A"]; if(WRITING_PROMPTS["11G"]) WRITING_PROMPTS["12G"]=WRITING_PROMPTS["11G"]; } }catch(e){}

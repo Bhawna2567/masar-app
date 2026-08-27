@@ -2,6 +2,141 @@
    English Terms 1-3 parsed from grade PDFs.  Maths 9-12 from Scope & Sequence spreadsheets;
    Maths 6-8 translated from the Arabic Comprehensive Guides, grouped by domain. */
 var CURRICULUM = {
+ "5": {
+ "1": {
+  "English": {
+   "Reading": [
+    "Read an adventure story and identify the main events, characters and setting (Unit 1: Exciting Adventures).",
+    "Read and identify specific information in a simple text.",
+    "Infer the meaning of unknown words for a concrete action or object using context and word-part clues when reading.",
+    "Read informational texts about unusual animals and places and identify the main idea and key details (Unit 2).",
+    "Read an informational text about weather safety and identify main ideas, key details and ways people prepare for dangerous weather (Unit 3).",
+    "Make simple personal connections between ideas or events and own experience when reading."
+   ],
+   "Writing": [
+    "Plan, draft and write an adventure story using a clear story structure.",
+    "Produce short, simple texts, giving simple reasons with 'because'.",
+    "Write an information board explaining what an animal or place is, where it is found, and why it is special.",
+    "Create a weather travel guide giving weather information, safety advice and travel tips.",
+    "Write sentences using capital letters, full stops, question marks and commas correctly.",
+    "Spell familiar and unfamiliar words using phonics, spelling patterns and morphology."
+   ],
+   "Grammar": [
+    "Past simple (including verb 'to be')",
+    "Past continuous",
+    "Past simple vs past continuous to describe events in a story",
+    "Defining relative clauses (who / that / which) to describe people, animals, things and places",
+    "Zero conditional to express facts, general truths and safety advice",
+    "should / shouldn't for advice"
+   ],
+   "Vocabulary": [
+    "Adventure: trail, wadi, whistle, flash flood, canyon, stranded, signal, rescue helicopter",
+    "Kayaking / desert: kayak, river, rocks, calm, safe, guide, sand dune, frightened, lost",
+    "Animals & places: axolotl, amphibian, gills, regrow, survive, salt flat, reflect, protect, rainforest",
+    "Weather safety: sandstorm, lightning, flood, strong wind, heatwave, warning, shelter, prepare, volunteer, emergency bag"
+   ]
+  },
+  "Math": {
+   "Number & Operations": [
+    "Place value: read and write whole numbers to the millions",
+    "Compare and order whole numbers to the millions",
+    "Use models to link decimals to fractions (tenths, hundredths, thousandths)",
+    "Represent decimals; understand decimal place value to thousandths",
+    "Read and write decimals in standard, expanded and word form",
+    "Compare and order decimals and whole numbers",
+    "Solve problems using the four-step problem-solving plan",
+    "Prime factorization; powers and exponents",
+    "Multiplication patterns; the distributive property; estimate products",
+    "Multiply by 1-digit and 2-digit numbers",
+    "Relate division to multiplication; divide with and without remainders",
+    "Division patterns; estimate quotients; interpret the remainder",
+    "Divide 3- and 4-digit numbers by 1-digit and 2-digit divisors; quotients with zeros",
+    "Multiply decimals by whole numbers, by decimals, and by powers of ten",
+    "Divide decimals by whole numbers, by decimals, and by powers of ten"
+   ]
+  }
+ },
+ "2": {
+  "English": {
+   "Reading": [
+    "Read a range of narrative and informational texts and identify overall meaning and key details.",
+    "Identify text features (headings, captions, diagrams) that help understanding.",
+    "Infer characters' feelings and reasons for actions when reading.",
+    "Compare information from two short texts on a familiar topic."
+   ],
+   "Writing": [
+    "Write a clear paragraph with a topic sentence and supporting details.",
+    "Use conjunctions and sequencers to connect ideas with developing coherence.",
+    "Write for different purposes (recount, description, instructions).",
+    "Revise and edit writing for spelling, capitals and punctuation."
+   ],
+   "Grammar": [
+    "Present perfect for experiences",
+    "Comparatives and superlatives",
+    "Adverbs of manner and time",
+    "First conditional"
+   ],
+   "Vocabulary": [
+    "Topic vocabulary for community, journeys and daily life",
+    "Academic verbs: describe, compare, explain, suggest",
+    "Time and sequence words: first, next, finally, meanwhile"
+   ]
+  },
+  "Math": {
+   "Number & Operations": [
+    "Fractions: equivalent fractions; compare and order fractions",
+    "Add and subtract fractions and mixed numbers with like and unlike denominators",
+    "Multiply fractions and whole numbers"
+   ],
+   "Measurement": [
+    "Convert units of length, mass and capacity (metric)",
+    "Perimeter and area of rectangles and composite figures",
+    "Elapsed time and money problems"
+   ]
+  }
+ },
+ "3": {
+  "English": {
+   "Reading": [
+    "Read longer texts and summarise the main points.",
+    "Distinguish fact from opinion in a simple text.",
+    "Use context to work out the meaning of new words.",
+    "Read and follow multi-step written instructions."
+   ],
+   "Writing": [
+    "Plan and write a multi-paragraph piece from an outline.",
+    "Write an opinion with a clear reason and example.",
+    "Use a wider range of punctuation with control.",
+    "Present and share written work."
+   ],
+   "Grammar": [
+    "Second conditional (basic)",
+    "Reported speech (statements)",
+    "Modal verbs for possibility and obligation",
+    "Relative clauses (review)"
+   ],
+   "Vocabulary": [
+    "Vocabulary for the environment, science and culture",
+    "Prefixes and suffixes to build word families",
+    "Connectors for cause and effect: because, so, therefore"
+   ]
+  },
+  "Math": {
+   "Geometry": [
+    "Classify 2D shapes (triangles, quadrilaterals, polygons) and identify 3D solids",
+    "Measure and classify angles; lines of symmetry",
+    "Coordinate geometry: plot and read points in the first quadrant",
+    "Surface area and volume of simple solids (introduction)"
+   ],
+   "Data & Probability": [
+    "Read and create bar graphs, line plots and pictographs",
+    "Find the mean (average) of a small data set",
+    "Describe the likelihood of simple events"
+   ]
+  }
+ }
+},
+
  "6": {
   "1": {
    "English": {
