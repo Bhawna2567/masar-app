@@ -335,7 +335,7 @@ function viewTeacher(){
       <td>${last?`<button class="btn sm" onclick="teacherOpenStudent('${last.id}')">Open →</button> `:""}<button class="btn ghost sm" onclick="removeStudent('${s.email}')">Remove</button></td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students yet — add one below.</td></tr>`;
   const studentOpts=roster.map(s=>`<option value="${s.email}">${s.name} (${s.email})</option>`).join("");
-  const assignRows=as.length?as.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(a=>`<tr><td>${a.studentName||a.studentEmail}</td><td>${subjChip(a.subject)}</td><td>${gLabel(a.prevGrade)} → ${gLabel(a.curGrade)}</td><td>${a.status==="completed"?`<span class="pill green">Done · ${a.score}%</span>`:`<span class="pill amber">Pending</span>`}</td><td>${a.status==="completed"?`<button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake allowed ✓":"Allow retake"}</button> `:""}<button class="btn ghost sm" onclick="deleteAssignment('${a.id}')">Delete</button></td></tr>`).join(""):`<tr><td colspan="5" class="muted">Nothing assigned yet.</td></tr>`;
+  const assignRows=as.length?as.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(a=>`<tr><td>${a.studentName||a.studentEmail}</td><td>${subjChip(a.subject)}</td><td>${gLabel(a.prevGrade)} → ${gLabel(a.curGrade)}</td><td>${a.status==="completed"?`<span class="pill green">Done · ${a.score}%</span>`:`<span class="pill amber">Pending</span>`}</td><td>${a.status==="completed"?`<button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake allowed ✓":"Allow retake"}</button> <button class="btn ghost sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked PDF</button> `:""}<button class="btn ghost sm" onclick="deleteAssignment('${a.id}')">Delete</button></td></tr>`).join(""):`<tr><td colspan="5" class="muted">Nothing assigned yet.</td></tr>`;
   const sec=S.tSection||"classes";
   const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px">`
     +`<button class="btn ${sec==='classes'?'':'ghost'} sm" onclick="setTSection('classes')">🏫 Classes</button>`
@@ -405,8 +405,9 @@ function showAssignmentResult(id){
   const areas=(a.subject==="Math")?MATH_SKILLS:ENG_SKILLS, sp=a.skillPct||{};
   const rows=areas.map(k=>`<tr><td>${k}</td><td>${sp[k]!=null?sp[k]+"%":"—"}</td><td>${sp[k]!=null?`<span class="pill ${rag(sp[k])}">${sp[k]>=80?"Strong":sp[k]>=55?"Developing":"Gap"}</span>`:""}</td></tr>`).join("");
   m.innerHTML=`<div class="ovl"><div class="ex">
-    <div class="flex-between"><h2 style="margin:0">${a.studentName} — result</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
+    <div class="flex-between"><h2 style="margin:0">${a.studentName} — result</h2><div><button class="btn gold sm" style="margin-right:6px" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked PDF</button><button class="btn ghost sm" onclick="closeExercise()">✕</button></div></div>
     <p class="sub">${subjChip(a.subject)} ${gLabel(a.prevGrade)} → ${gLabel(a.curGrade)}</p>
+    ${(a.snapshot&&a.snapshot.result&&a.snapshot.result.writingAssess)?`<div style="margin-top:6px">${cefrCardHtml(a.snapshot.result.writingAssess)}</div>`:""}
     <div class="kpi"><div class="box"><div class="n">${a.score}%</div><div class="l">Overall</div></div><div class="box"><div class="n"><span class="pill ${a.levelCls||'grey'}" style="font-size:12px">${a.level||""}</span></div><div class="l">Level</div></div></div>
     <table style="margin-top:12px"><thead><tr><th>Skill</th><th>%</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
     ${a.writePrompt?`<h3 style="font-size:14px;margin:14px 0 6px">Written response</h3><div style="border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;white-space:pre-wrap">${((a.writeResponse&&a.writeResponse.trim())?a.writeResponse:"(none written)").replace(/</g,"&lt;")}</div>`:""}
@@ -1369,49 +1370,127 @@ function viewDiagnostic(){
       <div class="muted" style="font-size:12px;margin-top:6px">Saved for the teacher to assess with a rubric (this written response is not auto-scored).</div></div>`;
   }
   const answered=Object.keys(S.answers).length;
-  html+=`<div class="flex-between"><span class="muted">${answered}/${qs.length} answered</span>
-    <button class="btn gold" onclick="grade()" ${answered<qs.length?"disabled":""}>Submit &amp; analyse →</button></div></div>`;
+  const allDone=answered>=qs.length;
+  html+=`<div class="flex-between"><span class="muted">${answered}/${qs.length} answered${allDone?"":" · answer all questions to submit"}${S.student.subject==="English"?" · writing is optional":""}</span>
+    <button id="submitBtn" class="btn gold" ${allDone?"":"disabled"} onclick="grade()">Submit &amp; analyse →</button></div></div>`;
   return html;
 }
 function pick(i,oi){S.answers[i]=oi;save();
   const qs=getQuestions();qs[i].options.forEach((_,k)=>{const el=document.getElementById(`opt-${i}-${k}`);if(el)el.classList.toggle("sel",k===oi);});
-  const answered=Object.keys(S.answers).length;const btn=document.querySelector(".btn.gold");if(btn)btn.disabled=answered<qs.length;
-  const span=document.querySelector(".flex-between .muted");if(span)span.textContent=`${answered}/${qs.length} answered`;
+  const answered=Object.keys(S.answers).length;
+  const allDone=answered>=qs.length;
+  const span=document.querySelector(".flex-between .muted");if(span)span.textContent=`${answered}/${qs.length} answered${allDone?"":" · answer all questions to submit"}${S.student.subject==="English"?" · writing is optional":""}`;
+  const btn=document.getElementById("submitBtn");if(btn)btn.disabled=!allDone;
 }
 
 function saveWrite(v){ S.writeResponse = v; save(); }
 // Provisional, transparent auto-estimate of a written response (0-100), pending teacher rubric review.
-function writingScore(text){
-  text=(text||"").trim(); if(!text) return 0;
-  const words=text.split(/\s+/).filter(Boolean).length;
-  const sentences=(text.match(/[.!?]+/g)||[]).length || (words>0?1:0);
-  const linkers=["however","because","therefore","first","second","finally","also","for example","in addition","although","moreover","as a result","in conclusion","on the other hand","furthermore","meanwhile","since","while","but ","so "];
-  const lc=" "+text.toLowerCase()+" ";
-  const transCount=linkers.filter(t=>lc.includes(t)).length;
-  let score=0;
-  score += Math.min(40, words/50*40);
-  score += sentences>=3?25:(sentences===2?14:5);
-  score += Math.min(20, transCount*10);
-  if(/^[A-Z]/.test(text)) score+=8;
-  if(/[.!?]$/.test(text)) score+=7;
-  return Math.max(0,Math.min(100,Math.round(score)));
+function cefrFromPct(p){ if(p>=93)return "C2"; if(p>=80)return "C1"; if(p>=65)return "B2"; if(p>=50)return "B1"; if(p>=33)return "A2"; return "A1"; }
+// Auto-estimate a written response against a CEFR-style rubric (4 bands). Returns an object.
+function writingAssess(text){
+  text=(text||"").trim();
+  if(!text) return {pct:0,cefr:"—",words:0,bands:{"Task & content":0,"Coherence & cohesion":0,"Vocabulary range":0,"Grammar & mechanics":0},note:"No response was written."};
+  var words=text.split(/\s+/).filter(Boolean);
+  var wc=words.length;
+  var sentences=(text.match(/[.!?]+/g)||[]).length || 1;
+  var linkers=["however","because","therefore","first","second","finally","also","for example","in addition","although","moreover","as a result","in conclusion","on the other hand","furthermore","meanwhile","since ","while ","but ","so "];
+  var lc=" "+text.toLowerCase()+" ";
+  var transCount=linkers.filter(function(t){return lc.indexOf(t)>=0;}).length;
+  var uniq={}; words.forEach(function(w){uniq[w.toLowerCase().replace(/[^a-z']/g,"")]=1;}); delete uniq[""];
+  var uc=Object.keys(uniq).length; var lexDiv= wc? uc/wc : 0;
+  var Task=Math.round(Math.min(100, wc/120*100));                                  // ~120 words = full task length
+  var Coh=Math.round(Math.min(100, (Math.min(sentences,6)/6*60) + Math.min(transCount,4)/4*40));
+  var Vocab=Math.round(Math.min(100, (lexDiv/0.55*100) * Math.min(1, wc/30)));      // range, damped for very short texts
+  var mech=0; if(/^[A-Z]/.test(text))mech+=30; if(/[.!?]$/.test(text))mech+=25; if(!/\bi\b/.test(text)||/\bI\b/.test(text))mech+=20; if(sentences>=2)mech+=25;
+  var Mech=Math.min(100,mech);
+  var pct=Math.max(0,Math.min(100,Math.round(Task*0.35 + Coh*0.25 + Vocab*0.2 + Mech*0.2)));
+  return {pct:pct,cefr:cefrFromPct(pct),words:wc,
+    bands:{"Task & content":Task,"Coherence & cohesion":Coh,"Vocabulary range":Vocab,"Grammar & mechanics":Mech},
+    note:"Auto-estimated from length, organisation, vocabulary range and mechanics. Please confirm against the full CEFR rubric."};
+}
+function writingScore(text){ return writingAssess(text).pct; }
+function cefrCardHtml(a){
+  if(!a) return "";
+  var badge='<span class="pill '+(a.pct>=60?"green":a.pct>=45?"amber":"grey")+'" style="font-size:13px">CEFR '+a.cefr+'</span>';
+  var bars=Object.keys(a.bands).map(function(k){var v=a.bands[k];var c=v>=70?"ok":v>=45?"amber":"red";
+    return '<tr><td style="font-size:12px">'+k+'</td><td style="width:55%"><div class="bar"><span style="width:'+v+'%;background:var(--'+c+')"></span></div></td><td style="font-size:12px">'+v+'%</td></tr>';}).join("");
+  return '<div style="margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#f8fafc">'
+   +'<div class="flex-between" style="align-items:center"><b style="font-size:13px">✍️ CEFR auto-estimate</b><div>'+badge+' <span class="muted" style="font-size:12px">· '+a.pct+'% · '+a.words+' words</span></div></div>'
+   +'<table style="margin-top:8px"><tbody>'+bars+'</tbody></table>'
+   +'<p class="muted" style="font-size:11px;margin:8px 0 0">'+a.note+'</p></div>';
+}
+function downloadMarkedPDF(id){
+ try{
+  var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;});
+  if(!a){ alert("Couldn't find that student's test."); return; }
+  var snap=a.snapshot&&a.snapshot.result;
+  if(!snap||!snap.qsnapshot){ alert("This student submitted before the marked-PDF feature was added, so their per-question answers weren't saved. New submissions after this update will include it — or ask the student to retake once you allow it, and a marked copy will be available."); return; }
+  var JS=(window.jspdf&&window.jspdf.jsPDF); if(!JS){ alert("The PDF writer didn't load — check your internet and try again."); return; }
+  var doc=new JS({unit:"pt",format:"a4"}); var W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+  var M=48,x=M,y=M,LW=W-2*M,LET=["A","B","C","D","E","F"];
+  function wrap(txt,size,style,indent,color){ doc.setFont("helvetica",style||"normal"); doc.setFontSize(size); doc.setTextColor(color?color[0]:20,color?color[1]:20,color?color[2]:20);
+    var lines=doc.splitTextToSize(String(txt),LW-(indent||0)); for(var i=0;i<lines.length;i++){ if(y>H-M){doc.addPage();y=M;} doc.text(lines[i],x+(indent||0),y); y+=size+3; } doc.setTextColor(20,20,20); }
+  var qs=snap.qsnapshot, ans=snap.answers||{};
+  doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("Adeptly — Marked Diagnostic",x,y);y+=22;
+  wrap((a.studentName||a.studentEmail||"Student"),13,"bold",0);
+  wrap((a.className?("Class: "+a.className+"     "):"")+"Subject: "+(a.subject||"")+"     Based on: "+gLabel(a.prevGrade)+(a.term?("     Term "+a.term):""),10,"normal",0);
+  wrap("Score: "+snap.overallPct+"%   ("+snap.correct+"/"+snap.total+" correct)   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
+  y+=4;doc.setDrawColor(200);doc.line(x,y,x+LW,y);y+=12;
+  if(snap.passageTitle){ wrap("Reading passage: "+snap.passageTitle,10,"italic",0); y+=4; }
+  qs.forEach(function(q,i){
+    var pick=ans[i], correct=q.answer;
+    wrap("Q"+(i+1)+". "+(q.q||""),11,"bold",0);
+    (q.options||[]).forEach(function(o,oi){
+      var tag="", col=null;
+      if(oi===correct && oi===pick){ tag="   <- student's answer (correct)"; col=[16,122,60]; }
+      else if(oi===pick && pick!==correct){ tag="   <- student's answer (incorrect)"; col=[190,30,30]; }
+      else if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; }
+      wrap(LET[oi]+")  "+o+tag,10,"normal",14,col);
+    });
+    if(pick==null) wrap("(no answer chosen)",9,"italic",14,[150,150,150]);
+    y+=6;
+  });
+  if(y>H-150){doc.addPage();y=M;}
+  y+=4; wrap("Skill breakdown",12,"bold",0);
+  Object.keys(snap.skillPct||{}).forEach(function(k){ wrap(k+": "+snap.skillPct[k]+"%",10,"normal",8); });
+  if(snap.writePrompt){
+    if(y>H-170){doc.addPage();y=M;}
+    y+=8; wrap("Writing sample",12,"bold",0);
+    wrap("Prompt: "+snap.writePrompt,9,"italic",0); y+=2;
+    wrap((snap.writeResponse&&snap.writeResponse.trim())?snap.writeResponse:"(No response was written.)",10,"normal",0);
+    if(snap.writingAssess){ var wa=snap.writingAssess; y+=4;
+      wrap("CEFR auto-estimate: "+wa.cefr+"   ("+wa.pct+"%, "+wa.words+" words)",11,"bold",0);
+      Object.keys(wa.bands).forEach(function(k){ wrap(k+": "+wa.bands[k]+"%",9,"normal",8); });
+      wrap(wa.note,8,"italic",0);
+    }
+  }
+  var fname=("Adeptly marked - "+(a.studentName||"student")).replace(/[^a-z0-9 \-]/gi,"").slice(0,80)+".pdf";
+  doc.save(fname);
+ }catch(e){ alert("Sorry — couldn't build the marked PDF: "+((e&&e.message)||e)); }
 }
 function grade(){
   if(READONLY) return;
   if(S.result){ S.activeTab="results"; save(); render(); return; }
   const qs=getQuestions();
+  const unanswered=qs.filter((q,i)=>S.answers[i]==null).length;
+  if(unanswered>0){ alert("Please answer all "+qs.length+" questions before submitting. You still have "+unanswered+" left."); return; }
   const subj=S.student.subject, areas=skillsFor(subj);
   const per={}; areas.forEach(a=>per[a]={correct:0,total:0});
   let correct=0;
   qs.forEach((q,i)=>{ per[q.skill].total++; if(S.answers[i]===q.answer){correct++;per[q.skill].correct++;} });
   const overallPct=Math.round(correct/qs.length*100);
   const skillPct={}; areas.forEach(a=>{ skillPct[a]= per[a].total? Math.round(per[a].correct/per[a].total*100):0; });
-  let writingProvisional=null;
-  if(subj==="English"){ const wr=(S.writeResponse||"").trim(); if(wr){ writingProvisional=writingScore(wr); skillPct["Writing"]=writingProvisional; } }
+  let writingProvisional=null, writingAssessObj=null;
+  if(subj==="English"){ const wr=(S.writeResponse||"").trim(); writingAssessObj=writingAssess(wr); if(wr){ writingProvisional=writingAssessObj.pct; skillPct["Writing"]=writingProvisional; } }
   S.result={ when:new Date().toISOString(), overallPct, correct, total:qs.length, skillPct, per, level:levelFromPct(overallPct) };
   S.result.writePrompt=(subj==="English"&&typeof WRITING_PROMPTS!=="undefined")?(WRITING_PROMPTS[S.student.prevGrade]||null):null;
   S.result.writeResponse=S.writeResponse||"";
   S.result.writingProvisional=writingProvisional;
+  S.result.writingAssess=writingAssessObj;
+  // Save answers + a question snapshot so the teacher can download a marked PDF later
+  S.result.answers=Object.assign({},S.answers);
+  S.result.qsnapshot=qs.map(function(q){return {q:q.q,options:q.options,answer:q.answer,skill:q.skill};});
+  S.result.passageTitle=(subj==="English")?(readingCompFor(S.student.prevGrade)||{}).title||null:null;
   S.plan=generatePlan();
   lockdownEnd();
   S.activeTab="results"; save(); render();
@@ -1451,7 +1530,8 @@ function viewResults(){
     <p class="sub">The student's own writing in response to the prompt — for teacher assessment (not auto-scored).</p>
     <p style="font-size:12px;color:var(--muted);margin:0 0 8px"><b>Prompt:</b> ${r.writePrompt}</p>
     <div style="border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;min-height:60px">${(r.writeResponse&&r.writeResponse.trim())?r.writeResponse.replace(/</g,"&lt;"):"<span class='muted'>(No response was written during the test.)</span>"}</div>
-    <p class="muted" style="font-size:12px;margin-top:8px">The three Writing multiple-choice items above are a quick auto-scored check. This paragraph is the authentic writing sample — assess it with a rubric to set the true Writing level. The Writing % above is a provisional automated estimate (length, structure and cohesion) — pending teacher review.</p>
+    ${cefrCardHtml(r.writingAssess)}
+    <p class="muted" style="font-size:12px;margin-top:8px">The Writing multiple-choice items above are a quick auto-scored check. The paragraph is the authentic writing sample, auto-estimated against a CEFR rubric below. Please confirm the CEFR level with the full rubric — the automated estimate is a starting point, not a final grade.</p>
   </div>`:""}`;
 }
 
