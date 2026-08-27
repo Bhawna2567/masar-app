@@ -125,6 +125,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <div id="exModal" style="display:none"></div>
 <!-- Curriculum data (auto-generated from the official MOE files). Replace this file to extend. -->
 <script src="curriculum.js"></script>
+<script src="curriculum-g34-ar.js"></script>
 <script src="questions.js"></script>
 <script src="questions-ar.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -144,6 +145,7 @@ if (typeof CURRICULUM === "undefined") { window.CURRICULUM = {}; }
 if (typeof WRITING_PROMPTS === "undefined") { var WRITING_PROMPTS = {}; }
 
 const GRADES = [
+  {id:"3",label:"Grade 3"},{id:"4",label:"Grade 4"},
   {id:"5",label:"Grade 5"},
   {id:"6",label:"Grade 6"},{id:"7",label:"Grade 7"},{id:"8",label:"Grade 8"},
   {id:"9A",label:"Grade 9 Advanced"},{id:"9G",label:"Grade 9 General"},
@@ -179,7 +181,11 @@ function reset(){ if(READONLY) return; if(confirm("Clear this student's progress
 function syncResultToAssignment(){
   if(!(AUTH&&AUTH.role==="student")||!S.result||!S.activeAssignment) return;
   const r=S.result;
-  const payload={status:"completed",score:r.overallPct,level:r.level?r.level.name:"",levelCls:r.level?r.level.cls:"grey",skillPct:r.skillPct||{},subject:S.student.subject,writePrompt:r.writePrompt||"",writeResponse:r.writeResponse||"",completedAt:Date.now(),retakeAllowed:false};
+  const payload={status:"completed",score:r.overallPct,level:r.level?r.level.name:"",levelCls:r.level?r.level.cls:"grey",skillPct:r.skillPct||{},subject:S.student.subject,language:(S.student.language||"English"),prevGrade:S.student.prevGrade,writePrompt:r.writePrompt||"",writeResponse:r.writeResponse||"",completedAt:Date.now(),retakeAllowed:false};
+  // Persist per-question data at the top level too (not only nested in snapshot) so the
+  // teacher's marked-PDF export can always find it.
+  payload.answers=r.answers||{};
+  payload.qsnapshot=r.qsnapshot||null;
   if(S.plan){
     let totalDone=0,totalAll=0,tp={};
     ["1","2","3"].forEach(t=>{let d=0,tt=0; S.plan.terms[t].weeks.forEach(w=>w.tasks.forEach((_,i)=>{tt++; if(S.taskDone[t+"-"+w.week+"-"+i])d++;})); tp[t]=tt?Math.round(d/tt*100):0; totalDone+=d; totalAll+=tt;});
@@ -1454,12 +1460,42 @@ function cefrCardHtml(a){
    +'<table style="margin-top:8px"><tbody>'+bars+'</tbody></table>'
    +'<p class="muted" style="font-size:11px;margin:8px 0 0">'+a.note+'</p></div>';
 }
+// Rebuild the exact question set for a completed assignment (deterministic from grade/subject/language),
+// used as a fallback when a stored per-question snapshot isn't present.
+function rebuildQuestionsForAssignment(a){
+  var snap=a.snapshot&&a.snapshot.result;
+  if(a.customQuestions&&a.customQuestions.length) return a.customQuestions;
+  if(snap&&snap && a.snapshot.student&&a.snapshot.student.customQuestions&&a.snapshot.student.customQuestions.length) return a.snapshot.student.customQuestions;
+  var g=a.prevGrade||(a.snapshot&&a.snapshot.student&&a.snapshot.student.prevGrade);
+  var subj=a.subject||(a.snapshot&&a.snapshot.student&&a.snapshot.student.subject);
+  var lang=a.language||(a.snapshot&&a.snapshot.student&&a.snapshot.student.language)||"English";
+  if(!g||!subj) return null;
+  if(isArabic(lang)&&subj==="Math"){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
+  var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
+  if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
+  return bank;
+}
 function downloadMarkedPDF(id){
  try{
   var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;});
   if(!a){ alert("Couldn't find that student's test."); return; }
-  var snap=a.snapshot&&a.snapshot.result;
-  if(!snap||!snap.qsnapshot){ alert("This student submitted before the marked-PDF feature was added, so their per-question answers weren't saved. New submissions after this update will include it — or ask the student to retake once you allow it, and a marked copy will be available."); return; }
+  var resultSnap=a.snapshot&&a.snapshot.result;
+  // Question snapshot + answers may live top-level (new saves) or nested in snapshot (older saves);
+  // if the question snapshot is missing but answers exist, rebuild the questions deterministically.
+  var qsnap=a.qsnapshot||(resultSnap&&resultSnap.qsnapshot)||null;
+  var ans=a.answers||(resultSnap&&resultSnap.answers)||null;
+  if(!qsnap) qsnap=rebuildQuestionsForAssignment(a);
+  if(!qsnap || !ans){ alert("This student's test was completed on an older version of the app that didn't save per-question answers, so a marked copy can't be generated for it. Any test completed on the current version will export fine — click \"Allow retake\" for this student and have them submit once more to produce a marked PDF."); return; }
+  // Merge nested result (if any) with top-level fallbacks so summary fields are always populated.
+  var snap=Object.assign({}, resultSnap||{}, {qsnapshot:qsnap, answers:ans});
+  snap.writeResponse=snap.writeResponse||a.writeResponse||"";
+  if(snap.overallPct==null) snap.overallPct=(a.score!=null?a.score:0);
+  snap.total=qsnap.length;
+  snap.correct=qsnap.filter(function(q,i){return ans[i]===q.answer;}).length;
+  if(snap.overallPct==null||resultSnap==null) snap.overallPct=Math.round(snap.correct/(snap.total||1)*100);
+  if(!snap.skillPct) snap.skillPct=a.skillPct||{};
+  if(!snap.level) snap.level={name:a.level||""};
+  if(snap.writePrompt==null) snap.writePrompt=a.writePrompt||"";
   var JS=(window.jspdf&&window.jspdf.jsPDF); if(!JS){ alert("The PDF writer didn't load — check your internet and try again."); return; }
   var doc=new JS({unit:"pt",format:"a4"}); var W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   var M=48,x=M,y=M,LW=W-2*M,LET=["A","B","C","D","E","F"];
@@ -1788,6 +1824,7 @@ function setCur(k,v){ const c=curState(); c[k]=v; save(); render(); }
 function viewCurriculum(){
   const c=curState();
   const gopts=GRADES.map(g=>`<option value="${g.id}" ${c.grade===g.id?"selected":""}>${g.label}</option>`).join("");
+  const arCurr=(c.subject==="Math" && (c.grade==="3"||c.grade==="4"));
   let loadedTerms=0, body="";
   ["1","2","3"].forEach(t=>{
     const data=(CURRICULUM[c.grade]&&CURRICULUM[c.grade][t]&&CURRICULUM[c.grade][t][c.subject])||{};
@@ -1797,8 +1834,8 @@ function viewCurriculum(){
     let inner=strands.map(st=>{
       const items=(data[st]||[]).filter(x=>x);
       const real=items.length && !items[0].startsWith("(");
-      return `<div style="margin-bottom:12px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">${st}</div>
-        <ul style="margin:4px 0;padding-left:18px;font-size:13px;color:${real?'var(--ink)':'var(--muted)'}">${(items.length?items:["—"]).map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+      return `<div style="margin-bottom:12px"${arCurr?' dir="rtl" style="margin-bottom:12px;text-align:right"':''}><div style="font-weight:700;font-size:14px;margin-bottom:4px">${st}${arCurr?" — "+(AR_SKILL[st]||""):""}</div>
+        <ul style="margin:4px 0;${arCurr?'padding-right:18px':'padding-left:18px'};font-size:13px;color:${real?'var(--ink)':'var(--muted)'}">${(items.length?items:["—"]).map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
     }).join("");
     body+=`<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${strands.length} ${c.subject==="Math"?"unit(s)/strand(s)":"skill(s)"}</span></div>${inner||'<p class="muted" style="font-size:13px">No data yet.</p>'}</div>`;
   });

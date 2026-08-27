@@ -1,7 +1,7 @@
 /* Adeptly service worker — network-first (always loads the latest when online,
    falls back to the cached copy only when offline). */
-const CACHE = "adeptly-v2";
-const ASSETS = ["./", "./index.html", "./curriculum.js", "./questions.js"];
+const CACHE = "adeptly-v3";
+const ASSETS = ["./", "./index.html", "./curriculum.js", "./curriculum-g34-ar.js", "./questions.js", "./questions-ar.js"];
 
 self.addEventListener("install", e => {
   e.waitUntil(
