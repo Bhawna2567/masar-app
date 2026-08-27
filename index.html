@@ -723,6 +723,14 @@ function downloadDiagnosticPDF(){
       wrap("Read the passage, then answer the questions below.",9,"italic",0); nl(10); }
     d.qs.forEach(function(q,i){ wrap("Q"+(i+1)+". "+(q.q||""),11,"bold",0); nl(1);
       (q.options||[]).forEach(function(o,oi){ wrap(LET[oi]+")  "+o,10,"normal",14); }); nl(8); });
+    // Writing task (English built-in tests) — a written response, not multiple choice
+    if(d.subj==="English" && d.passage && typeof WRITING_PROMPTS!=="undefined" && WRITING_PROMPTS[d.grade]){
+      nl(6); wrap("Writing Task — written response",12,"bold",0); nl(1);
+      wrap(WRITING_PROMPTS[d.grade],11,"normal",0); nl(3);
+      wrap("Write your response on the lines below:",9,"italic",0); nl(8);
+      doc.setDrawColor(200);
+      for(var wl=0; wl<12; wl++){ if(y>H-M){ doc.addPage(); y=M; } doc.line(x,y,x+LW,y); y+=22; }
+    }
     // Answer key (teacher copy) on a fresh page
     doc.addPage(); y=M; x=M;
     doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.text("Answer Key — teacher copy",x,y); y+=22;
@@ -739,6 +747,9 @@ function previewDiagnostic(){
   var body="";
   if(passage){ body+='<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px"><b>📖 Reading passage — '+passage.title+'</b><div style="font-size:13px;line-height:1.7;margin-top:6px">'+passage.passage.replace(/</g,"&lt;")+'</div></div>'; }
   body+=qs.map(function(q,i){ return '<div class="q"><div class="meta">'+(q.skill||"")+'</div><div class="stem">Q'+(i+1)+'. '+((q.q||"")+"").replace(/</g,"&lt;")+'</div>'+(q.options||[]).map(function(o,oi){ return '<label class="opt '+(oi===q.answer?"exok":"")+'">'+(oi===q.answer?"✅ ":"")+(""+o).replace(/</g,"&lt;")+'</label>'; }).join("")+'</div>'; }).join("");
+  if(subj==="English" && passage && typeof WRITING_PROMPTS!=="undefined" && WRITING_PROMPTS[grade]){
+    body+='<div class="q"><div class="meta">Writing · Written Response</div><div class="stem">✍️ Writing Task — students write a full response (not multiple choice):</div><p style="font-size:13px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0 0">'+(""+WRITING_PROMPTS[grade]).replace(/</g,"&lt;")+'</p></div>';
+  }
   m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">👁 Preview — '+title+'</h2><div><button class="btn gold sm" style="margin-right:6px" onclick="downloadDiagnosticPDF()">⬇ Download PDF</button><button class="btn ghost sm" onclick="closeExercise()">✕</button></div></div><p class="sub">'+qs.length+' question(s) · correct answers are highlighted here for you. Students do not see the answers.</p>'+body+'</div></div>';
   m.style.display="block";
 }
