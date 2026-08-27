@@ -126,6 +126,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <!-- Curriculum data (auto-generated from the official MOE files). Replace this file to extend. -->
 <script src="curriculum.js"></script>
 <script src="questions.js"></script>
+<script src="questions-ar.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -154,6 +155,8 @@ const ENG_SKILLS = ["Reading","Writing","Vocabulary","Grammar"];
 const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probability"];
 
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
+if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
+function isArabic(lang){ return String(lang||"").toLowerCase().indexOf("ar")===0 || lang==="Arabic" || lang==="العربية"; }
 
 /* ---- Firebase Auth + Firestore data layer (cloud) ---- */
 try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.warn("Firebase init:",e); }
@@ -940,7 +943,7 @@ function generateTerm(classId,term){
   const td=c.termDates||{};
   Promise.all(pending.map(m=>{
     const prior=priorSummaryFor(m.email,classId,t);
-    return db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:m.email,studentName:m.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,status:"pending",createdAt:Date.now()}).catch(()=>{});
+    return db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,status:"pending",createdAt:Date.now()}).catch(()=>{});
   })).then(()=>{ S.classTerm=t; render(); });
 }
 function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -984,7 +987,7 @@ function classCard(){
     const flagged=flaggedFor(c.id).length;
     const td=c.termDates||{};
     const sched=[1,2,3].map(t=>td[t]?`T${t} ${fmtDate(td[t])}`:`T${t} —`).join("<br>");
-    return `<tr><td><b>${c.name}</b><div class="muted" style="font-size:11px">Join code <b style="letter-spacing:1px">${c.joinCode}</b></div></td><td>${subjChip(c.subject)}</td><td style="font-size:11px;line-height:1.6">${sched}</td><td>${students} students · ${done.length} done</td><td>${avg!=null?avg+"%":"—"}</td><td>${flagged?`<span class="pill red">${flagged} flagged</span>`:(done.length?`<span class="pill green">All on track</span>`:`<span class="muted">—</span>`)}</td><td><button class="btn sm" onclick="openClass('${c.id}')">Open →</button> <button class="btn ghost sm" onclick="deleteClass('${c.id}')">Delete</button></td></tr>`;
+    return `<tr><td><b>${c.name}</b><div class="muted" style="font-size:11px">Join code <b style="letter-spacing:1px">${c.joinCode}</b></div></td><td>${subjChip(c.subject)}${isArabic(c.language)?` <span class="pill amber" style="font-size:10px">العربية</span>`:""}</td><td style="font-size:11px;line-height:1.6">${sched}</td><td>${students} students · ${done.length} done</td><td>${avg!=null?avg+"%":"—"}</td><td>${flagged?`<span class="pill red">${flagged} flagged</span>`:(done.length?`<span class="pill green">All on track</span>`:`<span class="muted">—</span>`)}</td><td><button class="btn sm" onclick="openClass('${c.id}')">Open →</button> <button class="btn ghost sm" onclick="deleteClass('${c.id}')">Delete</button></td></tr>`;
   }).join(""):`<tr><td colspan="7" class="muted">No classes${fSub?" for this subject":" yet. Create one below"}.</td></tr>`;
   return `<div class="card"><div class="flex-between"><h2 style="margin:0">My classes</h2>
       <div><label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setFilterSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option></select></div></div>
@@ -992,7 +995,9 @@ function classCard(){
     <table><thead><tr><th>Class</th><th>Subject</th><th>Term schedule</th><th>Enrolment</th><th>Avg</th><th>Flagged</th><th></th></tr></thead><tbody>${rows}</tbody></table>
     <h3 style="font-size:14px;margin:18px 0 6px">Create a class</h3>
     <div class="row"><div class="col"><label>Class name</label><input id="c_name" placeholder="e.g. Grade 7B — English"></div>
-      <div class="col"><label>Subject</label><select id="c_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div></div>
+      <div class="col"><label>Subject</label><select id="c_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div>
+      <div class="col"><label>Test language</label><select id="c_language"><option value="English">English</option><option value="Arabic">العربية · Arabic</option></select></div></div>
+    <p class="muted" style="font-size:11px;margin:2px 0 0">Arabic delivers the diagnostic right-to-left with an Arabic Mathematics question bank. (English question content is used for English-subject classes.)</p>
     <div class="row" style="margin-top:10px"><div class="col"><label>Diagnostic grade (previous)</label><select id="c_prev">${grades}</select></div>
       <div class="col"><label>Current grade</label><select id="c_cur">${grades}</select></div></div>
     <label style="margin-top:12px">Publish dates — pick when each term's diagnostic opens (calendar)</label>
@@ -1006,11 +1011,12 @@ function setFilterSubject(v){S.fSubject=v;render();}
 function createClass(){
   const name=document.getElementById("c_name").value.trim();
   const subject=document.getElementById("c_subject").value, prev=document.getElementById("c_prev").value, cur=document.getElementById("c_cur").value;
+  const language=(document.getElementById("c_language")||{}).value||"English";
   const msg=document.getElementById("cmsg");
   if(!name){msg.style.color="var(--red)";msg.textContent="Enter a class name.";return;}
   msg.style.color="var(--muted)";msg.textContent="Creating…";
   const termDates={1:document.getElementById("c_t1").value||"",2:document.getElementById("c_t2").value||"",3:document.getElementById("c_t3").value||""};
-  db.collection("classes").add({teacherUid:AUTH.uid,teacherName:AUTH.name,name:name,subject:subject,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
+  db.collection("classes").add({teacherUid:AUTH.uid,teacherName:AUTH.name,name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
     .then(()=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--ok)";m.textContent="Class created — share its join code.";}})
     .catch(e=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
@@ -1025,27 +1031,38 @@ function addToClass(id){
   if(assignments().find(a=>a.classId===id&&a.studentEmail===email)){msg.style.color="var(--red)";msg.textContent="That student is already in this class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Adding…";
   const td=c.termDates||{};
-  db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:email,studentName:name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,status:"pending",createdAt:Date.now()})
+  db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,status:"pending",createdAt:Date.now()})
     .then(()=>db.collection("users").doc(AUTH.uid).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(()=>{}))
     .then(()=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--ok)";m.textContent="Added — their Term 1 diagnostic is on their dashboard. Generate later terms from the class view.";}})
     .catch(e=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
+function normCode(s){ return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
 function joinClass(){
-  const code=(document.getElementById("joinCode").value||"").trim().toUpperCase();
+  const code=normCode(document.getElementById("joinCode").value);
   const parent=((document.getElementById("joinParent")||{}).value||"").replace(/[^0-9]/g,"");
   const msg=document.getElementById("joinMsg");
   if(!code){msg.style.color="var(--red)";msg.textContent="Enter a class code.";return;}
   if(!parent||parent.length<8){msg.style.color="var(--red)";msg.textContent="Enter your parent's WhatsApp number with country code.";return;}
   msg.style.color="var(--muted)";msg.textContent="Looking up class…";
   db.collection("users").doc(AUTH.uid).update({parentPhone:parent}).catch(()=>{}); AUTH.parentPhone=parent;
-  db.collection("classes").where("joinCode","==",code).limit(1).get().then(qs=>{
+  function enrol(c){
     const m=document.getElementById("joinMsg");
-    if(qs.empty){if(m){m.style.color="var(--red)";m.textContent="No class found with that code.";}return;}
-    const d=qs.docs[0], c=Object.assign({id:d.id},d.data());
     if(assignments().find(a=>a.classId===c.id)){if(m){m.style.color="var(--red)";m.textContent="You're already in "+c.name+".";}return;}
     const td=c.termDates||{};
-    return db.collection("assignments").add({teacherUid:c.teacherUid,teacherName:c.teacherName,studentEmail:AUTH.email,studentName:AUTH.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,status:"pending",createdAt:Date.now()})
+    return db.collection("assignments").add({teacherUid:c.teacherUid,teacherName:c.teacherName,studentEmail:AUTH.email,studentName:AUTH.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,language:c.language||"English",classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,status:"pending",createdAt:Date.now()})
       .then(()=>{const m2=document.getElementById("joinMsg");if(m2){m2.style.color="var(--ok)";m2.textContent="Joined "+c.name+"! Your Term 1 diagnostic is in the list below.";}});
+  }
+  // Exact match first; if the index is momentarily stale or the stored code drifted in
+  // case/spacing, fall back to a normalized client-side scan of all classes.
+  db.collection("classes").where("joinCode","==",code).limit(1).get().then(qs=>{
+    if(!qs.empty){ const d=qs.docs[0]; return enrol(Object.assign({id:d.id},d.data())); }
+    return db.collection("classes").get().then(all=>{
+      let match=null;
+      all.forEach(d=>{ if(!match && normCode((d.data()||{}).joinCode)===code) match=Object.assign({id:d.id},d.data()); });
+      const m=document.getElementById("joinMsg");
+      if(!match){ if(m){m.style.color="var(--red)";m.textContent="No class found with that code. Check the code with your teacher.";} return; }
+      return enrol(match);
+    });
   }).catch(e=>{const m=document.getElementById("joinMsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
 function viewClass(id){
@@ -1176,7 +1193,7 @@ function openAssignment(id,completed){
   if(a.status==="completed" && !a.retakeAllowed){ alert("You've already completed this diagnostic. Ask your teacher to allow a retake."); return; }
   if(a.status!=="completed" && !isPublished(a)){ alert("This diagnostic opens on "+fmtDate(a.publishDate)+"."); return; }
   S.activeAssignment=id;
-  S.student={name:AUTH.name,subject:a.subject,prevGrade:a.prevGrade,curGrade:a.curGrade};
+  S.student={name:AUTH.name,subject:a.subject,prevGrade:a.prevGrade,curGrade:a.curGrade,language:a.language||"English"};
   S.prior=a.prior||null; S.curTerm=a.term||"1";
   S.customQuestions=a.customQuestions||null; S.customTitle=a.customTitle||null;
   S.answers={};S.result=null;S.plan=null;S.taskDone={};S.writeResponse="";S.activeTab="diagnostic";
@@ -1326,9 +1343,18 @@ var READING_COMP={
 };
 
 function readingCompFor(grade){ var n=parseInt(String(grade),10); return READING_COMP[String(n)] || READING_COMP["6"]; }
+// The diagnostic is delivered in Arabic (RTL, Arabic bank) only when the class language
+// is Arabic AND the subject is Mathematics (the Arabic bank covers Maths).
+function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && S.student.subject==="Math"); }
+var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد"};
+function skillLabel(s,ar){ return ar?(AR_SKILL[s]||s):s; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
   const g=S.student.prevGrade, subj=S.student.subject;
+  if(diagnosticIsArabic()){
+    var arBank=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null;
+    if(arBank) return arBank;
+  }
   var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
   if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
   return bank;
@@ -1344,10 +1370,15 @@ function viewDiagnostic(){
     A question bank for <b>${gLabel(S.student.prevGrade)} · ${S.student.subject}</b> hasn't been added yet.<br>
     The curriculum for this grade is loaded (see Gap Analysis &amp; Curriculum), but diagnostic <b>items</b> still need to be authored.<br>
     To try the full demo now, set <b>previous = Grade 6</b> and <b>current = Grade 7</b>.</div></div>`;}
-  let html=`<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
+  const AR=diagnosticIsArabic();
+  let html=AR
+    ? `<div class="card" style="text-align:right"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("اختبار تشخيصي — بناءً على "+gLabel(S.student.prevGrade)+" · الرياضيات")}</h2>
+    <p class="sub">${S.student.name} ينتقل إلى ${gLabel(S.student.curGrade)}. يقيس هذا الاختبار إتقان الصف السابق قبل قياس الاستعداد للصف الجديد.</p>
+    ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">هذا اختبار <b>الفصل ${S.curTerm||""}</b> — ويُبنى على نتائج <b>الفصل ${S.prior.term}</b> (المجموع ${S.prior.score}%).</div>`:""}`
+    : `<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
     <p class="sub">${S.student.name} is entering ${gLabel(S.student.curGrade)}. This test checks mastery of the prior grade before measuring readiness for the new one.</p>
     ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">This is your <b>Term ${S.curTerm||""}</b> diagnostic — it builds on your <b>Term ${S.prior.term}</b> results (overall ${S.prior.score}%). Your plan continues to target the skills you were still developing.</div>`:""}`;
-  if(S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length)){
+  if(!AR && S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length)){
     var _rc=readingCompFor(S.student.prevGrade);
     html+=`<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 14px">
       <h3 style="margin:0 0 6px;font-size:15px">📖 Reading passage — ${_rc.title}</h3>
@@ -1355,7 +1386,7 @@ function viewDiagnostic(){
       <p class="muted" style="font-size:12px;margin:8px 0 0">Read the passage, then answer the reading questions that follow.</p></div>`;
   }
   qs.forEach((q,i)=>{
-    html+=`<div class="q"><div class="meta">${q.skill}</div><div class="stem">Q${i+1}. ${q.q}</div>`;
+    html+=`<div class="q"${AR?' dir="rtl" style="text-align:right"':''}><div class="meta">${skillLabel(q.skill,AR)}</div><div class="stem">${AR?("سؤال "+(i+1)+". "):("Q"+(i+1)+". ")}${q.q}</div>`;
     q.options.forEach((o,oi)=>{
       const sel=S.answers[i]===oi;
       html+=`<label class="opt ${sel?"sel":""}" id="opt-${i}-${oi}"><input type="radio" name="q${i}" ${sel?"checked":""} onchange="pick(${i},${oi})">${o}</label>`;
@@ -1371,15 +1402,19 @@ function viewDiagnostic(){
   }
   const answered=Object.keys(S.answers).length;
   const allDone=answered>=qs.length;
-  html+=`<div class="flex-between"><span class="muted">${answered}/${qs.length} answered${allDone?"":" · answer all questions to submit"}${S.student.subject==="English"?" · writing is optional":""}</span>
-    <button id="submitBtn" class="btn gold" ${allDone?"":"disabled"} onclick="grade()">Submit &amp; analyse →</button></div></div>`;
+  html+=`<div class="flex-between"${AR?' dir="rtl"':''}><span class="muted">${counterText(answered,qs.length,allDone,AR)}</span>
+    <button id="submitBtn" class="btn gold" ${allDone?"":"disabled"} onclick="grade()">${AR?"إرسال وتحليل ←":"Submit &amp; analyse →"}</button></div></div>`;
   return html;
+}
+function counterText(answered,total,allDone,ar){
+  if(ar){ return `${answered}/${total} تمت الإجابة${allDone?"":" · أجب عن جميع الأسئلة للإرسال"}`; }
+  return `${answered}/${total} answered${allDone?"":" · answer all questions to submit"}${S.student.subject==="English"?" · writing is optional":""}`;
 }
 function pick(i,oi){S.answers[i]=oi;save();
   const qs=getQuestions();qs[i].options.forEach((_,k)=>{const el=document.getElementById(`opt-${i}-${k}`);if(el)el.classList.toggle("sel",k===oi);});
   const answered=Object.keys(S.answers).length;
   const allDone=answered>=qs.length;
-  const span=document.querySelector(".flex-between .muted");if(span)span.textContent=`${answered}/${qs.length} answered${allDone?"":" · answer all questions to submit"}${S.student.subject==="English"?" · writing is optional":""}`;
+  const span=document.querySelector(".flex-between .muted");if(span)span.textContent=counterText(answered,qs.length,allDone,diagnosticIsArabic());
   const btn=document.getElementById("submitBtn");if(btn)btn.disabled=!allDone;
 }
 
