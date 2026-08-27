@@ -1088,7 +1088,8 @@ function viewClass(id){
   const rosterRows=ca.length?ca.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map(a=>{
     const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
     const flag=flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`);
-    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
+    const termsDone=caAll.filter(x=>x.studentEmail===a.studentEmail&&x.status==="completed").length;
+    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
     return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
@@ -1129,7 +1130,8 @@ function viewClass(id){
     if(has) return `<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">✅ Term ${term} diagnostic generated for ${ca.length} student(s)${Number(term)>1?`, built on their Term ${Number(term)-1} results`:""}. <button class="btn ghost sm" onclick="generateTerm('${c.id}','${term}')">Generate for newly-joined students</button></div>`;
     return `<div class="card" style="border:1px solid #c7b8f5;background:#faf8ff"><h3 style="margin:0 0 4px;font-size:15px">⚡ Term ${term} not generated yet</h3><p class="sub" style="margin:0 0 10px">Students see Term ${term} only after you generate it. It will be built on each student's Term ${Number(term)-1} results, so the goals and activities continue from where they left off.</p><button class="btn" onclick="generateTerm('${c.id}','${term}')">Generate Term ${term} diagnostic for the class</button></div>`;
   })()}
-  <div class="card"><h2>Class roster — Term ${term}</h2><p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish.</p>
+  <div class="card"><div class="flex-between" style="align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Class roster — Term ${term}</h2>${caAll.some(a=>a.status==="completed")?`<button class="btn gold sm" onclick="downloadClassMarked('${c.id}')">⬇ Download all marked tests (all terms)</button>`:""}</div>
+    <p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish. Use the per-row <b>⬇ Marked</b> for a single test, <b>⬇ All terms</b> for one student across terms, or <b>Download all marked tests</b> above for the whole class.</p>
     <table><thead><tr><th>Student</th><th>Result</th><th>Status</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
     <h3 style="font-size:14px;margin:18px 0 6px">Add a student to this class</h3>
     <div class="row"><div class="col"><label>Name</label><input id="cs_name" placeholder="Student name"></div><div class="col"><label>School email</label><input id="cs_email" type="email" placeholder="student@school.ae"></div><div class="col"><label>Parent's WhatsApp (optional)</label><input id="cs_parent" placeholder="9715XXXXXXXX"></div></div>
@@ -1475,69 +1477,125 @@ function rebuildQuestionsForAssignment(a){
   if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
   return bank;
 }
-function downloadMarkedPDF(id){
- try{
-  var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;});
-  if(!a){ alert("Couldn't find that student's test."); return; }
+// Normalize a completed assignment into the data the marked-PDF renderer needs, or null if
+// per-question data can't be recovered (older submission with nothing saved).
+function resolveMarkData(a){
   var resultSnap=a.snapshot&&a.snapshot.result;
-  // Question snapshot + answers may live top-level (new saves) or nested in snapshot (older saves);
-  // if the question snapshot is missing but answers exist, rebuild the questions deterministically.
   var qsnap=a.qsnapshot||(resultSnap&&resultSnap.qsnapshot)||null;
   var ans=a.answers||(resultSnap&&resultSnap.answers)||null;
   if(!qsnap) qsnap=rebuildQuestionsForAssignment(a);
-  if(!qsnap || !ans){ alert("This student's test was completed on an older version of the app that didn't save per-question answers, so a marked copy can't be generated for it. Any test completed on the current version will export fine — click \"Allow retake\" for this student and have them submit once more to produce a marked PDF."); return; }
-  // Merge nested result (if any) with top-level fallbacks so summary fields are always populated.
+  if(!qsnap || !ans) return null;
   var snap=Object.assign({}, resultSnap||{}, {qsnapshot:qsnap, answers:ans});
   snap.writeResponse=snap.writeResponse||a.writeResponse||"";
-  if(snap.overallPct==null) snap.overallPct=(a.score!=null?a.score:0);
   snap.total=qsnap.length;
   snap.correct=qsnap.filter(function(q,i){return ans[i]===q.answer;}).length;
   if(snap.overallPct==null||resultSnap==null) snap.overallPct=Math.round(snap.correct/(snap.total||1)*100);
   if(!snap.skillPct) snap.skillPct=a.skillPct||{};
   if(!snap.level) snap.level={name:a.level||""};
   if(snap.writePrompt==null) snap.writePrompt=a.writePrompt||"";
-  var JS=(window.jspdf&&window.jspdf.jsPDF); if(!JS){ alert("The PDF writer didn't load — check your internet and try again."); return; }
-  var doc=new JS({unit:"pt",format:"a4"}); var W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
-  var M=48,x=M,y=M,LW=W-2*M,LET=["A","B","C","D","E","F"];
-  function wrap(txt,size,style,indent,color){ doc.setFont("helvetica",style||"normal"); doc.setFontSize(size); doc.setTextColor(color?color[0]:20,color?color[1]:20,color?color[2]:20);
-    var lines=doc.splitTextToSize(String(txt),LW-(indent||0)); for(var i=0;i<lines.length;i++){ if(y>H-M){doc.addPage();y=M;} doc.text(lines[i],x+(indent||0),y); y+=size+3; } doc.setTextColor(20,20,20); }
+  return snap;
+}
+function newMarkDoc(){
+  var JS=(window.jspdf&&window.jspdf.jsPDF); if(!JS) return null;
+  var doc=new JS({unit:"pt",format:"a4"});
+  var ctx={doc:doc,W:doc.internal.pageSize.getWidth(),H:doc.internal.pageSize.getHeight(),M:48};
+  ctx.x=ctx.M; ctx.y=ctx.M; ctx.LW=ctx.W-2*ctx.M; ctx.LET=["A","B","C","D","E","F"];
+  return ctx;
+}
+function markWrap(ctx,txt,size,style,indent,color){
+  var doc=ctx.doc; doc.setFont("helvetica",style||"normal"); doc.setFontSize(size);
+  doc.setTextColor(color?color[0]:20,color?color[1]:20,color?color[2]:20);
+  var lines=doc.splitTextToSize(String(txt),ctx.LW-(indent||0));
+  for(var i=0;i<lines.length;i++){ if(ctx.y>ctx.H-ctx.M){doc.addPage();ctx.y=ctx.M;} doc.text(lines[i],ctx.x+(indent||0),ctx.y); ctx.y+=size+3; }
+  doc.setTextColor(20,20,20);
+}
+// Write one student's marked test into an existing doc context. Returns false if no data.
+function renderMarkedInto(ctx,a,newPage){
+  var snap=resolveMarkData(a); if(!snap) return false;
+  var doc=ctx.doc, LET=ctx.LET;
+  if(newPage){ doc.addPage(); ctx.y=ctx.M; }
+  doc.setFont("helvetica","bold");doc.setFontSize(16);doc.setTextColor(20,20,20);doc.text("Adeptly — Marked Diagnostic",ctx.x,ctx.y);ctx.y+=22;
+  markWrap(ctx,(a.studentName||a.studentEmail||"Student"),13,"bold",0);
+  markWrap(ctx,(a.className?("Class: "+a.className+"     "):"")+"Subject: "+(a.subject||"")+"     Based on: "+gLabel(a.prevGrade)+(a.term?("     Term "+a.term):""),10,"normal",0);
+  markWrap(ctx,"Score: "+snap.overallPct+"%   ("+snap.correct+"/"+snap.total+" correct)   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
+  ctx.y+=4;doc.setDrawColor(200);doc.line(ctx.x,ctx.y,ctx.x+ctx.LW,ctx.y);ctx.y+=12;
+  if(snap.passageTitle){ markWrap(ctx,"Reading passage: "+snap.passageTitle,10,"italic",0); ctx.y+=4; }
   var qs=snap.qsnapshot, ans=snap.answers||{};
-  doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("Adeptly — Marked Diagnostic",x,y);y+=22;
-  wrap((a.studentName||a.studentEmail||"Student"),13,"bold",0);
-  wrap((a.className?("Class: "+a.className+"     "):"")+"Subject: "+(a.subject||"")+"     Based on: "+gLabel(a.prevGrade)+(a.term?("     Term "+a.term):""),10,"normal",0);
-  wrap("Score: "+snap.overallPct+"%   ("+snap.correct+"/"+snap.total+" correct)   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
-  y+=4;doc.setDrawColor(200);doc.line(x,y,x+LW,y);y+=12;
-  if(snap.passageTitle){ wrap("Reading passage: "+snap.passageTitle,10,"italic",0); y+=4; }
   qs.forEach(function(q,i){
     var pick=ans[i], correct=q.answer;
-    wrap("Q"+(i+1)+". "+(q.q||""),11,"bold",0);
+    markWrap(ctx,"Q"+(i+1)+". "+(q.q||""),11,"bold",0);
     (q.options||[]).forEach(function(o,oi){
       var tag="", col=null;
       if(oi===correct && oi===pick){ tag="   <- student's answer (correct)"; col=[16,122,60]; }
       else if(oi===pick && pick!==correct){ tag="   <- student's answer (incorrect)"; col=[190,30,30]; }
       else if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; }
-      wrap(LET[oi]+")  "+o+tag,10,"normal",14,col);
+      markWrap(ctx,LET[oi]+")  "+o+tag,10,"normal",14,col);
     });
-    if(pick==null) wrap("(no answer chosen)",9,"italic",14,[150,150,150]);
-    y+=6;
+    if(pick==null) markWrap(ctx,"(no answer chosen)",9,"italic",14,[150,150,150]);
+    ctx.y+=6;
   });
-  if(y>H-150){doc.addPage();y=M;}
-  y+=4; wrap("Skill breakdown",12,"bold",0);
-  Object.keys(snap.skillPct||{}).forEach(function(k){ wrap(k+": "+snap.skillPct[k]+"%",10,"normal",8); });
+  if(ctx.y>ctx.H-150){doc.addPage();ctx.y=ctx.M;}
+  ctx.y+=4; markWrap(ctx,"Skill breakdown",12,"bold",0);
+  Object.keys(snap.skillPct||{}).forEach(function(k){ markWrap(ctx,k+": "+snap.skillPct[k]+"%",10,"normal",8); });
   if(snap.writePrompt){
-    if(y>H-170){doc.addPage();y=M;}
-    y+=8; wrap("Writing sample",12,"bold",0);
-    wrap("Prompt: "+snap.writePrompt,9,"italic",0); y+=2;
-    wrap((snap.writeResponse&&snap.writeResponse.trim())?snap.writeResponse:"(No response was written.)",10,"normal",0);
-    if(snap.writingAssess){ var wa=snap.writingAssess; y+=4;
-      wrap("CEFR auto-estimate: "+wa.cefr+"   ("+wa.pct+"%, "+wa.words+" words)",11,"bold",0);
-      Object.keys(wa.bands).forEach(function(k){ wrap(k+": "+wa.bands[k]+"%",9,"normal",8); });
-      wrap(wa.note,8,"italic",0);
+    if(ctx.y>ctx.H-170){doc.addPage();ctx.y=ctx.M;}
+    ctx.y+=8; markWrap(ctx,"Writing sample",12,"bold",0);
+    markWrap(ctx,"Prompt: "+snap.writePrompt,9,"italic",0); ctx.y+=2;
+    markWrap(ctx,(snap.writeResponse&&snap.writeResponse.trim())?snap.writeResponse:"(No response was written.)",10,"normal",0);
+    if(snap.writingAssess){ var wa=snap.writingAssess; ctx.y+=4;
+      markWrap(ctx,"CEFR auto-estimate: "+wa.cefr+"   ("+wa.pct+"%, "+wa.words+" words)",11,"bold",0);
+      Object.keys(wa.bands).forEach(function(k){ markWrap(ctx,k+": "+wa.bands[k]+"%",9,"normal",8); });
+      markWrap(ctx,wa.note,8,"italic",0);
     }
   }
-  var fname=("Adeptly marked - "+(a.studentName||"student")).replace(/[^a-z0-9 \-]/gi,"").slice(0,80)+".pdf";
-  doc.save(fname);
+  return true;
+}
+function safeName(s){ return String(s||"").replace(/[^a-z0-9 \-]/gi,"").slice(0,80); }
+var OLDER_MARK_MSG="was completed on an older version that didn't save per-question answers, so a marked copy can't be generated. Click \"Allow retake\" and have the student submit once on the current version.";
+// Single test (one term for one student)
+function downloadMarkedPDF(id){
+ try{
+  var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;});
+  if(!a){ alert("Couldn't find that student's test."); return; }
+  var ctx=newMarkDoc(); if(!ctx){ alert("The PDF writer didn't load — check your internet and try again."); return; }
+  if(!renderMarkedInto(ctx,a,false)){ alert("This test "+OLDER_MARK_MSG); return; }
+  ctx.doc.save(safeName("Adeptly marked - "+(a.studentName||"student")+(a.term?(" - Term "+a.term):""))+".pdf");
  }catch(e){ alert("Sorry — couldn't build the marked PDF: "+((e&&e.message)||e)); }
+}
+function completedSorted(list){
+  return list.filter(function(a){return a.status==="completed";}).slice().sort(function(a,b){
+    var na=(a.studentName||a.studentEmail||"").toLowerCase(), nb=(b.studentName||b.studentEmail||"").toLowerCase();
+    if(na!==nb) return na<nb?-1:1;
+    return aTerm(a).localeCompare(aTerm(b));
+  });
+}
+// Every completed diagnostic in a class, across ALL terms (past, current, future), in one PDF.
+function downloadClassMarked(classId){
+ try{
+  var c=classesList().find(function(x){return x.id===classId;});
+  var all=completedSorted(assignments().filter(function(a){return a.classId===classId;}));
+  if(!all.length){ alert("No completed diagnostics in this class yet."); return; }
+  var ctx=newMarkDoc(); if(!ctx){ alert("The PDF writer didn't load — check your internet and try again."); return; }
+  var done=0, skipped=0;
+  all.forEach(function(a){ if(renderMarkedInto(ctx,a,done>0)){ done++; } else { skipped++; } });
+  if(!done){ alert("None of the completed tests in this class have per-question data saved (all taken on an older version). Allow retakes and have students submit once on the current version."); return; }
+  ctx.doc.save(safeName("Adeptly marked - "+((c&&c.name)||"class")+" - all terms")+".pdf");
+  if(skipped) setTimeout(function(){ alert(done+" marked test(s) exported. "+skipped+" older test(s) without per-question data were skipped."); },250);
+ }catch(e){ alert("Sorry — couldn't build the class PDF: "+((e&&e.message)||e)); }
+}
+// All completed terms for a single student (in one class), in one PDF.
+function downloadStudentMarked(email,classId){
+ try{
+  var list=assignments().filter(function(a){return a.studentEmail===email && (!classId||a.classId===classId);});
+  var all=completedSorted(list).sort(function(a,b){return aTerm(a).localeCompare(aTerm(b));});
+  if(!all.length){ alert("This student has no completed diagnostics yet."); return; }
+  var ctx=newMarkDoc(); if(!ctx){ alert("The PDF writer didn't load — check your internet and try again."); return; }
+  var done=0, skipped=0, nm=all[0].studentName||email;
+  all.forEach(function(a){ if(renderMarkedInto(ctx,a,done>0)){ done++; } else { skipped++; } });
+  if(!done){ alert("This student's completed test(s) don't have per-question data saved (older version). Allow a retake and have them submit once on the current version."); return; }
+  ctx.doc.save(safeName("Adeptly marked - "+nm+" - all terms")+".pdf");
+  if(skipped) setTimeout(function(){ alert(done+" term(s) exported. "+skipped+" older test(s) skipped."); },250);
+ }catch(e){ alert("Sorry — couldn't build the student PDF: "+((e&&e.message)||e)); }
 }
 function grade(){
   if(READONLY) return;
