@@ -158,6 +158,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
+var APP_BUILD = "2026-08-27f";  // shown in the header so you can confirm the latest build is running
 function isArabic(lang){ return String(lang||"").toLowerCase().indexOf("ar")===0 || lang==="Arabic" || lang==="العربية"; }
 
 /* ---- Firebase Auth + Firestore data layer (cloud) ---- */
@@ -253,7 +254,7 @@ function renderTabs(){
 
 function render(){
   const chip=document.getElementById("userChip");
-  if(chip){ chip.innerHTML = AUTH?(`<span class="pill ${AUTH.role==='teacher'?'amber':'green'}">${AUTH.role==='teacher'?'Teacher':'Student'}</span><span style="color:#fff;font-size:13px;font-weight:600">${(AUTH.name||'').split(' ')[0]}</span>`+(isAdmin()?`<button class="btn ghost sm" onclick="setAdmin('reports')">··· Admin ▾</button>`:``)+`<button class="btn gold sm" onclick="openUserGuide()">📖 User Guide</button><button class="btn ghost sm" onclick="logout()">Log out</button>`):""; }
+  if(chip){ chip.innerHTML = AUTH?(`<span class="pill ${AUTH.role==='teacher'?'amber':'green'}">${AUTH.role==='teacher'?'Teacher':'Student'}</span><span style="color:#fff;font-size:13px;font-weight:600">${(AUTH.name||'').split(' ')[0]}</span>`+(isAdmin()?`<button class="btn ghost sm" onclick="setAdmin('reports')">··· Admin ▾</button>`:``)+`<button class="btn gold sm" onclick="openUserGuide()">📖 User Guide</button><button class="btn ghost sm" onclick="logout()">Log out</button><span class="muted" style="font-size:10px;margin-left:6px" title="App build">build ${APP_BUILD}</span>`):""; }
   const tabsEl=document.getElementById("tabs"); const v=document.getElementById("view");
   if(!AUTH){ tabsEl.innerHTML=""; v.innerHTML=viewAuth(); window.scrollTo(0,0); return; }
   if(AUTH.blocked && !isAdmin()){ tabsEl.innerHTML=""; v.innerHTML=blockedView(); window.scrollTo(0,0); return; }
@@ -1484,12 +1485,19 @@ function resolveMarkData(a){
   var qsnap=a.qsnapshot||(resultSnap&&resultSnap.qsnapshot)||null;
   var ans=a.answers||(resultSnap&&resultSnap.answers)||null;
   if(!qsnap) qsnap=rebuildQuestionsForAssignment(a);
-  if(!qsnap || !ans) return null;
-  var snap=Object.assign({}, resultSnap||{}, {qsnapshot:qsnap, answers:ans});
+  if(!qsnap) return null;  // can't reconstruct the paper at all — nothing we can export
+  var noAnswers=!ans;      // older submission: the student's per-question picks were never saved
+  var snap=Object.assign({}, resultSnap||{}, {qsnapshot:qsnap, answers:ans||{}, noAnswers:noAnswers});
   snap.writeResponse=snap.writeResponse||a.writeResponse||"";
   snap.total=qsnap.length;
-  snap.correct=qsnap.filter(function(q,i){return ans[i]===q.answer;}).length;
-  if(snap.overallPct==null||resultSnap==null) snap.overallPct=Math.round(snap.correct/(snap.total||1)*100);
+  if(noAnswers){
+    // No per-question data — show the answer key + the score/skills that WERE saved on the record.
+    snap.correct=null;
+    if(snap.overallPct==null) snap.overallPct=(a.score!=null?a.score:null);
+  } else {
+    snap.correct=qsnap.filter(function(q,i){return ans[i]===q.answer;}).length;
+    if(snap.overallPct==null||resultSnap==null) snap.overallPct=Math.round(snap.correct/(snap.total||1)*100);
+  }
   if(!snap.skillPct) snap.skillPct=a.skillPct||{};
   if(!snap.level) snap.level={name:a.level||""};
   if(snap.writePrompt==null) snap.writePrompt=a.writePrompt||"";
@@ -1517,21 +1525,27 @@ function renderMarkedInto(ctx,a,newPage){
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.setTextColor(20,20,20);doc.text("Adeptly — Marked Diagnostic",ctx.x,ctx.y);ctx.y+=22;
   markWrap(ctx,(a.studentName||a.studentEmail||"Student"),13,"bold",0);
   markWrap(ctx,(a.className?("Class: "+a.className+"     "):"")+"Subject: "+(a.subject||"")+"     Based on: "+gLabel(a.prevGrade)+(a.term?("     Term "+a.term):""),10,"normal",0);
-  markWrap(ctx,"Score: "+snap.overallPct+"%   ("+snap.correct+"/"+snap.total+" correct)   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
+  if(snap.noAnswers){
+    markWrap(ctx,"Score: "+(snap.overallPct!=null?snap.overallPct+"%":"—")+"   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
+    markWrap(ctx,"Note: this earlier submission did not record the student's individual answer choices, so this shows the diagnostic paper with the correct-answer key plus the score and skill breakdown that were saved.",9,"italic",0,[150,90,10]);
+  } else {
+    markWrap(ctx,"Score: "+snap.overallPct+"%   ("+snap.correct+"/"+snap.total+" correct)   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
+  }
   ctx.y+=4;doc.setDrawColor(200);doc.line(ctx.x,ctx.y,ctx.x+ctx.LW,ctx.y);ctx.y+=12;
   if(snap.passageTitle){ markWrap(ctx,"Reading passage: "+snap.passageTitle,10,"italic",0); ctx.y+=4; }
   var qs=snap.qsnapshot, ans=snap.answers||{};
   qs.forEach(function(q,i){
-    var pick=ans[i], correct=q.answer;
+    var pick=snap.noAnswers?undefined:ans[i], correct=q.answer;
     markWrap(ctx,"Q"+(i+1)+". "+(q.q||""),11,"bold",0);
     (q.options||[]).forEach(function(o,oi){
       var tag="", col=null;
-      if(oi===correct && oi===pick){ tag="   <- student's answer (correct)"; col=[16,122,60]; }
+      if(snap.noAnswers){ if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; } }
+      else if(oi===correct && oi===pick){ tag="   <- student's answer (correct)"; col=[16,122,60]; }
       else if(oi===pick && pick!==correct){ tag="   <- student's answer (incorrect)"; col=[190,30,30]; }
       else if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; }
       markWrap(ctx,LET[oi]+")  "+o+tag,10,"normal",14,col);
     });
-    if(pick==null) markWrap(ctx,"(no answer chosen)",9,"italic",14,[150,150,150]);
+    if(!snap.noAnswers && pick==null) markWrap(ctx,"(no answer chosen)",9,"italic",14,[150,150,150]);
     ctx.y+=6;
   });
   if(ctx.y>ctx.H-150){doc.addPage();ctx.y=ctx.M;}
@@ -1551,7 +1565,7 @@ function renderMarkedInto(ctx,a,newPage){
   return true;
 }
 function safeName(s){ return String(s||"").replace(/[^a-z0-9 \-]/gi,"").slice(0,80); }
-var OLDER_MARK_MSG="was completed on an older version that didn't save per-question answers, so a marked copy can't be generated. Click \"Allow retake\" and have the student submit once on the current version.";
+var OLDER_MARK_MSG="was a one-off/imported test whose question paper wasn't saved on the record, so it can't be reconstructed. For built-in diagnostics the paper and answer key are always recoverable; for a custom test, have the student retake once on the latest build (see the \"build "+APP_BUILD+"\" tag in the top bar).";
 // Single test (one term for one student)
 function downloadMarkedPDF(id){
  try{
@@ -1578,9 +1592,9 @@ function downloadClassMarked(classId){
   var ctx=newMarkDoc(); if(!ctx){ alert("The PDF writer didn't load — check your internet and try again."); return; }
   var done=0, skipped=0;
   all.forEach(function(a){ if(renderMarkedInto(ctx,a,done>0)){ done++; } else { skipped++; } });
-  if(!done){ alert("None of the completed tests in this class have per-question data saved (all taken on an older version). Allow retakes and have students submit once on the current version."); return; }
+  if(!done){ alert("Couldn't reconstruct any of these tests (they appear to be custom/imported tests without a saved paper)."); return; }
   ctx.doc.save(safeName("Adeptly marked - "+((c&&c.name)||"class")+" - all terms")+".pdf");
-  if(skipped) setTimeout(function(){ alert(done+" marked test(s) exported. "+skipped+" older test(s) without per-question data were skipped."); },250);
+  if(skipped) setTimeout(function(){ alert(done+" test(s) exported. "+skipped+" custom test(s) without a saved paper were skipped."); },250);
  }catch(e){ alert("Sorry — couldn't build the class PDF: "+((e&&e.message)||e)); }
 }
 // All completed terms for a single student (in one class), in one PDF.
@@ -1592,9 +1606,9 @@ function downloadStudentMarked(email,classId){
   var ctx=newMarkDoc(); if(!ctx){ alert("The PDF writer didn't load — check your internet and try again."); return; }
   var done=0, skipped=0, nm=all[0].studentName||email;
   all.forEach(function(a){ if(renderMarkedInto(ctx,a,done>0)){ done++; } else { skipped++; } });
-  if(!done){ alert("This student's completed test(s) don't have per-question data saved (older version). Allow a retake and have them submit once on the current version."); return; }
+  if(!done){ alert("Couldn't reconstruct this student's test(s) (they appear to be custom/imported tests without a saved paper)."); return; }
   ctx.doc.save(safeName("Adeptly marked - "+nm+" - all terms")+".pdf");
-  if(skipped) setTimeout(function(){ alert(done+" term(s) exported. "+skipped+" older test(s) skipped."); },250);
+  if(skipped) setTimeout(function(){ alert(done+" term(s) exported. "+skipped+" custom test(s) without a saved paper were skipped."); },250);
  }catch(e){ alert("Sorry — couldn't build the student PDF: "+((e&&e.message)||e)); }
 }
 function grade(){
@@ -2070,7 +2084,21 @@ if(ib) ib.addEventListener("click", async ()=>{
 });
 window.addEventListener("appinstalled", ()=>{ const b=document.getElementById("installBtn"); if(b)b.style.display="none"; });
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  // Reload once when a new service worker takes control, so a stale cached build is replaced
+  // immediately with the latest code (fixes students stuck on an old version whose submissions
+  // didn't save per-question answers).
+  let _swReloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(_swReloaded)return; _swReloaded=true; location.reload(); });
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").then(reg=>{
+      try{ reg.update(); }catch(_){}
+      // If an updated worker is waiting, activate it now.
+      if(reg.waiting){ try{ reg.waiting.postMessage("skip"); }catch(_){} }
+      reg.addEventListener("updatefound", ()=>{ const nw=reg.installing; if(nw){ nw.addEventListener("statechange", ()=>{ /* controllerchange handles reload */ }); } });
+    }).catch(()=>{});
+    // Check for an updated worker each time the app regains focus.
+    document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{try{r.update();}catch(_){}})); } });
+  });
 }
 
 fbAuth.onAuthStateChanged(function(user){
