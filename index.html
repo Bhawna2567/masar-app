@@ -128,6 +128,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="curriculum-g34-ar.js"></script>
 <script src="questions.js"></script>
 <script src="questions-ar.js"></script>
+<script src="pool-math.js"></script>
+<script src="pool-english.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -158,7 +160,65 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
-var APP_BUILD = "2026-08-27f";  // shown in the header so you can confirm the latest build is running
+if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
+var APP_BUILD = "2026-08-28a";  // shown in the header so you can confirm the latest build is running
+
+/* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
+   Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
+   easy/medium/hard items, so the test can separate low, medium and high achievers.
+   Deterministic per student so the same test is shown every time and can be re-marked. */
+function _seedRand(seedStr){
+  seedStr=String(seedStr||"seed");
+  var h=1779033703 ^ seedStr.length;
+  for(var i=0;i<seedStr.length;i++){ h=Math.imul(h ^ seedStr.charCodeAt(i), 3432918353); h=(h<<13)|(h>>>19); }
+  var a=h>>>0;
+  return function(){ a|=0; a=(a+0x6D2B79F5)|0; var t=Math.imul(a ^ (a>>>15), 1|a); t=(t + Math.imul(t ^ (t>>>7), 61|t)) ^ t; return ((t ^ (t>>>14))>>>0)/4294967296; };
+}
+function _shuffleSeeded(arr,rand){ arr=arr.slice(); for(var i=arr.length-1;i>0;i--){ var j=Math.floor(rand()*(i+1)); var t=arr[i];arr[i]=arr[j];arr[j]=t; } return arr; }
+function diagSeed(email,grade,subj,term){ return (email||"anon")+"|"+grade+"|"+subj+"|"+(term||"1"); }
+function assembleDiagnostic(grade,subj,seedStr){
+  var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
+  if(!pool||!pool.length) return null;
+  var rand=_seedRand(seedStr);
+  var byL={F:[],C:[],H:[]};
+  pool.forEach(function(q){ (byL[q.level]||(byL[q.level]=[])).push(q); });
+  var T=Math.min(pool.length,16);
+  var want={F:Math.round(T*0.45), C:Math.round(T*0.35)}; want.H=T-want.F-want.C;
+  var chosen=[], order=["F","C","H"];
+  order.forEach(function(lv){ chosen=chosen.concat(_shuffleSeeded(byL[lv]||[],rand).slice(0,want[lv])); });
+  if(chosen.length<T){ var have={}; chosen.forEach(function(q){have[q.q]=1;});
+    chosen=chosen.concat(_shuffleSeeded(pool.filter(function(q){return !have[q.q];}),rand).slice(0,T-chosen.length)); }
+  var rank={F:0,C:1,H:2};
+  chosen.sort(function(a,b){ return (rank[a.level]||0)-(rank[b.level]||0); });
+  return chosen;
+}
+// Weighted achiever classification: harder items count more, so the tier reflects the
+// difficulty ceiling a student reaches, not just a raw percentage.
+function computeAchiever(qs,answers){
+  var wt={F:1,C:2,H:3}, wsum=0,wmax=0, lb={F:{correct:0,total:0},C:{correct:0,total:0},H:{correct:0,total:0}};
+  qs.forEach(function(q,i){ var lv=q.level||"C", w=wt[lv]||2; wmax+=w; if(!lb[lv])lb[lv]={correct:0,total:0}; lb[lv].total++; if(answers[i]===q.answer){ wsum+=w; lb[lv].correct++; } });
+  var ratio=wmax? wsum/wmax : 0;
+  var tier = ratio>=0.75 ? "High" : ratio>=0.45 ? "Medium" : "Low";
+  return {tier:tier, ratio:Math.round(ratio*100), bands:lb};
+}
+function achieverCls(t){ return t==="High"?"green":t==="Medium"?"amber":"red"; }
+function achieverBandName(k){ return k==="F"?"Foundational (easy)":k==="C"?"Core (medium)":"Challenge (hard)"; }
+function achieverCardHtml(ac){
+  if(!ac||!ac.bands) return "";
+  var b=ac.bands, order=["F","C","H"];
+  var bars=order.map(function(k){
+    var x=b[k]||{correct:0,total:0}; var p=x.total?Math.round(x.correct/x.total*100):0;
+    var col=p>=70?"var(--ok)":p>=40?"var(--amber)":"var(--red)";
+    return '<div style="margin:6px 0"><div class="flex-between" style="font-size:12px"><span>'+achieverBandName(k)+'</span><span style="font-weight:700">'+(x.total?x.correct+"/"+x.total+" · "+p+"%":"—")+'</span></div>'
+      +'<div class="bar"><span style="width:'+p+'%;background:'+col+'"></span></div></div>';
+  }).join("");
+  var tips={High:"Strong across harder questions — ready to extend beyond grade level.",Medium:"Solid on the basics; still developing on the harder items.",Low:"Needs support on the foundations before moving on."};
+  return '<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px;background:#f8fafc">'
+    +'<div class="flex-between" style="align-items:center"><b style="font-size:14px">🎯 Achiever level</b>'
+    +'<span class="pill '+achieverCls(ac.tier)+'" style="font-size:14px">'+ac.tier+' achiever</span></div>'
+    +'<p class="muted" style="font-size:12px;margin:6px 0 8px">Based on performance across easy, medium and hard questions (weighted score '+ac.ratio+'%). '+(tips[ac.tier]||"")+'</p>'
+    +bars+'</div>';
+}
 function isArabic(lang){ return String(lang||"").toLowerCase().indexOf("ar")===0 || lang==="Arabic" || lang==="العربية"; }
 
 /* ---- Firebase Auth + Firestore data layer (cloud) ---- */
@@ -187,6 +247,9 @@ function syncResultToAssignment(){
   // teacher's marked-PDF export can always find it.
   payload.answers=r.answers||{};
   payload.qsnapshot=r.qsnapshot||null;
+  // Low / Medium / High achiever classification for the teacher's roster.
+  payload.achiever=r.achiever||null;
+  payload.achieverTier=(r.achiever&&r.achiever.tier)||null;
   if(S.plan){
     let totalDone=0,totalAll=0,tp={};
     ["1","2","3"].forEach(t=>{let d=0,tt=0; S.plan.terms[t].weeks.forEach(w=>w.tasks.forEach((_,i)=>{tt++; if(S.taskDone[t+"-"+w.week+"-"+i])d++;})); tp[t]=tt?Math.round(d/tt*100):0; totalDone+=d; totalAll+=tt;});
@@ -1087,8 +1150,9 @@ function viewClass(id){
   const flaggedIds={}; flagged.forEach(a=>flaggedIds[a.id]=true);
   const students=new Set(caAll.map(a=>a.studentEmail)).size;
   const rosterRows=ca.length?ca.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map(a=>{
+    const tier=a.achieverTier||(a.achiever&&a.achiever.tier)||null;
     const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
-    const flag=flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`);
+    const flag=(a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span>`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`));
     const termsDone=caAll.filter(x=>x.studentEmail===a.studentEmail&&x.status==="completed").length;
     const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
@@ -1133,7 +1197,8 @@ function viewClass(id){
   })()}
   <div class="card"><div class="flex-between" style="align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Class roster — Term ${term}</h2>${caAll.some(a=>a.status==="completed")?`<button class="btn gold sm" onclick="downloadClassMarked('${c.id}')">⬇ Download all marked tests (all terms)</button>`:""}</div>
     <p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish. Use the per-row <b>⬇ Marked</b> for a single test, <b>⬇ All terms</b> for one student across terms, or <b>Download all marked tests</b> above for the whole class.</p>
-    <table><thead><tr><th>Student</th><th>Result</th><th>Status</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
+    ${(function(){ if(!done.length)return ""; var t={High:0,Medium:0,Low:0}; done.forEach(function(a){var tt=a.achieverTier||(a.achiever&&a.achiever.tier); if(tt&&t[tt]!=null)t[tt]++;}); if(!(t.High+t.Medium+t.Low))return ""; return `<div class="notice" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:#f8fafc"><b style="font-size:13px">Achiever spread:</b><span class="pill green">${t.High} High</span><span class="pill amber">${t.Medium} Medium</span><span class="pill red">${t.Low} Low</span><span class="muted" style="font-size:11px">from ${done.length} completed test(s) this term</span></div>`; })()}
+    <table><thead><tr><th>Student</th><th>Result</th><th>Achiever / status</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>
     <h3 style="font-size:14px;margin:18px 0 6px">Add a student to this class</h3>
     <div class="row"><div class="col"><label>Name</label><input id="cs_name" placeholder="Student name"></div><div class="col"><label>School email</label><input id="cs_email" type="email" placeholder="student@school.ae"></div><div class="col"><label>Parent's WhatsApp (optional)</label><input id="cs_parent" placeholder="9715XXXXXXXX"></div></div>
     <div style="margin-top:10px"><button class="btn" onclick="addToClass('${c.id}')">+ Add to class</button> <span id="csmsg" style="font-size:12px;color:var(--ok)"></span></div>
@@ -1364,6 +1429,10 @@ function getQuestions(){
     var arBank=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null;
     if(arBank) return arBank;
   }
+  // Preferred: assemble a difficulty-mixed test from the plain-English tagged pool.
+  var assembled=assembleDiagnostic(g,subj,diagSeed(AUTH&&AUTH.email,g,subj,S.curTerm));
+  if(assembled&&assembled.length) return assembled;
+  // Fallback to the older flat bank for any grade/subject not yet in the pool.
   var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
   if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
   return bank;
@@ -1474,6 +1543,9 @@ function rebuildQuestionsForAssignment(a){
   var lang=a.language||(a.snapshot&&a.snapshot.student&&a.snapshot.student.language)||"English";
   if(!g||!subj) return null;
   if(isArabic(lang)&&subj==="Math"){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
+  // Reproduce the same assembled pool test (deterministic from the student + grade + subject + term).
+  var assembled=assembleDiagnostic(g,subj,diagSeed(a.studentEmail,g,subj,a.term));
+  if(assembled&&assembled.length) return assembled;
   var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
   if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
   return bank;
@@ -1531,6 +1603,9 @@ function renderMarkedInto(ctx,a,newPage){
   } else {
     markWrap(ctx,"Score: "+snap.overallPct+"%   ("+snap.correct+"/"+snap.total+" correct)   Level: "+((snap.level&&snap.level.name)||""),11,"bold",0);
   }
+  if(snap.achiever&&snap.achiever.tier){ var acb=snap.achiever.bands||{};
+    var bandStr=["F","C","H"].map(function(k){var x=acb[k]||{};return (k==="F"?"Foundational":k==="C"?"Core":"Challenge")+" "+(x.total?x.correct+"/"+x.total:"—");}).join("   ");
+    markWrap(ctx,"Achiever level: "+snap.achiever.tier+"   (weighted "+snap.achiever.ratio+"%)   "+bandStr,10,"bold",0,[40,90,150]); }
   ctx.y+=4;doc.setDrawColor(200);doc.line(ctx.x,ctx.y,ctx.x+ctx.LW,ctx.y);ctx.y+=12;
   if(snap.passageTitle){ markWrap(ctx,"Reading passage: "+snap.passageTitle,10,"italic",0); ctx.y+=4; }
   var qs=snap.qsnapshot, ans=snap.answers||{};
@@ -1625,14 +1700,17 @@ function grade(){
   const skillPct={}; areas.forEach(a=>{ skillPct[a]= per[a].total? Math.round(per[a].correct/per[a].total*100):0; });
   let writingProvisional=null, writingAssessObj=null;
   if(subj==="English"){ const wr=(S.writeResponse||"").trim(); writingAssessObj=writingAssess(wr); if(wr){ writingProvisional=writingAssessObj.pct; skillPct["Writing"]=writingProvisional; } }
-  S.result={ when:new Date().toISOString(), overallPct, correct, total:qs.length, skillPct, per, level:levelFromPct(overallPct) };
+  // Classify the student as a Low / Medium / High achiever from performance across the
+  // Foundational / Core / Challenge difficulty bands (the core purpose of the diagnostic).
+  const achiever=computeAchiever(qs, S.answers);
+  S.result={ when:new Date().toISOString(), overallPct, correct, total:qs.length, skillPct, per, level:levelFromPct(overallPct), achiever:achiever };
   S.result.writePrompt=(subj==="English"&&typeof WRITING_PROMPTS!=="undefined")?(WRITING_PROMPTS[S.student.prevGrade]||null):null;
   S.result.writeResponse=S.writeResponse||"";
   S.result.writingProvisional=writingProvisional;
   S.result.writingAssess=writingAssessObj;
-  // Save answers + a question snapshot so the teacher can download a marked PDF later
+  // Save answers + a question snapshot so the teacher can download a marked PDF later (keep the difficulty level).
   S.result.answers=Object.assign({},S.answers);
-  S.result.qsnapshot=qs.map(function(q){return {q:q.q,options:q.options,answer:q.answer,skill:q.skill};});
+  S.result.qsnapshot=qs.map(function(q){return {q:q.q,options:q.options,answer:q.answer,skill:q.skill,level:q.level||null};});
   S.result.passageTitle=(subj==="English")?(readingCompFor(S.student.prevGrade)||{}).title||null:null;
   S.plan=generatePlan();
   lockdownEnd();
@@ -1661,6 +1739,7 @@ function viewResults(){
       <div class="box"><div class="n"><span class="pill ${lvl.cls}" style="font-size:13px">${lvl.name}</span></div><div class="l">Placed Level</div></div>
       <div class="box"><div class="n" style="font-size:18px">${gLabel(S.student.curGrade)}</div><div class="l">Current Grade</div></div>
     </div>
+    ${achieverCardHtml(r.achiever)}
   </div>
   <div class="card">
     <h2>Skill breakdown</h2>
