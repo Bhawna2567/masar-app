@@ -161,7 +161,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -183,11 +183,15 @@ function assembleDiagnostic(grade,subj,seedStr){
   var byL={F:[],C:[],H:[]};
   pool.forEach(function(q){ (byL[q.level]||(byL[q.level]=[])).push(q); });
   var T=Math.min(pool.length,16);
-  var want={F:Math.round(T*0.45), C:Math.round(T*0.35)}; want.H=T-want.F-want.C;
+  // Lean easier: ~55% Foundational, ~30% Core, ~15% Challenge — still a full spread so the
+  // test separates low/medium/high, but most questions are accessible.
+  var want={F:Math.round(T*0.55), C:Math.round(T*0.30)}; want.H=Math.max(1,T-want.F-want.C);
   var chosen=[], order=["F","C","H"];
   order.forEach(function(lv){ chosen=chosen.concat(_shuffleSeeded(byL[lv]||[],rand).slice(0,want[lv])); });
   if(chosen.length<T){ var have={}; chosen.forEach(function(q){have[q.q]=1;});
-    chosen=chosen.concat(_shuffleSeeded(pool.filter(function(q){return !have[q.q];}),rand).slice(0,T-chosen.length)); }
+    var rk={F:0,C:1,H:2};
+    var rest=_shuffleSeeded(pool.filter(function(q){return !have[q.q];}),rand).sort(function(a,b){return (rk[a.level]||0)-(rk[b.level]||0);}); // easiest first
+    chosen=chosen.concat(rest.slice(0,T-chosen.length)); }
   var rank={F:0,C:1,H:2};
   chosen.sort(function(a,b){ return (rank[a.level]||0)-(rank[b.level]||0); });
   return chosen;
@@ -198,7 +202,8 @@ function computeAchiever(qs,answers){
   var wt={F:1,C:2,H:3}, wsum=0,wmax=0, lb={F:{correct:0,total:0},C:{correct:0,total:0},H:{correct:0,total:0}};
   qs.forEach(function(q,i){ var lv=q.level||"C", w=wt[lv]||2; wmax+=w; if(!lb[lv])lb[lv]={correct:0,total:0}; lb[lv].total++; if(answers[i]===q.answer){ wsum+=w; lb[lv].correct++; } });
   var ratio=wmax? wsum/wmax : 0;
-  var tier = ratio>=0.75 ? "High" : ratio>=0.45 ? "Medium" : "Low";
+  // High needs success on harder items (not just the many easy ones); tuned for the easier mix.
+  var tier = ratio>=0.80 ? "High" : ratio>=0.40 ? "Medium" : "Low";
   return {tier:tier, ratio:Math.round(ratio*100), bands:lb};
 }
 function achieverCls(t){ return t==="High"?"green":t==="Medium"?"amber":"red"; }
