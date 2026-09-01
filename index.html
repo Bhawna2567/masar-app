@@ -161,7 +161,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28e";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28f";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -411,28 +411,94 @@ function teacherNav(){
 }
 function setTeacherView(v){ S.teacherView=v; render(); }
 function openAnalysis(id){ S.teacherView="analysis"; S.analysisId=id; render(); }
+// Named, interactive classroom activities/games (low-prep + a few digital tools) per skill and level.
 var SKILL_STRATEGIES={
- "Reading":{support:["Use short, levelled texts and pre-teach 5–6 key words (gloss tricky words in Arabic).","Model 'find the main idea' aloud, then ask one literal question before any inference question.","Use picture support and 'point to the answer in the text' tasks to build confidence."],
-   extend:["Give longer authentic texts and ask for inference, author's purpose and tone.","Compare two texts on the same topic and have the student summarise the differences in their own words."]},
- "Vocabulary":{support:["Teach high-frequency words with images and actions; add them to a class word wall.","Have students say a new word in a sentence before writing it.","Practise opposites and simple word families (play / played / playing)."],
-   extend:["Explore synonyms, antonyms and collocations; keep a personal vocabulary journal.","Ask students to write original sentences and a short paragraph using the target words."]},
- "Grammar":{support:["Teach one structure at a time using sentence frames (e.g. 'She ___ to school').","Plenty of controlled practice (gap-fill, matching) before free writing.","Colour-code subject / verb / object so the pattern is visible."],
-   extend:["Editing tasks: find and fix mixed errors in a paragraph.","Transform sentences — change the tense, singular/plural, or active/passive."]},
- "Writing":{support:["Give sentence starters and a paragraph frame; model it, write one together, then let them try alone.","Focus first on capital letters, full stops and finger spaces.","Keep tasks short (3–4 sentences) and celebrate correct punctuation."],
-   extend:["Build multi-paragraph texts using linking words (first, however, finally).","Use peer editing against a simple rubric and encourage self-correction."]},
- "Number & Operations":{support:["Use number lines and place-value blocks before abstract sums.","Practise number bonds and times tables daily in short bursts.","Break word problems into steps with a worked example."],
-   extend:["Multi-step, real-life problems (money, measurement); ask the student to explain the method.","Introduce estimation and checking strategies."]},
- "Algebra":{support:["Start with number patterns and 'missing number' boxes before letters.","Use a balance-scale picture for equations.","One-step equations with lots of practice."],
-   extend:["Two-step equations, sequences and simple graphs; justify each step."]},
- "Geometry":{support:["Use real objects and grid paper for area/perimeter — count the squares first.","Name and sort 2-D shapes by their properties."],
-   extend:["Combined shapes, angles and simple Pythagoras; explain the reasoning."]},
- "Data & Probability":{support:["Read simple bar charts and pictograms; find the biggest and smallest first.","Introduce 'likely / unlikely' with everyday examples."],
-   extend:["Mean, median and range, and probability as fractions; interpret and compare data sets."]}
+ "Reading":{support:[
+   "<b>Running Dictation</b> — post a short text on the wall; runners read, remember and dictate to a writing partner, then check.",
+   "<b>Story Sequencing Cards</b> — students put jumbled sentence strips of a short story in the right order in pairs.",
+   "<b>Highlighter Hunt</b> — give a 4–5 line text and race to underline the answer to a literal question ('point to the words').",
+   "<b>Kahoot! / Blooket 'True or False'</b> — quick comprehension checks on a mini-text the class just read together."],
+   extend:[
+   "<b>Jigsaw Reading</b> — each group reads a different short text, then teaches the others and compares ideas.",
+   "<b>Reciprocal Reading roles</b> — Predictor, Questioner, Clarifier, Summariser rotate around the group.",
+   "<b>Two-text Debate</b> — read two opinions on one topic and argue which is more convincing, using evidence."]},
+ "Vocabulary":{support:[
+   "<b>Flyswatter Game</b> — words on the board; two students race to swat the word you define.",
+   "<b>Pictionary / Charades</b> — act or draw the target word for the team to guess.",
+   "<b>Word Wall + Bingo</b> — build a class word wall, then play definition Bingo with those words.",
+   "<b>Wordwall.net 'Match up'</b> or <b>Quizlet Live</b> — match words to meanings in teams."],
+   extend:[
+   "<b>Synonym Ladders</b> — climb from a weak word to a strong one (big → large → enormous).",
+   "<b>Vocabulary Journal + Frayer Model</b> — word, meaning, example, non-example, picture.",
+   "<b>Taboo</b> — describe a word to your team without saying the 'forbidden' words."]},
+ "Grammar":{support:[
+   "<b>Sentence Scramble Race</b> — teams reorder cut-up word cards into a correct sentence.",
+   "<b>Four Corners</b> — label corners A/B/C/D; students run to the corner with the correct verb form.",
+   "<b>Grammar Board Race</b> — two teams race to fix an incorrect sentence on the board.",
+   "<b>Kahoot! / Quizizz</b> — fast 'choose the correct word' rounds with instant feedback."],
+   extend:[
+   "<b>Error Hunt / Find-and-Fix</b> — a paragraph with mixed errors to correct against a checklist.",
+   "<b>Sentence Transformation Relay</b> — change tense or active↔passive down the row.",
+   "<b>Grammar Auction</b> — teams 'buy' sentences they believe are correct."]},
+ "Writing":{support:[
+   "<b>Sentence Starters + Paragraph Frame</b> — model, write one together, then students try alone.",
+   "<b>Roll-a-Story</b> — dice choose the character, setting and problem; write 3–4 sentences.",
+   "<b>Punctuation Traffic Lights</b> — students hold red/green cards to spot missing capitals/full stops.",
+   "<b>Dictogloss</b> — read a short text twice; students rebuild it, then compare and fix."],
+   extend:[
+   "<b>Peer Editing with a Rubric (Two Stars and a Wish)</b> — students give two praises and one improvement.",
+   "<b>Gallery Walk</b> — post paragraphs; classmates leave sticky-note feedback.",
+   "<b>Linking-Words Challenge</b> — rewrite a paragraph adding first/however/finally to improve flow."]},
+ "Number & Operations":{support:[
+   "<b>Around the World</b> — flashcard duel of number facts around the class.",
+   "<b>Number-line / Place-value Blocks</b> — build the number physically before the abstract sum.",
+   "<b>SCOOT task cards</b> — cards around the room; students rotate solving one step each.",
+   "<b>Blooket / Prodigy</b> — gamified fact and operations practice."],
+   extend:[
+   "<b>Real-life Maths Stations</b> — shopping, recipes and measurement problems; explain the method.",
+   "<b>Estimation Jar / 'Which is bigger?'</b> — estimate then check and justify.",
+   "<b>Maths Escape Room</b> — solve multi-step problems to unlock the next clue."]},
+ "Algebra":{support:[
+   "<b>Balance-Scale Equations</b> — physical or drawn balance to solve for the unknown.",
+   "<b>Missing-Number Bingo</b> — solve simple equations to mark the board.",
+   "<b>Pattern Trains</b> — build and continue number/shape patterns with counters."],
+   extend:[
+   "<b>Desmos / graph challenges</b> — match equations to lines.",
+   "<b>Two-step Equation Relay</b> — teams solve and pass to the next member.",
+   "<b>'Guess My Rule'</b> — input/output tables where students find and justify the rule."]},
+ "Geometry":{support:[
+   "<b>Geoboard / grid-paper</b> — count squares to find area and perimeter.",
+   "<b>Shape Sort & Hunt</b> — classify 2-D shapes and find them around the classroom.",
+   "<b>Angle Charades</b> — bodies or arms show acute / right / obtuse angles."],
+   extend:[
+   "<b>Origami / Nets</b> — build 3-D solids and calculate surface area or volume.",
+   "<b>Pythagoras Investigation</b> — measure real right triangles and test a²+b²=c².",
+   "<b>Design a Floor Plan</b> — apply area and perimeter to a real space."]},
+ "Data & Probability":{support:[
+   "<b>Class Survey + Bar Graph</b> — collect real data (favourite fruit) and graph it together.",
+   "<b>Likely / Unlikely Sorting</b> — sort everyday events on a probability line.",
+   "<b>Dice & Coin Experiments</b> — predict, roll/flip, tally and compare."],
+   extend:[
+   "<b>Spinner Probability Lab</b> — design spinners for a given probability as a fraction.",
+   "<b>Data Detective</b> — interpret real graphs from news/sport and draw conclusions.",
+   "<b>Mean/Median/Range Stations</b> — rotate through mini data sets and compare."]}
 };
 var TIER_STRATEGIES={
- Low:{title:"Low achiever — build the foundations",items:["Target the foundational gaps first; keep tasks short and achievable to build confidence.","10–15 minutes of focused daily practice beats one long weekly session.","Re-teach with the concrete → pictorial → abstract sequence and check understanding often.","Share one simple home activity each week with parents."]},
- Medium:{title:"Medium achiever — close the core gaps",items:["Focus on the specific core skills missed (listed below).","Set one measurable 4-week goal per weak skill and review progress.","Add slightly harder items only once the core skill is secure.","Use pair work so the student explains their thinking."]},
- High:{title:"High achiever — extend and challenge",items:["Give enrichment and challenge tasks beyond grade level.","Use open-ended, project-based and multi-step problems.","Offer a peer-tutoring or 'expert' role to deepen understanding.","Encourage independent goals and self-assessment."]}
+ Low:{title:"Low achiever — build the foundations",items:[
+   "Target the foundational gaps first; keep tasks short and achievable to build confidence.",
+   "Warm up every lesson with a 5-minute game (<b>Kahoot!</b>, <b>flashcard 'Around the World'</b>, or a <b>Flyswatter</b> round) on the weak skill.",
+   "Use the concrete → pictorial → abstract sequence and lots of praise for effort.",
+   "Send one simple home game each week (e.g. <b>vocabulary Bingo</b> or <b>Roll-a-Story</b>)."]},
+ Medium:{title:"Medium achiever — close the core gaps",items:[
+   "Focus on the specific sub-skills missed (listed above).",
+   "Use pair/'<b>Think–Pair–Share</b>' and <b>Quizizz</b> team mode so students explain their thinking.",
+   "Set one measurable 4-week goal per weak skill and finish lessons with an <b>Exit Ticket</b>.",
+   "Add slightly harder items only once the core skill is secure."]},
+ High:{title:"High achiever — extend and challenge",items:[
+   "Give enrichment: <b>Escape Rooms</b>, <b>Genius Hour</b> projects, and open-ended investigations.",
+   "Use the student as an '<b>expert</b>' in <b>Jigsaw</b> groups or as a peer tutor.",
+   "Offer <b>debates</b>, <b>Taboo</b> and <b>two-text comparison</b> tasks that need reasoning.",
+   "Encourage independent goals and self-assessment against a rubric."]}
 };
 function cefrForAssignment(snap,a){ var p=(snap&&snap.overallPct!=null)?snap.overallPct:(a.score!=null?a.score:0); return cefrFromPct(p); }
 function viewAnalysis(){
@@ -2197,9 +2263,9 @@ const WRITING_PRACTICE_PROMPTS=[
 ];
 function exRnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 function exPickN(arr,k){const c=arr.slice(),o=[];while(o.length<k&&c.length)o.push(c.splice(exRnd(0,c.length-1),1)[0]);return o;}
-function genMath(strand){
-  const items=[];
-  for(let i=0;i<5;i++){
+function genMath(strand,count){
+  const items=[]; count=count||10;
+  for(let i=0;i<count;i++){
     if(strand.indexOf("Number")>=0){
       const t=exRnd(0,3);
       if(t===0){const a=exRnd(12,99),b=exRnd(12,99);items.push({q:`${a} + ${b} = ?`,answer:a+b});}
@@ -2220,15 +2286,46 @@ function genMath(strand){
   }
   return items;
 }
+// Gather all MCQs of a given skill from the difficulty pool (across grades; plain-English, self-contained).
+function collectPoolItems(subject,skill){
+  var out=[],seen={};
+  for(var g in QUESTION_POOL){ var arr=QUESTION_POOL[g]&&QUESTION_POOL[g][subject]; if(!arr)continue;
+    arr.forEach(function(q){ if(q.skill===skill && !seen[q.q]){ seen[q.q]=1; out.push({q:q.q,options:q.options.slice(),answer:q.answer,sub:q.sub}); } }); }
+  return out;
+}
+// Which sub-skills did the student get wrong in the diagnostic for this skill? (to target practice)
+function weakSubsFor(skill){
+  var res=S.result, w={}; if(res&&res.qsnapshot&&res.answers){
+    res.qsnapshot.forEach(function(q,i){ if(q.skill===skill && res.answers[i]!==q.answer && q.sub) w[q.sub]=true; }); }
+  return w;
+}
+// Put questions that match the student's weak sub-skills first, then the rest (lightly shuffled).
+function orderByWeak(items,skill){
+  var w=weakSubsFor(skill);
+  items.forEach(function(it){ it._r=Math.random(); });
+  items.sort(function(a,b){ var aw=w[a.sub]?0:1, bw=w[b.sub]?0:1; if(aw!==bw)return aw-bw; return a._r-b._r; });
+  return items;
+}
+function take10(bank,extra){
+  var out=[],seen={};
+  bank.concat(extra||[]).forEach(function(x){ if(out.length<10 && x && !seen[x.q]){ seen[x.q]=1; out.push(x); } });
+  return out;
+}
 function buildExercise(skill){
-  if(skill==="Reading"){const p=READING_PASSAGES[exRnd(0,READING_PASSAGES.length-1)];return {type:"mcq",intro:`<b>${p.title}</b><br>${p.text}`,items:p.qs};}
-  if(skill==="Grammar")return {type:"mcq",items:exPickN(GRAMMAR_POOL,5)};
-  if(skill==="Vocabulary")return {type:"mcq",items:exPickN(VOCAB_POOL,5)};
-  if(skill==="Writing")return {type:"writing",prompt:WRITING_PRACTICE_PROMPTS[exRnd(0,WRITING_PRACTICE_PROMPTS.length-1)]};
-  return {type:"mathinput",items:genMath(skill)};
+  if(skill==="Writing") return {type:"writing",prompt:WRITING_PRACTICE_PROMPTS[exRnd(0,WRITING_PRACTICE_PROMPTS.length-1)]};
+  if(skill==="Reading"){
+    var items=orderByWeak(collectPoolItems("English","Reading"),"Reading");
+    if(items.length>=10) return {type:"mcq",items:items.slice(0,10)};
+    var p=READING_PASSAGES[exRnd(0,READING_PASSAGES.length-1)];
+    return {type:"mcq",intro:`<b>${p.title}</b><br>${p.text}`,items:take10(items,p.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer};}))};
+  }
+  if(skill==="Grammar")    return {type:"mcq",items:take10(orderByWeak(collectPoolItems("English","Grammar"),"Grammar"),GRAMMAR_POOL)};
+  if(skill==="Vocabulary") return {type:"mcq",items:take10(orderByWeak(collectPoolItems("English","Vocabulary"),"Vocabulary"),VOCAB_POOL)};
+  return {type:"mathinput",items:genMath(skill,10)};
 }
 let EX=null;
-function launchExercise(key,skill){ if(READONLY) return; EX={key,skill,def:buildExercise(skill),resp:{},submitted:false}; renderExercise(); lockdownStart("activity"); }
+// Practice is low-stakes: no exam lockdown/fullscreen (that overlay was hiding the activity).
+function launchExercise(key,skill){ if(READONLY) return; EX={key,skill,def:buildExercise(skill),resp:{},submitted:false}; renderExercise(); }
 function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
 function exInput(i,v){ EX.resp[i]=v; }
 function exWrite(v){ EX.resp.text=v; }
