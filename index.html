@@ -161,7 +161,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -497,17 +497,25 @@ function viewAnalysis(){
     // Questions missed
     var anyMissed=areas.some(function(k){return per[k]&&per[k].missed.length;});
     if(anyMissed){
+      // Sub-skill focus: which specific sub-skills the student lost marks on.
+      var subLost={};
+      areas.forEach(function(k){ var x=per[k]; if(!x)return; x.missed.forEach(function(mm){ var key=k+" — "+(mm.q.sub||"General"); subLost[key]=(subLost[key]||0)+1; }); });
+      var subKeys=Object.keys(subLost);
+      if(subKeys.length){
+        html+='<div class="notice" style="background:#fff7f5;border-color:#ffd9cf;margin-top:14px"><b style="font-size:13px">Specific sub-skills to reteach:</b> '
+          +subKeys.map(function(kk){return '<span class="pill red" style="margin:2px">'+kk+(subLost[kk]>1?(" ×"+subLost[kk]):"")+'</span>';}).join(" ")+'</div>';
+      }
       html+='<h3 style="font-size:14px;margin:16px 0 6px">Questions the student lost marks on</h3>';
-      html+='<table><thead><tr><th>Q</th><th>Skill</th><th>Level</th><th>Question</th><th>Their answer</th><th>Correct</th><th>Lost (of skill)</th></tr></thead><tbody>';
+      html+='<table><thead><tr><th>Q</th><th>Skill</th><th>Sub-skill</th><th>Level</th><th>Question</th><th>Their answer</th><th>Correct</th><th>Lost (of skill)</th></tr></thead><tbody>';
       areas.forEach(function(k){ var x=per[k]; if(!x)return; x.missed.forEach(function(mm){ var q=mm.q; var lvlName=q.level==="F"?"Easy":q.level==="H"?"Hard":q.level==="C"?"Medium":"—";
         var chosen=(mm.chosen!=null&&q.options[mm.chosen]!=null)?q.options[mm.chosen]:"(no answer)";
         var lostSkill=Math.round(1/x.t*100);
-        html+='<tr><td>Q'+(mm.i+1)+'</td><td>'+k+'</td><td>'+lvlName+'</td><td style="font-size:12px">'+String(q.q).replace(/</g,"&lt;")+'</td>'
+        html+='<tr><td>Q'+(mm.i+1)+'</td><td>'+k+'</td><td style="font-size:12px"><b>'+(q.sub||"—")+'</b></td><td>'+lvlName+'</td><td style="font-size:12px">'+String(q.q).replace(/</g,"&lt;")+'</td>'
           +'<td style="font-size:12px;color:var(--red)">'+String(chosen).replace(/</g,"&lt;")+'</td>'
           +'<td style="font-size:12px;color:var(--ok)">'+String(q.options[q.answer]).replace(/</g,"&lt;")+'</td>'
           +'<td>'+lostSkill+'%</td></tr>';
       });});
-      html+='</tbody></table><p class="muted" style="font-size:11px;margin-top:6px">"Lost (of skill)" is how much of that skill\'s marks the single question was worth — e.g. missing 1 of 4 Reading questions loses 25% of Reading.</p>';
+      html+='</tbody></table><p class="muted" style="font-size:11px;margin-top:6px">"Sub-skill" is the specific skill each question tests. "Lost (of skill)" is how much of that skill\'s marks the question was worth — e.g. missing 1 of 4 Reading questions loses 25% of Reading.</p>';
     } else {
       html+='<p class="muted" style="font-size:13px;margin-top:10px">🎉 No questions missed — full marks.</p>';
     }
@@ -1750,7 +1758,7 @@ function renderMarkedInto(ctx,a,newPage){
   qs.forEach(function(q,i){
     var pick=snap.noAnswers?undefined:ans[i], correct=q.answer;
     markWrap(ctx,"Q"+(i+1)+". "+(q.q||""),11,"bold",0);
-    if(q.skill){ markWrap(ctx,"Skill tested: "+q.skill+(lvlName(q.level)?("   ·   Level: "+lvlName(q.level)):""),9,"italic",14,[90,90,120]); }
+    if(q.skill){ markWrap(ctx,"Skill tested: "+q.skill+(q.sub?(" — "+q.sub):"")+(lvlName(q.level)?("   ·   Level: "+lvlName(q.level)):""),9,"italic",14,[90,90,120]); }
     (q.options||[]).forEach(function(o,oi){
       var tag="", col=null;
       if(snap.noAnswers){ if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; } }
