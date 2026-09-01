@@ -161,7 +161,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28f";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28g";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2325,7 +2325,12 @@ function buildExercise(skill){
 }
 let EX=null;
 // Practice is low-stakes: no exam lockdown/fullscreen (that overlay was hiding the activity).
-function launchExercise(key,skill){ if(READONLY) return; EX={key,skill,def:buildExercise(skill),resp:{},submitted:false}; renderExercise(); }
+function launchExercise(key,skill){
+  // Practice opens for students AND for teachers previewing a student (read-only just means
+  // ticking the box won't be saved). Any error is surfaced instead of failing silently.
+  try{ EX={key,skill,def:buildExercise(skill),resp:{},submitted:false,readonly:READONLY}; renderExercise(); }
+  catch(e){ alert("Couldn't open this practice activity: "+((e&&e.message)||e)); }
+}
 function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
 function exInput(i,v){ EX.resp[i]=v; }
 function exWrite(v){ EX.resp.text=v; }
