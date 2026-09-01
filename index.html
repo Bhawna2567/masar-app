@@ -161,7 +161,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -327,7 +327,7 @@ function render(){
   if(!AUTH){ tabsEl.innerHTML=""; v.innerHTML=viewAuth(); window.scrollTo(0,0); return; }
   if(AUTH.blocked && !isAdmin()){ tabsEl.innerHTML=""; v.innerHTML=blockedView(); window.scrollTo(0,0); return; }
   if(isAdmin() && S.adminSection){ tabsEl.innerHTML=""; v.innerHTML=viewAdmin(); window.scrollTo(0,0); return; }
-  if(AUTH.role==="teacher" && !VIEWING){ tabsEl.innerHTML=""; v.innerHTML=verifyBanner()+(S.openClassId?viewClass(S.openClassId):viewTeacher()); window.scrollTo(0,0); return; }
+  if(AUTH.role==="teacher" && !VIEWING){ tabsEl.innerHTML=""; var tnav=teacherNav(); var tbody=(S.teacherView==="analysis")?viewAnalysis():(S.openClassId?viewClass(S.openClassId):viewTeacher()); v.innerHTML=verifyBanner()+tnav+tbody; window.scrollTo(0,0); return; }
   renderTabs();
   const map={home:viewHome,setup:viewSetup,diagnostic:viewDiagnostic,results:viewResults,gaps:viewGaps,report:viewReport,goals:viewGoals,plan:viewPlan,folders:viewFolders,tracker:viewTracker,graphs:viewProgressGraphs,curriculum:viewCurriculum};
   if(!tabEnabled(TABS.find(t=>t.id===S.activeTab))){S.activeTab=VIEWING?"results":"home";}
@@ -400,6 +400,138 @@ function doLogin(){
   fbAuth.signInWithEmailAndPassword(email,pass).catch(e=>{const m=document.getElementById("authMsg"); if(m)m.textContent=fbErr(e);});
 }
 function logout(){ fbAuth.signOut(); }
+
+/* ===== TEACHER: Skill Analysis tab ===== */
+function teacherNav(){
+  var v=(S.teacherView==="analysis")?"analysis":"classes";
+  return '<div class="card no-print" style="padding:10px 14px;margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +'<b style="font-size:14px;margin-right:6px">Teacher dashboard</b>'
+    +'<button class="btn '+(v==="classes"?"":"ghost")+' sm" onclick="setTeacherView(\'classes\')">🏫 My classes</button>'
+    +'<button class="btn '+(v==="analysis"?"":"ghost")+' sm" onclick="setTeacherView(\'analysis\')">📈 Skill analysis</button></div>';
+}
+function setTeacherView(v){ S.teacherView=v; render(); }
+function openAnalysis(id){ S.teacherView="analysis"; S.analysisId=id; render(); }
+var SKILL_STRATEGIES={
+ "Reading":{support:["Use short, levelled texts and pre-teach 5–6 key words (gloss tricky words in Arabic).","Model 'find the main idea' aloud, then ask one literal question before any inference question.","Use picture support and 'point to the answer in the text' tasks to build confidence."],
+   extend:["Give longer authentic texts and ask for inference, author's purpose and tone.","Compare two texts on the same topic and have the student summarise the differences in their own words."]},
+ "Vocabulary":{support:["Teach high-frequency words with images and actions; add them to a class word wall.","Have students say a new word in a sentence before writing it.","Practise opposites and simple word families (play / played / playing)."],
+   extend:["Explore synonyms, antonyms and collocations; keep a personal vocabulary journal.","Ask students to write original sentences and a short paragraph using the target words."]},
+ "Grammar":{support:["Teach one structure at a time using sentence frames (e.g. 'She ___ to school').","Plenty of controlled practice (gap-fill, matching) before free writing.","Colour-code subject / verb / object so the pattern is visible."],
+   extend:["Editing tasks: find and fix mixed errors in a paragraph.","Transform sentences — change the tense, singular/plural, or active/passive."]},
+ "Writing":{support:["Give sentence starters and a paragraph frame; model it, write one together, then let them try alone.","Focus first on capital letters, full stops and finger spaces.","Keep tasks short (3–4 sentences) and celebrate correct punctuation."],
+   extend:["Build multi-paragraph texts using linking words (first, however, finally).","Use peer editing against a simple rubric and encourage self-correction."]},
+ "Number & Operations":{support:["Use number lines and place-value blocks before abstract sums.","Practise number bonds and times tables daily in short bursts.","Break word problems into steps with a worked example."],
+   extend:["Multi-step, real-life problems (money, measurement); ask the student to explain the method.","Introduce estimation and checking strategies."]},
+ "Algebra":{support:["Start with number patterns and 'missing number' boxes before letters.","Use a balance-scale picture for equations.","One-step equations with lots of practice."],
+   extend:["Two-step equations, sequences and simple graphs; justify each step."]},
+ "Geometry":{support:["Use real objects and grid paper for area/perimeter — count the squares first.","Name and sort 2-D shapes by their properties."],
+   extend:["Combined shapes, angles and simple Pythagoras; explain the reasoning."]},
+ "Data & Probability":{support:["Read simple bar charts and pictograms; find the biggest and smallest first.","Introduce 'likely / unlikely' with everyday examples."],
+   extend:["Mean, median and range, and probability as fractions; interpret and compare data sets."]}
+};
+var TIER_STRATEGIES={
+ Low:{title:"Low achiever — build the foundations",items:["Target the foundational gaps first; keep tasks short and achievable to build confidence.","10–15 minutes of focused daily practice beats one long weekly session.","Re-teach with the concrete → pictorial → abstract sequence and check understanding often.","Share one simple home activity each week with parents."]},
+ Medium:{title:"Medium achiever — close the core gaps",items:["Focus on the specific core skills missed (listed below).","Set one measurable 4-week goal per weak skill and review progress.","Add slightly harder items only once the core skill is secure.","Use pair work so the student explains their thinking."]},
+ High:{title:"High achiever — extend and challenge",items:["Give enrichment and challenge tasks beyond grade level.","Use open-ended, project-based and multi-step problems.","Offer a peer-tutoring or 'expert' role to deepen understanding.","Encourage independent goals and self-assessment."]}
+};
+function cefrForAssignment(snap,a){ var p=(snap&&snap.overallPct!=null)?snap.overallPct:(a.score!=null?a.score:0); return cefrFromPct(p); }
+function viewAnalysis(){
+  var doneAll=assignments().filter(function(x){return x.status==="completed";}).slice().sort(function(p,q){
+    var cp=(p.className||"~"),cq=(q.className||"~"); if(cp!==cq)return cp<cq?-1:1;
+    var np=(p.studentName||p.studentEmail||""),nq=(q.studentName||q.studentEmail||""); if(np!==nq)return np<nq?-1:1;
+    return aTerm(p).localeCompare(aTerm(q));
+  });
+  var pick=doneAll.find(function(x){return x.id===S.analysisId;})||null;
+  var options='<option value="">— choose a completed student test —</option>'+doneAll.map(function(x){
+    return '<option value="'+x.id+'" '+(pick&&pick.id===x.id?"selected":"")+'>'+(x.studentName||x.studentEmail)+' · '+(x.className||"")+' · Term '+aTerm(x)+' · '+(x.score!=null?x.score+"%":"—")+'</option>';
+  }).join("");
+  var head='<div class="card"><h2 style="margin:0 0 4px">📈 Skill analysis &amp; teaching strategies</h2>'
+    +'<p class="sub">Pick a student to see the CEFR level, achiever band, exactly which questions and skills lost marks, and tailored strategies to move them up.</p>'
+    +'<div class="row"><div class="col"><label>Student test</label><select onchange="openAnalysis(this.value)">'+options+'</select></div></div>';
+  if(!doneAll.length) head+='<p class="muted" style="font-size:13px;margin-top:10px">No completed diagnostics yet. As students finish, they will appear here.</p>';
+  head+='</div>';
+  if(!pick) return head;
+
+  var a=pick, subj=a.subject||"English", areas=skillsFor(subj);
+  var snap=resolveMarkData(a);
+  var tier=(snap&&snap.achiever&&snap.achiever.tier)||a.achieverTier||(a.achiever&&a.achiever.tier)||null;
+  if(!tier && snap && snap.qsnapshot && !snap.noAnswers) tier=computeAchiever(snap.qsnapshot,snap.answers).tier;
+  var tierCls=tier?achieverCls(tier):"grey";
+  var cefr=(subj==="English")?cefrForAssignment(snap,a):null;
+  var overall=(snap&&snap.overallPct!=null)?snap.overallPct:(a.score||0);
+
+  // Per-skill tally from the saved question snapshot + answers.
+  var per={}; areas.forEach(function(k){per[k]={c:0,t:0,missed:[]};});
+  var haveQ = !!(snap && snap.qsnapshot && !snap.noAnswers);
+  if(haveQ){
+    snap.qsnapshot.forEach(function(q,i){ var k=q.skill; if(!per[k])per[k]={c:0,t:0,missed:[]}; per[k].t++; if(snap.answers[i]===q.answer)per[k].c++; else per[k].missed.push({i:i,q:q,chosen:snap.answers[i]}); });
+  }
+
+  var html=head;
+  // Header card: CEFR + achiever, colour-coded.
+  html+='<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:10px"><div><h2 style="margin:0">'+(a.studentName||a.studentEmail)+'</h2>'
+    +'<p class="sub" style="margin:2px 0 0">'+subjChip(subj)+' · based on '+gLabel(a.prevGrade)+' · '+(a.className||"")+' · Term '+aTerm(a)+'</p></div>'
+    +'<div style="text-align:right">'
+    +(cefr?('<div><span class="pill '+tierCls+'" style="font-size:16px;padding:6px 14px">CEFR '+cefr+'</span></div>'):'')
+    +(tier?('<div style="margin-top:6px"><span class="pill '+tierCls+'">'+tier+' achiever</span></div>'):'')
+    +'</div></div>'
+    +'<div class="kpi" style="margin-top:10px"><div class="box"><div class="n">'+overall+'%</div><div class="l">Overall</div></div>'
+    +(snap&&snap.achiever?('<div class="box"><div class="n">'+snap.achiever.ratio+'%</div><div class="l">Weighted (harder Qs count more)</div></div>'):'')
+    +'<div class="box"><div class="n"><span class="pill '+tierCls+'" style="font-size:13px">'+(tier||"—")+'</span></div><div class="l">Achiever band</div></div></div>'
+    +(cefr?'<p class="muted" style="font-size:11px;margin:8px 0 0">CEFR is an estimate from this diagnostic; confirm against a full rubric. Colour shows the achiever band: red = low, amber = medium, green = high.</p>':'')
+    +'</div>';
+
+  // Per-skill breakdown with marks lost + which questions.
+  html+='<div class="card"><h2>Where the marks were lost</h2><p class="sub">Each skill shows the score, the percent of that skill\'s marks lost, and the exact questions missed.</p>';
+  if(!haveQ){
+    html+='<div class="notice">This test was completed before per-question saving, so only the skill percentages are available. Ask the student to retake once on the current build for full question-by-question detail.</div>';
+    html+='<table><thead><tr><th>Skill</th><th>Score</th><th>Marks lost</th></tr></thead><tbody>';
+    areas.forEach(function(k){ var p=(a.skillPct||{})[k]; if(p==null)return; html+='<tr><td><b>'+skillLabel(k,false)+'</b></td><td>'+p+'%</td><td>'+(100-p)+'%</td></tr>'; });
+    html+='</tbody></table></div>';
+  } else {
+    html+='<table><thead><tr><th>Skill</th><th>Correct</th><th>Score</th><th>Marks lost</th><th>Status</th></tr></thead><tbody>';
+    areas.forEach(function(k){ var x=per[k]; if(!x||!x.t)return; var p=Math.round(x.c/x.t*100); var lost=100-p; var c=rag(p);
+      html+='<tr><td><b>'+k+'</b></td><td>'+x.c+'/'+x.t+'</td><td>'+p+'%</td><td><b style="color:var(--'+(lost>=45?'red':lost>=20?'amber':'ok')+')">'+lost+'%</b></td><td><span class="pill '+c+'">'+(p>=80?"Strong":p>=55?"Developing":"Gap")+'</span></td></tr>';
+    });
+    html+='</tbody></table>';
+    // Questions missed
+    var anyMissed=areas.some(function(k){return per[k]&&per[k].missed.length;});
+    if(anyMissed){
+      html+='<h3 style="font-size:14px;margin:16px 0 6px">Questions the student lost marks on</h3>';
+      html+='<table><thead><tr><th>Q</th><th>Skill</th><th>Level</th><th>Question</th><th>Their answer</th><th>Correct</th><th>Lost (of skill)</th></tr></thead><tbody>';
+      areas.forEach(function(k){ var x=per[k]; if(!x)return; x.missed.forEach(function(mm){ var q=mm.q; var lvlName=q.level==="F"?"Easy":q.level==="H"?"Hard":q.level==="C"?"Medium":"—";
+        var chosen=(mm.chosen!=null&&q.options[mm.chosen]!=null)?q.options[mm.chosen]:"(no answer)";
+        var lostSkill=Math.round(1/x.t*100);
+        html+='<tr><td>Q'+(mm.i+1)+'</td><td>'+k+'</td><td>'+lvlName+'</td><td style="font-size:12px">'+String(q.q).replace(/</g,"&lt;")+'</td>'
+          +'<td style="font-size:12px;color:var(--red)">'+String(chosen).replace(/</g,"&lt;")+'</td>'
+          +'<td style="font-size:12px;color:var(--ok)">'+String(q.options[q.answer]).replace(/</g,"&lt;")+'</td>'
+          +'<td>'+lostSkill+'%</td></tr>';
+      });});
+      html+='</tbody></table><p class="muted" style="font-size:11px;margin-top:6px">"Lost (of skill)" is how much of that skill\'s marks the single question was worth — e.g. missing 1 of 4 Reading questions loses 25% of Reading.</p>';
+    } else {
+      html+='<p class="muted" style="font-size:13px;margin-top:10px">🎉 No questions missed — full marks.</p>';
+    }
+  }
+  html+='</div>';
+
+  // Strategies
+  var weak=areas.filter(function(k){ if(haveQ){ var x=per[k]; return x&&x.t&&(x.c/x.t*100)<70; } var p=(a.skillPct||{})[k]; return p!=null&&p<70; });
+  var isHigh=(tier==="High");
+  var tinfo=TIER_STRATEGIES[tier||"Medium"]||TIER_STRATEGIES.Medium;
+  html+='<div class="card" style="border-left:4px solid var(--'+(tierCls==='green'?'ok':tierCls==='amber'?'amber':'red')+')">'
+    +'<h2>'+(isHigh?"How to challenge this student":"How to move this student up a level")+'</h2>'
+    +'<p class="sub">'+tinfo.title+'</p>'
+    +'<ul style="font-size:13px;line-height:1.6;margin:6px 0 4px;padding-left:18px">'+tinfo.items.map(function(s){return '<li>'+s+'</li>';}).join("")+'</ul>';
+  var focusSkills=isHigh?areas:(weak.length?weak:areas);
+  html+='<h3 style="font-size:14px;margin:14px 0 6px">'+(isHigh?"Challenge activities by skill":"Targeted strategies for the weak skills")+'</h3>';
+  focusSkills.forEach(function(k){ var st=SKILL_STRATEGIES[k]; if(!st)return; var arr=isHigh?st.extend:st.support;
+    html+='<div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px"><b style="font-size:13px">'+k+'</b>'
+      +'<ul style="font-size:12px;line-height:1.55;margin:5px 0 0;padding-left:18px">'+arr.map(function(s){return '<li>'+s+'</li>';}).join("")+'</ul></div>';
+  });
+  html+='<p class="muted" style="font-size:11px;margin-top:4px">Suggestions are general classroom strategies — adapt them to your students and curriculum.</p></div>';
+  return html;
+}
+
 function viewTeacher(){
   const me=AUTH, as=assignments(), roster=me.students||[];
   const grades=GRADES.map(g=>`<option value="${g.id}">${g.label}</option>`).join("");
@@ -1159,7 +1291,7 @@ function viewClass(id){
     const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
     const flag=(a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span>`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`));
     const termsDone=caAll.filter(x=>x.studentEmail===a.studentEmail&&x.status==="completed").length;
-    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
+    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
     return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
