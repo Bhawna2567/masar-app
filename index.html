@@ -161,7 +161,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1746,9 +1746,11 @@ function renderMarkedInto(ctx,a,newPage){
   ctx.y+=4;doc.setDrawColor(200);doc.line(ctx.x,ctx.y,ctx.x+ctx.LW,ctx.y);ctx.y+=12;
   if(snap.passageTitle){ markWrap(ctx,"Reading passage: "+snap.passageTitle,10,"italic",0); ctx.y+=4; }
   var qs=snap.qsnapshot, ans=snap.answers||{};
+  function lvlName(lv){ return lv==="F"?"Easy":lv==="C"?"Medium":lv==="H"?"Hard":""; }
   qs.forEach(function(q,i){
     var pick=snap.noAnswers?undefined:ans[i], correct=q.answer;
     markWrap(ctx,"Q"+(i+1)+". "+(q.q||""),11,"bold",0);
+    if(q.skill){ markWrap(ctx,"Skill tested: "+q.skill+(lvlName(q.level)?("   ·   Level: "+lvlName(q.level)):""),9,"italic",14,[90,90,120]); }
     (q.options||[]).forEach(function(o,oi){
       var tag="", col=null;
       if(snap.noAnswers){ if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; } }
