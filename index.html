@@ -138,6 +138,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}catch(e){}</script>
 <script>
 /* ============================================================
@@ -161,7 +163,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28g";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28h";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -501,6 +503,135 @@ var TIER_STRATEGIES={
    "Encourage independent goals and self-assessment against a rubric."]}
 };
 function cefrForAssignment(snap,a){ var p=(snap&&snap.overallPct!=null)?snap.overallPct:(a.score!=null?a.score:0); return cefrFromPct(p); }
+
+/* ===== EXCEL EXPORT: diagnostic analysis (per term + whole year), with embedded charts ===== */
+function ensureXlsxLibs(){
+  return new Promise(function(resolve,reject){
+    function ok(){ return window.ExcelJS && window.Chart; }
+    if(ok()) return resolve();
+    var need=[]; if(!window.ExcelJS) need.push("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js");
+    if(!window.Chart) need.push("https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js");
+    if(!need.length) return resolve();
+    var left=need.length;
+    need.forEach(function(src){ var s=document.createElement("script"); s.src=src;
+      s.onload=function(){ if(--left<=0){ ok()?resolve():reject(new Error("Chart/Excel library did not initialise.")); } };
+      s.onerror=function(){ reject(new Error("Couldn't load "+src+" — check your internet.")); };
+      document.head.appendChild(s); });
+  });
+}
+function chartPNG(cfg,w,h){
+  return new Promise(function(resolve){
+    var c=document.createElement("canvas"); c.width=w; c.height=h; c.style.position="fixed"; c.style.left="-99999px"; c.style.top="0"; document.body.appendChild(c);
+    cfg.options=cfg.options||{}; cfg.options.animation=false; cfg.options.responsive=false; cfg.options.devicePixelRatio=2;
+    var ch=new Chart(c.getContext("2d"),cfg);
+    setTimeout(function(){ var url=c.toDataURL("image/png"); try{ch.destroy();}catch(e){} c.remove(); resolve(url); },70);
+  });
+}
+function downloadBlob(buf,fname,mime){ var blob=new Blob([buf],{type:mime}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},1500); }
+function classCompletedForTerm(classId,term){ return assignments().filter(function(a){ return a.classId===classId && a.status==="completed" && aTerm(a)===String(term); }); }
+function qsAns(a){ var qs=a.qsnapshot||(a.snapshot&&a.snapshot.result&&a.snapshot.result.qsnapshot); var ans=a.answers||(a.snapshot&&a.snapshot.result&&a.snapshot.result.answers); return {qs:qs,ans:ans}; }
+function analyzeSet(list,subj){
+  var areas=skillsFor(subj);
+  var students=list.map(function(a){ var sp=a.skillPct||{}, overall=(a.score!=null?a.score:0);
+    return {name:a.studentName||a.studentEmail, overall:overall, cefr:(subj==="English"?cefrFromPct(overall):""), tier:(a.achieverTier||(a.achiever&&a.achiever.tier)||""), skills:sp, term:aTerm(a)}; });
+  var skillAvg={}; areas.forEach(function(k){ var s=0,n=0; students.forEach(function(st){ if(st.skills[k]!=null){s+=st.skills[k];n++;} }); skillAvg[k]=n?Math.round(s/n):0; });
+  var overallAvg=students.length?Math.round(students.reduce(function(s,st){return s+st.overall;},0)/students.length):0;
+  var tiers={High:0,Medium:0,Low:0}; students.forEach(function(st){ if(tiers[st.tier]!=null)tiers[st.tier]++; });
+  var subAgg={}; list.forEach(function(a){ var d=qsAns(a); if(!d.qs||!d.ans)return; d.qs.forEach(function(q,i){ if(!q.sub)return; var key=q.skill+" — "+q.sub; if(!subAgg[key])subAgg[key]={skill:q.skill,sub:q.sub,correct:0,total:0}; subAgg[key].total++; if(d.ans[i]===q.answer)subAgg[key].correct++; }); });
+  return {students:students,areas:areas,skillAvg:skillAvg,overallAvg:overallAvg,tiers:tiers,subAgg:subAgg,n:students.length};
+}
+function hdrRow(ws,rowArr){ var r=ws.addRow(rowArr); r.font={bold:true}; r.eachCell(function(c){ c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFEEF2FF"}}; c.border={bottom:{style:"thin",color:{argb:"FFCBD5E1"}}}; }); return r; }
+async function buildAnalysisWorkbook(title,subj,perTerm,isYear){
+  // perTerm: array of {term, data(analyzeSet)}
+  var wb=new ExcelJS.Workbook(); wb.creator="Adeptly"; wb.created=new Date();
+  var areas=skillsFor(subj);
+  var GREEN="16a34a",AMBER="f59e0b",RED="dc2626",BLUE="4f46e5";
+  // ---- Summary ----
+  var sm=wb.addWorksheet("Summary"); sm.columns=[{width:26},{width:14},{width:14},{width:14},{width:14}];
+  sm.addRow([title]).font={bold:true,size:14};
+  sm.addRow(["Subject: "+subj+"     Generated: "+new Date().toLocaleDateString()]);
+  sm.addRow([]);
+  hdrRow(sm,["Period","Students","Class average %","High","Medium","Low"]);
+  perTerm.forEach(function(pt){ var d=pt.data; sm.addRow([(isYear?("Term "+pt.term):("Term "+pt.term)),d.n,d.overallAvg,d.tiers.High,d.tiers.Medium,d.tiers.Low]); });
+  sm.addRow([]);
+  hdrRow(sm,["Skill"].concat(perTerm.map(function(pt){return "Term "+pt.term+" avg %";})));
+  areas.forEach(function(k){ sm.addRow([k].concat(perTerm.map(function(pt){return pt.data.skillAvg[k];}))); });
+  // charts
+  var last=perTerm[perTerm.length-1].data;
+  var skillBar=await chartPNG({type:"bar",data:{labels:areas,datasets:perTerm.map(function(pt,idx){return {label:"Term "+pt.term,data:areas.map(function(k){return pt.data.skillAvg[k];}),backgroundColor:idx===0?("#"+BLUE):idx===1?("#"+GREEN):("#"+AMBER)};})},options:{plugins:{title:{display:true,text:"Class average by skill"},legend:{display:perTerm.length>1}},scales:{y:{min:0,max:100}}}},560,320);
+  var dough=await chartPNG({type:"doughnut",data:{labels:["High","Medium","Low"],datasets:[{data:[last.tiers.High,last.tiers.Medium,last.tiers.Low],backgroundColor:["#"+GREEN,"#"+AMBER,"#"+RED]}]},options:{plugins:{title:{display:true,text:"Achiever distribution ("+(isYear?"latest term":"this term")+")"}}}},360,320);
+  var id1=wb.addImage({base64:skillBar,extension:"png"}); sm.addImage(id1,{tl:{col:0,row:(6+perTerm.length+areas.length)},ext:{width:560,height:320}});
+  var id2=wb.addImage({base64:dough,extension:"png"}); sm.addImage(id2,{tl:{col:6,row:3},ext:{width:360,height:320}});
+  if(isYear){
+    var trend=await chartPNG({type:"line",data:{labels:perTerm.map(function(pt){return "Term "+pt.term;}),datasets:[{label:"Class average %",data:perTerm.map(function(pt){return pt.data.overallAvg;}),borderColor:"#"+BLUE,backgroundColor:"#"+BLUE,tension:.25}]},options:{plugins:{title:{display:true,text:"Class average across the year"}},scales:{y:{min:0,max:100}}}},560,300);
+    var id3=wb.addImage({base64:trend,extension:"png"}); sm.addImage(id3,{tl:{col:0,row:(6+perTerm.length+areas.length+18)},ext:{width:560,height:300}});
+  }
+  // ---- Students ----
+  var st=wb.addWorksheet("Students"); st.columns=[{width:8},{width:26},{width:12},{width:8},{width:12}].concat(areas.map(function(){return {width:16};}));
+  hdrRow(st,["Term","Student","Overall %"].concat(subj==="English"?["CEFR"]:[]).concat(["Achiever"]).concat(areas.map(function(k){return k+" %";})));
+  perTerm.forEach(function(pt){ pt.data.students.sort(function(a,b){return b.overall-a.overall;}).forEach(function(s){
+    var row=["T"+pt.term,s.name,s.overall].concat(subj==="English"?[s.cefr]:[]).concat([s.tier]).concat(areas.map(function(k){return s.skills[k]!=null?s.skills[k]:"";}));
+    var r=st.addRow(row); var tc=r.getCell(subj==="English"?5:4); var col=s.tier==="High"?GREEN:s.tier==="Medium"?AMBER:s.tier==="Low"?RED:"64748b"; tc.font={bold:true,color:{argb:"FF"+col}};
+  }); });
+  // ---- Sub-skill gaps ----
+  var sk=wb.addWorksheet("Sub-skill gaps"); sk.columns=[{width:22},{width:34},{width:12},{width:12}];
+  hdrRow(sk,["Skill","Sub-skill","Class % correct","Questions"]);
+  var subs=[]; perTerm.forEach(function(pt){ Object.keys(pt.data.subAgg).forEach(function(key){ var x=pt.data.subAgg[key]; subs.push({skill:x.skill,sub:x.sub,pct:x.total?Math.round(x.correct/x.total*100):0,total:x.total}); }); });
+  // merge duplicates across terms (weighted)
+  var merged={}; subs.forEach(function(s){ var k=s.skill+"|"+s.sub; if(!merged[k])merged[k]={skill:s.skill,sub:s.sub,pctSum:0,cnt:0,total:0}; merged[k].pctSum+=s.pct; merged[k].cnt++; merged[k].total+=s.total; });
+  Object.keys(merged).map(function(k){return merged[k];}).sort(function(a,b){return (a.pctSum/a.cnt)-(b.pctSum/b.cnt);}).forEach(function(m){ var p=Math.round(m.pctSum/m.cnt); var r=sk.addRow([m.skill,m.sub,p,m.total]); var c=r.getCell(3); c.font={bold:true,color:{argb:"FF"+(p<55?RED:p<80?AMBER:GREEN)}}; });
+  return wb;
+}
+async function exportClassExcel(classId,term){
+  try{
+    var c=classesList().find(function(x){return x.id===classId;}); if(!c){ alert("Please choose a class."); return; }
+    var subj=c.subject||"English";
+    var terms = term==="year"?["1","2","3"]:[String(term)];
+    var perTerm=[]; terms.forEach(function(t){ var list=classCompletedForTerm(classId,t); if(list.length) perTerm.push({term:t,data:analyzeSet(list,subj)}); });
+    if(!perTerm.length){ alert("No completed diagnostics found for "+c.name+(term==="year"?" this year yet.":(" in Term "+term+" yet.")) ); return; }
+    await ensureXlsxLibs();
+    var title="Diagnostic Analysis — "+c.name+" ("+gLabel(c.prevGrade)+")"+(term==="year"?" — Whole Year":(" — Term "+term));
+    var wb=await buildAnalysisWorkbook(title,subj,perTerm,term==="year");
+    var buf=await wb.xlsx.writeBuffer();
+    downloadBlob(buf,safeName("Adeptly analysis - "+c.name+" - "+(term==="year"?"Year":"Term "+term))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }catch(e){ alert("Couldn't build the Excel file: "+((e&&e.message)||e)); }
+}
+async function exportCohortExcel(classId,term){
+  try{
+    var ref=classesList().find(function(x){return x.id===classId;}); if(!ref){ alert("Please choose a class first (the cohort uses its grade & subject)."); return; }
+    var subj=ref.subject||"English", grade=ref.prevGrade;
+    var cohortClasses=classesList().filter(function(c){return c.subject===subj && c.prevGrade===grade;});
+    var terms=term==="year"?["1","2","3"]:[String(term)];
+    await ensureXlsxLibs();
+    var areas=skillsFor(subj);
+    var wb=new ExcelJS.Workbook(); wb.creator="Adeptly";
+    var ws=wb.addWorksheet("Cohort summary"); ws.columns=[{width:28},{width:10},{width:14}].concat(areas.map(function(){return {width:16};})).concat([{width:8},{width:8},{width:8}]);
+    ws.addRow(["Cohort Diagnostic Analysis — "+gLabel(grade)+" "+subj+(term==="year"?" — Whole Year":(" — Term "+term))]).font={bold:true,size:14};
+    ws.addRow(["Generated: "+new Date().toLocaleDateString()+"     Classes: "+cohortClasses.length]); ws.addRow([]);
+    hdrRow(ws,["Class","Students","Overall avg %"].concat(areas.map(function(k){return k+" %";})).concat(["High","Med","Low"]));
+    var rowsForChart=[]; var cohAll=[];
+    cohortClasses.forEach(function(c){
+      var list=[]; terms.forEach(function(t){ list=list.concat(classCompletedForTerm(c.id,t)); });
+      if(!list.length) return; var d=analyzeSet(list,subj); cohAll=cohAll.concat(list);
+      ws.addRow([c.name,d.n,d.overallAvg].concat(areas.map(function(k){return d.skillAvg[k];})).concat([d.tiers.High,d.tiers.Medium,d.tiers.Low]));
+      rowsForChart.push({name:c.name,avg:d.overallAvg});
+    });
+    if(!cohAll.length){ alert("No completed diagnostics for this cohort yet."); return; }
+    var coh=analyzeSet(cohAll,subj);
+    var tot=ws.addRow(["COHORT TOTAL",coh.n,coh.overallAvg].concat(areas.map(function(k){return coh.skillAvg[k];})).concat([coh.tiers.High,coh.tiers.Medium,coh.tiers.Low])); tot.font={bold:true};
+    // charts
+    var GREEN="16a34a",AMBER="f59e0b",RED="dc2626",BLUE="4f46e5";
+    var byClass=await chartPNG({type:"bar",data:{labels:rowsForChart.map(function(r){return r.name;}),datasets:[{label:"Class average %",data:rowsForChart.map(function(r){return r.avg;}),backgroundColor:"#"+BLUE}]},options:{plugins:{title:{display:true,text:"Average by class"}},scales:{y:{min:0,max:100}}}},560,320);
+    var skillBar=await chartPNG({type:"bar",data:{labels:areas,datasets:[{label:"Cohort average %",data:areas.map(function(k){return coh.skillAvg[k];}),backgroundColor:"#"+GREEN}]},options:{plugins:{title:{display:true,text:"Cohort average by skill"}},scales:{y:{min:0,max:100}}}},560,320);
+    var dough=await chartPNG({type:"doughnut",data:{labels:["High","Medium","Low"],datasets:[{data:[coh.tiers.High,coh.tiers.Medium,coh.tiers.Low],backgroundColor:["#"+GREEN,"#"+AMBER,"#"+RED]}]},options:{plugins:{title:{display:true,text:"Cohort achiever distribution"}}}},360,320);
+    var base=6+cohortClasses.length;
+    ws.addImage(wb.addImage({base64:byClass,extension:"png"}),{tl:{col:0,row:base},ext:{width:560,height:320}});
+    ws.addImage(wb.addImage({base64:skillBar,extension:"png"}),{tl:{col:0,row:base+18},ext:{width:560,height:320}});
+    ws.addImage(wb.addImage({base64:dough,extension:"png"}),{tl:{col:8,row:base},ext:{width:360,height:320}});
+    var buf=await wb.xlsx.writeBuffer();
+    downloadBlob(buf,safeName("Adeptly cohort - "+gLabel(grade)+" "+subj+" - "+(term==="year"?"Year":"Term "+term))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }catch(e){ alert("Couldn't build the cohort Excel: "+((e&&e.message)||e)); }
+}
 function viewAnalysis(){
   var doneAll=assignments().filter(function(x){return x.status==="completed";}).slice().sort(function(p,q){
     var cp=(p.className||"~"),cq=(q.className||"~"); if(cp!==cq)return cp<cq?-1:1;
@@ -511,7 +642,22 @@ function viewAnalysis(){
   var options='<option value="">— choose a completed student test —</option>'+doneAll.map(function(x){
     return '<option value="'+x.id+'" '+(pick&&pick.id===x.id?"selected":"")+'>'+(x.studentName||x.studentEmail)+' · '+(x.className||"")+' · Term '+aTerm(x)+' · '+(x.score!=null?x.score+"%":"—")+'</option>';
   }).join("");
-  var head='<div class="card"><h2 style="margin:0 0 4px">📈 Skill analysis &amp; teaching strategies</h2>'
+  // Excel export card (per-class + cohort, per-term or whole year, with embedded charts)
+  var clsList=classesList();
+  var exBody;
+  if(!clsList.length){ exBody='<p class="muted" style="font-size:13px;margin-top:8px">Create a class first to export its analysis.</p>'; }
+  else {
+    var clsOpts=clsList.map(function(c){return '<option value="'+c.id+'">'+c.name+' · '+gLabel(c.prevGrade)+' '+c.subject+'</option>';}).join("");
+    exBody='<div class="row"><div class="col"><label>Class</label><select id="exCls">'+clsOpts+'</select></div>'
+      +'<div class="col"><label>Period</label><select id="exTerm"><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option><option value="year">Whole year (end-of-year)</option></select></div></div>'
+      +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btn gold" onclick="exportClassExcel(document.getElementById(\'exCls\').value,document.getElementById(\'exTerm\').value)">⬇ Export this class (Excel)</button>'
+      +'<button class="btn" onclick="exportCohortExcel(document.getElementById(\'exCls\').value,document.getElementById(\'exTerm\').value)">⬇ Export cohort summary (grade)</button></div>';
+  }
+  var exportCard='<div class="card no-print"><h2 style="margin:0 0 4px">📊 Export diagnostic analysis (Excel)</h2>'
+    +'<p class="sub">Download an Excel workbook with a Summary, per-student table, skill &amp; sub-skill averages and embedded charts. Choose a term, or "Whole year" for the end-of-year roll-up with a term-by-term trend. "Cohort summary" combines every class of the same grade &amp; subject.</p>'
+    +exBody+'</div>';
+  var head=exportCard+'<div class="card"><h2 style="margin:0 0 4px">📈 Skill analysis &amp; teaching strategies</h2>'
     +'<p class="sub">Pick a student to see the CEFR level, achiever band, exactly which questions and skills lost marks, and tailored strategies to move them up.</p>'
     +'<div class="row"><div class="col"><label>Student test</label><select onchange="openAnalysis(this.value)">'+options+'</select></div></div>';
   if(!doneAll.length) head+='<p class="muted" style="font-size:13px;margin-top:10px">No completed diagnostics yet. As students finish, they will appear here.</p>';
