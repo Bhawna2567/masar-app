@@ -163,7 +163,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28i";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28j";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -244,6 +244,79 @@ function mtssPyramidCard(list){
     +'<p class="sub">Where students fall across the tiers of support, against the usual RTI benchmark (~80% Tier 1, ~15% Tier 2, ~5% Tier 3).</p>'
     +bars
     +'<p class="muted" style="font-size:12px;margin-top:8px">'+note+' <span style="color:var(--muted)">('+n+' completed this term)</span></p></div>';
+}
+/* ===== RTI progress monitoring, response-to-intervention & decision log (Phase 2) ===== */
+// This student's completed diagnostics across terms (same class), oldest first.
+function studentTermHistory(a){
+  var list=assignments().filter(function(x){ return x.studentEmail===a.studentEmail && x.classId===a.classId && x.status==="completed"; });
+  return list.map(function(x){ var band=x.achieverTier||(x.achiever&&x.achiever.tier)||null; return {term:aTerm(x),score:(x.score!=null?x.score:0),band:band,tier:(rtiFor(band)?rtiFor(band).tier:null),when:x.completedAt||0,a:x}; })
+    .sort(function(p,q){ return p.term.localeCompare(q.term); });
+}
+// Compare latest vs previous term → response-to-intervention recommendation.
+function rtiRecommendation(hist){
+  if(!hist.length) return {status:"none",cls:"grey",text:"No completed diagnostic yet."};
+  var cur=hist[hist.length-1], prev=hist.length>1?hist[hist.length-2]:null;
+  if(!prev) return {status:"baseline",cls:(rtiFor(cur.band)?rtiFor(cur.band).cls:"grey"),text:"Baseline set — begin "+(rtiFor(cur.band)?rtiFor(cur.band).label:"support")+" and monitor.",suggest:cur.tier};
+  var delta=cur.score-prev.score;
+  var curT=rtiFor(cur.band), lower=curT?Math.max(1,curT.tier-1):null, higher=curT?Math.min(3,curT.tier+1):null;
+  if(cur.tier===1 && delta>=0) return {status:"secure",cls:"green",text:"On track at Tier 1 (change "+(delta>=0?"+":"")+delta+"%). Continue quality core instruction.",suggest:1,delta:delta};
+  if(delta>=10) return {status:"responding",cls:"green",text:"Responding well (+"+delta+"% since last term). Consider stepping down to Tier "+lower+" and keep monitoring.",suggest:lower,delta:delta};
+  if(delta>=1) return {status:"progress",cls:"amber",text:"Some progress (+"+delta+"%). Hold at the current tier and continue the intervention.",suggest:cur.tier,delta:delta};
+  return {status:"notresponding",cls:"red",text:"Not responding ("+(delta>0?"+":"")+delta+"% ). Intensify or escalate to Tier "+(higher||3)+" and review the plan.",suggest:higher,delta:delta};
+}
+// Days to add before the next progress check, by tier.
+function tierCadenceDays(tier){ return tier===3?7:tier===2?21:90; }
+function nextCheckInfo(a){
+  var r=rtiForAssignment(a); if(!r) return null;
+  var base=a.completedAt||a.createdAt||Date.now();
+  var due=base + tierCadenceDays(r.tier)*24*3600*1000;
+  var overdue=Date.now()>due;
+  return {due:due,overdue:overdue,tier:r.tier,everyDays:tierCadenceDays(r.tier)};
+}
+function fmtDay(ms){ try{ return new Date(ms).toLocaleDateString(); }catch(e){ return "—"; } }
+function logRtiDecision(id){
+  var sel=document.getElementById("rtiAction"), noteEl=document.getElementById("rtiNote");
+  var action=sel?sel.value:""; var note=noteEl?(noteEl.value||"").trim():"";
+  if(!action){ alert("Please choose a decision."); return; }
+  var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;}); if(!a){ alert("Record not found."); return; }
+  var log=(a.rtiLog||[]).slice(); log.push({action:action,note:note,by:(AUTH&&AUTH.name)||"Teacher",at:Date.now()});
+  db.collection("assignments").doc(id).update({rtiLog:log}).catch(function(e){ alert(fbErr(e)); });
+}
+function mtssCycleHtml(a){
+  var steps=[["1. Identify","Universal screening — the diagnostic flags who needs support.","completed"],
+             ["2. Analyze","Skill & sub-skill gaps, CEFR and tier are shown below.","completed"],
+             ["3. Plan","Goals + tiered intervention with a set intensity (see the strategies card).","active"],
+             ["4. Implement","Student works the Weekly Folders; teacher runs the tier group.","active"],
+             ["5. Evaluate","Re-test on the cadence below; log the decision to move / hold / escalate.","next"]];
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px">'+steps.map(function(s){
+    var col=s[2]==="completed"?"ok":s[2]==="active"?"amber":"line";
+    return '<div style="flex:1;min-width:150px;border:1px solid var(--line);border-left:4px solid var(--'+col+');border-radius:8px;padding:8px 10px"><b style="font-size:12px">'+s[0]+'</b><div class="muted" style="font-size:11px;margin-top:2px">'+s[1]+'</div></div>';
+  }).join("")+'</div>';
+}
+function rtiProgressCard(a){
+  var hist=studentTermHistory(a), rec=rtiRecommendation(hist), nc=nextCheckInfo(a);
+  var rows=hist.map(function(h){ var rt=rtiFor(h.band); var d=""; return '<tr><td>Term '+h.term+'</td><td>'+h.score+'%</td><td>'+(h.band||"—")+'</td><td>'+(rt?('<span class="pill '+rt.cls+'">'+rt.short+'</span>'):"—")+'</td><td>'+(h.when?fmtDay(h.when):"—")+'</td></tr>'; }).join("");
+  var log=(a.rtiLog||[]).slice().reverse();
+  var logHtml=log.length? ('<table style="margin-top:6px"><thead><tr><th>When</th><th>Decision</th><th>Note</th><th>By</th></tr></thead><tbody>'
+    +log.map(function(L){ return '<tr><td style="font-size:11px">'+fmtDay(L.at)+'</td><td><b>'+L.action+'</b></td><td style="font-size:12px">'+String(L.note||"").replace(/</g,"&lt;")+'</td><td style="font-size:11px">'+String(L.by||"").replace(/</g,"&lt;")+'</td></tr>'; }).join("")
+    +'</tbody></table>') : '<p class="muted" style="font-size:12px;margin:6px 0 0">No decisions logged yet.</p>';
+  return '<div class="card"><h2 style="margin:0 0 2px">🔄 RTI progress &amp; decisions</h2>'
+    +'<p class="sub">The MTSS problem-solving cycle for this student, the response to intervention, and your decision record.</p>'
+    +mtssCycleHtml(a)
+    +'<div class="notice" style="background:#f8fafc;border-color:var(--'+rec.cls+');margin-top:8px"><b>Response to intervention:</b> '+rec.text+'</div>'
+    +(nc?('<p style="font-size:13px;margin:8px 0 0">📅 <b>Next progress check:</b> '+fmtDay(nc.due)+' &nbsp;<span class="muted">(Tier '+nc.tier+' cadence: every '+(nc.everyDays===7?"week":nc.everyDays===21?"~3 weeks":"term")+')</span> '+(nc.overdue?'<span class="pill red">overdue</span>':'<span class="pill green">scheduled</span>')+'</p>'):'')
+    +'<h3 style="font-size:14px;margin:14px 0 4px">Term-by-term history</h3>'
+    +(hist.length?('<table><thead><tr><th>Period</th><th>Score</th><th>Achiever</th><th>Tier</th><th>Taken</th></tr></thead><tbody>'+rows+'</tbody></table>'):'<p class="muted" style="font-size:12px">Only one term so far.</p>')
+    +'<h3 style="font-size:14px;margin:14px 0 4px">Log an RTI decision</h3>'
+    +'<div class="row"><div class="col"><label>Decision</label><select id="rtiAction"><option value="">— choose —</option>'
+      +'<option value="Move down a tier (responding)">Move down a tier (responding)</option>'
+      +'<option value="Hold at current tier">Hold at current tier</option>'
+      +'<option value="Escalate to next tier (not responding)">Escalate to next tier (not responding)</option>'
+      +'<option value="Refer to MTSS team">Refer to MTSS team</option></select></div>'
+      +'<div class="col"><label>Note (optional)</label><input id="rtiNote" placeholder="e.g. Start small-group phonics 3×/week"></div></div>'
+    +'<div style="margin-top:10px"><button class="btn" onclick="logRtiDecision(\''+a.id+'\')">＋ Save decision</button></div>'
+    +logHtml
+    +'</div>';
 }
 function achieverBandName(k){ return k==="F"?"Foundational (easy)":k==="C"?"Core (medium)":"Challenge (hard)"; }
 function achieverCardHtml(ac){
@@ -732,6 +805,9 @@ function viewAnalysis(){
     +'<div class="box"><div class="n"><span class="pill '+tierCls+'" style="font-size:13px">'+(tier||"—")+'</span></div><div class="l">Achiever band</div></div></div>'
     +(cefr?'<p class="muted" style="font-size:11px;margin:8px 0 0">CEFR is an estimate from this diagnostic; confirm against a full rubric. Colour shows the achiever band: red = low, amber = medium, green = high.</p>':'')
     +'</div>';
+
+  // RTI progress monitoring + response-to-intervention + decision log + MTSS cycle
+  html+=rtiProgressCard(a);
 
   // Per-skill breakdown with marks lost + which questions.
   html+='<div class="card"><h2>Where the marks were lost</h2><p class="sub">Each skill shows the score, the percent of that skill\'s marks lost, and the exact questions missed.</p>';
