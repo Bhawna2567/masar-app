@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28s";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28t";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1970,7 +1970,7 @@ function viewClass(id){
     const goals=computeGoalsFor(a);
     const goalRows=goals.length?goals.map(g=>`<div style="border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;font-size:13px"><b>${g.skill}</b> — ${g.statement} <span class="muted">(targets ${g.t1}% → ${g.t2}% → ${g.t3}%)</span></div>`).join(""):`<p class="muted" style="font-size:12px">No gap skills — flagged on class ranking only.</p>`;
     const focusSkills=goals.map(g=>g.skill);
-    const act=focusSkills.length?`<p style="font-size:13px;margin:10px 0 6px"><b>Targeted activities</b> for: ${focusSkills.map(s=>`<span class="tag">${s}</span>`).join(" ")}</p><p class="muted" style="font-size:12px;margin:0">Weekly practice exercises and games for these skills are generated in the student's plan. ${a.snapshot?`<a href="#" onclick="teacherOpenStudent('${a.id}');return false">Open their full plan &amp; activities →</a>`:"They appear once the student opens their Skill Development Plan."}</p>`:"";
+    const act=focusSkills.length?`<p style="font-size:13px;margin:10px 0 6px"><b>Targeted activities</b> for: ${focusSkills.map(s=>`<span class="tag">${s}</span>`).join(" ")}</p><p class="muted" style="font-size:12px;margin:0 0 10px">Weekly practice exercises and games for these skills are generated in the student's plan.</p>${a.snapshot?`<button class="btn gold" onclick="teacherOpenStudent('${a.id}')">📂 Open full plan &amp; activities →</button>`:`<p class="muted" style="font-size:12px;margin:0">They appear once the student opens their Skill Development Plan.</p>`}`:"";
     return `<div class="card" style="border-left:4px solid var(--red)">
       <div class="flex-between"><h3 style="margin:0;font-size:16px">${a.studentName||a.studentEmail}</h3><div>${a._reasons.map(r=>`<span class="pill red" style="margin-left:4px">${r}</span>`).join("")}</div></div>
       <p class="sub" style="margin:6px 0 12px">Term ${term} · overall ${a.score}% · measured ${gLabel(c.prevGrade)} mastery · ${gLabel(c.curGrade)} expects ≥80%</p>
