@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28t";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28u";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1088,9 +1088,11 @@ function viewAnalysis(){
   var exportCard='<div class="card no-print"><h2 style="margin:0 0 4px">📊 Export diagnostic analysis (Excel)</h2>'
     +'<p class="sub">Download an Excel workbook with a Summary, per-student table, skill &amp; sub-skill averages and embedded charts. Choose a term, or "Whole year" for the end-of-year roll-up with a term-by-term trend. "Cohort summary" combines every class of the same grade &amp; subject.</p>'
     +exBody+'</div>';
-  var importCard='<div class="card no-print"><h2 style="margin:0 0 4px">📥 Import past results (history)</h2>'
-    +'<p class="sub">Upload the combined term-results workbook (the "All terms (stacked)" sheet). Each student\'s prior subject grades are stored by <b>Student ID</b>, so they appear on the student\'s Progress-over-time chart once their ID is linked. Works for any subject columns in the file.</p>'
-    +'<input type="file" id="impResults" accept=".xlsx" onchange="handleResultsImport(this)"> <span id="impMsg" class="muted" style="font-size:12px;margin-left:8px"></span></div>';
+  var importCard = isAdmin()
+    ? ('<div class="card no-print"><h2 style="margin:0 0 4px">📥 Import past results (history) <span class="pill amber" style="font-size:10px">Admin</span></h2>'
+      +'<p class="sub">Upload the combined term-results workbook (the "All terms (stacked)" sheet). Each student\'s prior subject grades are stored by <b>Student ID</b>, so they appear on the student\'s Progress-over-time chart once their ID is linked. Works for any subject columns in the file. Uploaded once here, it is shared with every teacher.</p>'
+      +'<input type="file" id="impResults" accept=".xlsx" onchange="handleResultsImport(this)"> <span id="impMsg" class="muted" style="font-size:12px;margin-left:8px"></span></div>')
+    : '<div class="card no-print" style="background:#f8fafc"><h2 style="margin:0 0 4px">📥 Past results (history)</h2><p class="sub">Historical term results are imported centrally by your school admin and are shared with all teachers automatically — no upload needed here. Once a student\'s ID is linked and they take a diagnostic, their history appears on the <b>Progress over time</b> card below.</p></div>';
   var head=exportCard+importCard+'<div class="card"><h2 style="margin:0 0 4px">📈 Skill analysis &amp; teaching strategies</h2>'
     +'<p class="sub">Pick a student to see the CEFR level, achiever band, exactly which questions and skills lost marks, and tailored strategies to move them up.</p>'
     +'<div class="row"><div class="col"><label>Student test</label><select onchange="openAnalysis(this.value)">'+options+'</select></div></div>';
