@@ -163,7 +163,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28l";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28m";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -312,9 +312,22 @@ function submitProbe(){ var c=0; PROBE.items.forEach(function(q,i){ if(PROBE.res
 function saveProbe(){
   var a=PROBE.a, probes=(a.rtiProbes||[]).slice();
   probes.push({at:Date.now(),score:PROBE.score,correct:PROBE.correct,total:PROBE.total,by:(AUTH&&AUTH.name)||"" });
-  db.collection("assignments").doc(a.id).update({rtiProbes:probes}).then(function(){ closeProbe(); render(); }).catch(function(e){ alert(fbErr(e)); });
+  // Re-lock after it's taken so the student can't retake until the teacher unlocks again.
+  db.collection("assignments").doc(a.id).update({rtiProbes:probes,probeUnlocked:false,probeUnlockedAt:null}).then(function(){ try{lockdownEnd();}catch(e){} closeProbe(); render(); }).catch(function(e){ alert(fbErr(e)); });
 }
-function closeProbe(){ PROBE=null; var m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
+// Teacher toggles whether the student can take the progress check on their own device.
+function setProbeUnlock(id,val){
+  var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;}); if(!a){alert("Record not found.");return;}
+  db.collection("assignments").doc(id).update({probeUnlocked:!!val,probeUnlockedAt:val?Date.now():null}).catch(function(e){ alert(fbErr(e)); });
+}
+// Student launches the probe — only allowed while the teacher has it unlocked.
+function startStudentProbe(id){
+  var a=assignments().find(function(x){return x.id===id;});
+  if(!a||!a.probeUnlocked){ alert("This progress check is locked. Your teacher will unlock it when it's time."); render(); return; }
+  runProbe(id);
+  if(PROBE) try{ lockdownStart("activity"); }catch(e){}  // screenshot/copy/leave guards during the check
+}
+function closeProbe(){ try{lockdownEnd();}catch(e){} PROBE=null; var m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
 function renderProbe(){
   var m=document.getElementById("exModal"); if(!m)return; var P=PROBE, body="";
   body+='<p class="sub">Short progress check — '+P.items.length+' questions on the skills this student is working on. Scored instantly and logged to the RTI record.</p>';
@@ -378,7 +391,12 @@ function rtiProgressCard(a){
     +mtssCycleHtml(a)
     +'<div class="notice" style="background:#f8fafc;border-color:var(--'+rec.cls+');margin-top:8px"><b>Response to intervention:</b> '+rec.text+'</div>'
     +(nc?('<p style="font-size:13px;margin:8px 0 0">📅 <b>Next progress check:</b> '+fmtDay(nc.due)+' &nbsp;<span class="muted">(Tier '+nc.tier+' cadence: every '+(nc.everyDays===7?"week":nc.everyDays===21?"~3 weeks":"term")+')</span> '+(nc.overdue?'<span class="pill red">overdue</span>':'<span class="pill green">scheduled</span>')+'</p>'):'')
-    +'<div style="margin-top:8px"><button class="btn gold sm" onclick="runProbe(\''+a.id+'\')">▶ Run progress check now</button> <span class="muted" style="font-size:11px">Teacher-run: a short, targeted re-check on this student\'s weak sub-skills.</span></div>'
+    +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      +'<button class="btn gold sm" onclick="runProbe(\''+a.id+'\')">▶ Run now (teacher 1:1)</button>'
+      +(a.probeUnlocked
+          ? '<button class="btn ghost sm" onclick="setProbeUnlock(\''+a.id+'\',false)">🔒 Lock again</button><span class="pill amber">Unlocked for student — waiting for them to take it</span>'
+          : '<button class="btn sm" onclick="setProbeUnlock(\''+a.id+'\',true)">🔓 Unlock for student</button><span class="muted" style="font-size:11px">Locked — the student can\'t take it until you unlock it. It re-locks after one attempt.</span>')
+      +'</div>'
     +(function(){ var pr=(a.rtiProbes||[]); var svg=probeTrendSvg(a);
         var tbl=pr.length?('<table style="margin-top:6px"><thead><tr><th>Date</th><th>Score</th><th>Result</th></tr></thead><tbody>'
           +pr.slice().reverse().map(function(p){ return '<tr><td style="font-size:11px">'+fmtDay(p.at)+'</td><td>'+p.score+'%</td><td>'+p.correct+'/'+p.total+'</td></tr>'; }).join("")+'</tbody></table>'):'';
@@ -1793,7 +1811,12 @@ function viewHome(){
     }
     return `<tr><td>${subjChip(a.subject)}${meta}<div class="muted" style="font-size:11px">shared by ${a.teacherName||a.teacherEmail}</div></td><td>Based on ${gLabel(a.prevGrade)}</td><td>${status}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No diagnostics${(fSub||fTerm)?" match this filter":" yet. Your teacher will share one with you here"}.</td></tr>`;
+  const unlockedProbes=assignments().filter(a=>a.status==="completed" && a.probeUnlocked);
+  const probeBanner=unlockedProbes.length?`<div class="card" style="border:2px solid var(--gold);background:#fffdf5"><h2 style="margin:0 0 4px">📋 Progress check unlocked</h2>
+    <p class="sub">Your teacher has unlocked a short progress check for you. It has 10 questions on the skills you're working on. You can take it once.</p>
+    ${unlockedProbes.map(a=>`<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px"><div><b>${subjChip(a.subject)}</b> <span class="muted" style="font-size:12px">${a.className||""} · Term ${aTerm(a)}</span></div><button class="btn gold sm" onclick="startStudentProbe('${a.id}')">▶ Start progress check</button></div>`).join("")}</div>`:"";
   return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">${me.email} · Student dashboard</p></div>
+  ${probeBanner}
   <div class="card"><h2>Join a class</h2><p class="sub">Got a class code from your teacher? Enter it, and add your parent's WhatsApp number so your teacher can send them your reports.</p>
     <div class="row"><div class="col"><label>Class code</label><input id="joinCode" placeholder="e.g. K7P2QX" style="text-transform:uppercase;letter-spacing:2px"></div>
     <div class="col"><label>Parent's WhatsApp number (with country code)</label><input id="joinParent" placeholder="e.g. 9715XXXXXXXX" value="${AUTH.parentPhone||''}"></div></div>
