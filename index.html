@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28q";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28r";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -482,6 +482,8 @@ function syncResultToAssignment(){
   // Low / Medium / High achiever classification for the teacher's roster.
   payload.achiever=r.achiever||null;
   payload.achieverTier=(r.achiever&&r.achiever.tier)||null;
+  // Stamp the student's MOE Student ID so the teacher can match imported history.
+  if(AUTH&&AUTH.studentId) payload.studentId=AUTH.studentId;
   if(S.plan){
     let totalDone=0,totalAll=0,tp={};
     ["1","2","3"].forEach(t=>{let d=0,tt=0; S.plan.terms[t].weeks.forEach(w=>w.tasks.forEach((_,i)=>{tt++; if(S.taskDone[t+"-"+w.week+"-"+i])d++;})); tp[t]=tt?Math.round(d/tt*100):0; totalDone+=d; totalAll+=tt;});
@@ -580,7 +582,8 @@ function viewAuth(){
     ${mode==='register'?`<label>I am a…</label>
       <select id="a_role"><option value="teacher">Teacher</option><option value="student">Student</option></select>
       <div style="height:10px"></div>
-      <label>Full name</label><input id="a_name" placeholder="e.g. Sara Al Hashimi"><div style="height:10px"></div>`:""}
+      <label>Full name</label><input id="a_name" placeholder="e.g. Sara Al Hashimi"><div style="height:10px"></div>
+      <label>Student ID <span class="muted" style="font-weight:400">(students only — your MOE number; links your past results)</span></label><input id="a_sid" placeholder="e.g. 20230004282"><div style="height:10px"></div>`:""}
     <label>School email</label><input id="a_email" type="email" placeholder="name@school.ae"><div style="height:10px"></div>
     <label>Password</label><input id="a_pass" type="password" placeholder="at least 8 characters" onkeydown="if(event.key==='Enter'){${mode==='register'?'doRegister':'doLogin'}()}">
     <div id="authMsg" style="font-size:12px;color:var(--red);margin-top:8px"></div>
@@ -593,13 +596,20 @@ function fbErr(e){ const c=(e&&e.code)||""; if(c.indexOf("email-already-in-use")
 function doRegister(){
   const role=document.getElementById("a_role").value, name=document.getElementById("a_name").value.trim();
   const email=document.getElementById("a_email").value.trim().toLowerCase(), pass=document.getElementById("a_pass").value;
+  const studentId=((document.getElementById("a_sid")||{}).value||"").trim();
   const msg=document.getElementById("authMsg");
   if(!name||!email||!pass){msg.textContent="Please fill in all fields.";return;}
   if(pass.length<8){msg.textContent="Password must be at least 8 characters.";return;}
   msg.textContent="Creating account…";
   fbAuth.createUserWithEmailAndPassword(email,pass)
-    .then(cred=>{ try{ cred.user.sendEmailVerification(); }catch(e){} return db.collection("users").doc(cred.user.uid).set({role:role,name:name,email:email,students:[]}); })
+    .then(cred=>{ try{ cred.user.sendEmailVerification(); }catch(e){} var doc={role:role,name:name,email:email,students:[]}; if(role==="student"&&studentId)doc.studentId=studentId; return db.collection("users").doc(cred.user.uid).set(doc); })
     .catch(e=>{const m=document.getElementById("authMsg"); if(m)m.textContent=fbErr(e);});
+}
+function saveStudentId(){
+  var v=((document.getElementById("my_sid")||{}).value||"").trim();
+  var m=document.getElementById("sidMsg");
+  if(!v){ if(m){m.style.color="var(--red)";m.textContent="Enter your Student ID.";} return; }
+  db.collection("users").doc(AUTH.uid).update({studentId:v}).then(function(){ AUTH.studentId=v; if(m){m.style.color="var(--ok)";m.textContent="Saved ✓";} render(); }).catch(function(e){ if(m){m.style.color="var(--red)";m.textContent=fbErr(e);} });
 }
 function verifyBanner(){
   try{ var u=fbAuth.currentUser; if(u && !u.emailVerified){ return '<div class="notice" style="background:#fff8e8;border-color:#f0e2b8;color:#7a5d00;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">✉️ Please verify your email — we sent a link to <b>'+(u.email||"")+'</b>. (Check spam too.) <button class="btn ghost sm" onclick="resendVerification()">Resend email</button></div>'; } }catch(e){} return "";
@@ -828,6 +838,86 @@ var TIER_STRATEGIES={
 };
 function cefrForAssignment(snap,a){ var p=(snap&&snap.overallPct!=null)?snap.overallPct:(a.score!=null?a.score:0); return cefrFromPct(p); }
 
+/* ===== Import past results (subject-agnostic) + progress-over-time ===== */
+function handleResultsImport(input){
+  var file=input.files&&input.files[0], msg=document.getElementById("impMsg");
+  if(!file) return;
+  if(msg){msg.style.color="var(--muted)";msg.textContent="Reading "+file.name+"…";}
+  ensureXlsxLibs()
+    .then(function(){ return file.arrayBuffer(); })
+    .then(function(buf){ var wb=new ExcelJS.Workbook(); return wb.xlsx.load(buf).then(function(){ return wb; }); })
+    .then(function(wb){
+      var ws=wb.getWorksheet("All terms (stacked)")||wb.worksheets[0];
+      if(!ws) throw new Error("No worksheet found.");
+      var H={}; ws.getRow(1).eachCell(function(cell,col){ if(cell.value!=null) H[String(cell.value).trim().toLowerCase()]=col; });
+      var cTerm=H["term"], cId=H["student id"], cName=H["student name"], cGrade=H["track / stream"]||H["grade"];
+      if(!cId||!cTerm) throw new Error("The sheet must have 'Student ID' and 'Term' columns (use the 'All terms (stacked)' sheet).");
+      var identity={"term":1,"student name":1,"student id":1,"grade":1,"track / stream":1,"section":1};
+      var subjCols=Object.keys(H).filter(function(k){return !identity[k];}).map(function(k){return {name:k,col:H[k]};});
+      function disp(k){ if(k==="overall average"||k==="overall") return "Overall"; return k.replace(/\b\w/g,function(c){return c.toUpperCase();}); }
+      var byId={};
+      ws.eachRow(function(row,rn){ if(rn===1) return;
+        var sid=row.getCell(cId).value; if(sid==null) return; sid=String(sid).trim(); if(!sid) return;
+        var term=String((row.getCell(cTerm).value)||"").trim(); if(!term) return;
+        var rec=byId[sid]||(byId[sid]={studentId:sid,name:(cName?String(row.getCell(cName).value||""):""),grade:(cGrade?String(row.getCell(cGrade).value||""):""),bySubject:{}});
+        subjCols.forEach(function(s){ var num=parseFloat(row.getCell(s.col).value); if(!isNaN(num)){ var d=disp(s.name); (rec.bySubject[d]||(rec.bySubject[d]={}))[term]=Math.round(num*100)/100; } });
+      });
+      var ids=Object.keys(byId);
+      if(!ids.length) throw new Error("No rows with a Student ID were found.");
+      if(msg) msg.textContent="Saving "+ids.length+" students…";
+      var chunks=[]; for(var i=0;i<ids.length;i+=400) chunks.push(ids.slice(i,i+400));
+      var chain=Promise.resolve();
+      chunks.forEach(function(ck){ chain=chain.then(function(){ var b=db.batch(); ck.forEach(function(sid){ var rec=byId[sid]; rec.importedAt=Date.now(); rec.importedBy=(AUTH&&AUTH.name)||""; b.set(db.collection("priorResults").doc(sid),rec,{merge:true}); }); return b.commit(); }); });
+      return chain.then(function(){ CACHE.prior={}; if(msg){msg.style.color="var(--ok)";msg.textContent="Imported "+ids.length+" students · subjects: "+subjCols.map(function(s){return disp(s.name);}).join(", ")+" ✓";} });
+    })
+    .catch(function(e){ if(msg){msg.style.color="var(--red)";msg.textContent="Import failed: "+((e&&e.message)||e);} });
+}
+// Two-series line: report-card grade (dashed) vs Adeptly diagnostic (solid), over term labels.
+function progressTwoSeriesSvg(labels, reportVals, diagVals){
+  var W=520,H=170,padL=30,padB=26,padT=12;
+  var n=labels.length; if(n<1) return "";
+  var xw=(n>1)?((W-padL-14)/(n-1)):0;
+  function X(i){ return padL+i*xw; } function Y(v){ return padT+(100-v)/100*(H-padT-padB); }
+  function path(vals){ var d="",started=false; vals.forEach(function(v,i){ if(v==null)return; d+=(started?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" "; started=true; }); return d.trim(); }
+  function dots(vals,color){ return vals.map(function(v,i){ if(v==null)return ""; return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.2" fill="'+color+'"></circle><text x="'+X(i).toFixed(1)+'" y="'+(Y(v)-6).toFixed(1)+'" font-size="8.5" text-anchor="middle" fill="#334155">'+v+'</text>'; }).join(""); }
+  var xlabels=labels.map(function(l,i){ return '<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" font-size="9" text-anchor="middle" fill="#64748b">'+l+'</text>'; }).join("");
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff">'
+    +'<path d="'+path(reportVals)+'" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 4"></path>'+dots(reportVals,"#f59e0b")
+    +'<path d="'+path(diagVals)+'" fill="none" stroke="#4f46e5" stroke-width="2"></path>'+dots(diagVals,"#4f46e5")
+    +xlabels+'</svg>'
+    +'<div style="font-size:11px;margin-top:4px"><span style="color:#f59e0b">▬▬</span> Report-card grade (previous terms) &nbsp; <span style="color:#4f46e5">▬▬</span> Adeptly diagnostic</div>';
+}
+function progressOverTimeCard(a){
+  var sid=a.studentId||null;
+  if(!sid) return '<div class="card"><h2 style="margin:0 0 2px">📉 Progress over time</h2><p class="sub">This student\'s <b>Student ID</b> isn\'t linked yet, so imported past results can\'t be matched. Ask them to add it on their dashboard (🆔 Student ID), then it appears here.</p></div>';
+  CACHE.prior=CACHE.prior||{};
+  if(CACHE.prior[sid]===undefined){
+    db.collection("priorResults").doc(sid).get().then(function(d){ CACHE.prior[sid]=d.exists?d.data():null; render(); }).catch(function(){ CACHE.prior[sid]=null; render(); });
+    return '<div class="card"><h2 style="margin:0 0 2px">📉 Progress over time</h2><p class="muted" style="font-size:13px">Loading history…</p></div>';
+  }
+  var prior=CACHE.prior[sid];
+  var subjName=(a.subject==="Math")?"Maths":"English";
+  var priorSubj=(prior&&prior.bySubject)?(prior.bySubject[subjName]||prior.bySubject[a.subject]||null):null;
+  var overall=(prior&&prior.bySubject)?prior.bySubject["Overall"]:null;
+  var hist=studentTermHistory(a); var diagByTerm={}; hist.forEach(function(h){ diagByTerm[h.term]=h.score; });
+  var labels=["Term 1","Term 2","Term 3"];
+  var reportVals=labels.map(function(l){ var v=priorSubj?priorSubj[l]:null; return (v==null||isNaN(v))?null:v; });
+  var diagVals=labels.map(function(l){ var t=l.replace("Term ",""); return diagByTerm[t]!=null?diagByTerm[t]:null; });
+  var haveAny=reportVals.some(function(v){return v!=null;})||diagVals.some(function(v){return v!=null;});
+  var body="";
+  if(!prior){ body='<div class="notice">No imported history found for Student ID <b>'+sid+'</b>. Import the results workbook in the panel above, or check the ID matches the sheet.</div>'; }
+  else if(!haveAny){ body='<p class="muted" style="font-size:13px">History found, but no '+subjName+' grades for the terms yet.</p>'; }
+  else {
+    body=progressTwoSeriesSvg(labels,reportVals,diagVals)
+      +'<table style="margin-top:10px"><thead><tr><th>Period</th><th>'+subjName+' report grade</th><th>Adeptly diagnostic</th></tr></thead><tbody>'
+      +labels.map(function(l,i){ return '<tr><td>'+l+'</td><td>'+(reportVals[i]!=null?reportVals[i]+"%":"—")+'</td><td>'+(diagVals[i]!=null?diagVals[i]+"%":"—")+'</td></tr>'; }).join("")
+      +'</tbody></table>'
+      +'<p class="muted" style="font-size:11px;margin-top:6px">The two lines are <b>different measures</b>: the report‑card grade is the school term grade; the Adeptly diagnostic is a harder, subject‑readiness test. Read each line\'s own trend rather than comparing the two directly.</p>';
+  }
+  return '<div class="card"><h2 style="margin:0 0 2px">📉 Progress over time — '+subjName+'</h2>'
+    +'<p class="sub">Past three terms (imported report grades) flowing into the Adeptly diagnostic, matched by Student ID '+sid+'.</p>'+body+'</div>';
+}
+
 /* ===== EXCEL EXPORT: diagnostic analysis (per term + whole year), with embedded charts ===== */
 function ensureXlsxLibs(){
   return new Promise(function(resolve,reject){
@@ -984,7 +1074,10 @@ function viewAnalysis(){
   var exportCard='<div class="card no-print"><h2 style="margin:0 0 4px">📊 Export diagnostic analysis (Excel)</h2>'
     +'<p class="sub">Download an Excel workbook with a Summary, per-student table, skill &amp; sub-skill averages and embedded charts. Choose a term, or "Whole year" for the end-of-year roll-up with a term-by-term trend. "Cohort summary" combines every class of the same grade &amp; subject.</p>'
     +exBody+'</div>';
-  var head=exportCard+'<div class="card"><h2 style="margin:0 0 4px">📈 Skill analysis &amp; teaching strategies</h2>'
+  var importCard='<div class="card no-print"><h2 style="margin:0 0 4px">📥 Import past results (history)</h2>'
+    +'<p class="sub">Upload the combined term-results workbook (the "All terms (stacked)" sheet). Each student\'s prior subject grades are stored by <b>Student ID</b>, so they appear on the student\'s Progress-over-time chart once their ID is linked. Works for any subject columns in the file.</p>'
+    +'<input type="file" id="impResults" accept=".xlsx" onchange="handleResultsImport(this)"> <span id="impMsg" class="muted" style="font-size:12px;margin-left:8px"></span></div>';
+  var head=exportCard+importCard+'<div class="card"><h2 style="margin:0 0 4px">📈 Skill analysis &amp; teaching strategies</h2>'
     +'<p class="sub">Pick a student to see the CEFR level, achiever band, exactly which questions and skills lost marks, and tailored strategies to move them up.</p>'
     +'<div class="row"><div class="col"><label>Student test</label><select onchange="openAnalysis(this.value)">'+options+'</select></div></div>';
   if(!doneAll.length) head+='<p class="muted" style="font-size:13px;margin-top:10px">No completed diagnostics yet. As students finish, they will appear here.</p>';
@@ -1023,6 +1116,8 @@ function viewAnalysis(){
 
   // RTI progress monitoring + response-to-intervention + decision log + MTSS cycle
   html+=rtiProgressCard(a);
+  // Past-terms history (report grades) flowing into the diagnostic, matched by Student ID
+  html+=progressOverTimeCard(a);
 
   // Per-skill breakdown with marks lost + which questions.
   html+='<div class="card"><h2>Where the marks were lost</h2><p class="sub">Each skill shows the score, the percent of that skill\'s marks lost, and the exact questions missed.</p>';
@@ -1939,7 +2034,10 @@ function viewHome(){
   const probeBanner=unlockedProbes.length?`<div class="card" style="border:2px solid var(--gold);background:#fffdf5"><h2 style="margin:0 0 4px">📋 Progress check unlocked</h2>
     <p class="sub">Your teacher has unlocked a short progress check for you. It has 10 questions on the skills you're working on. You can take it once.</p>
     ${unlockedProbes.map(a=>`<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px"><div><b>${subjChip(a.subject)}</b> <span class="muted" style="font-size:12px">${a.className||""} · Term ${aTerm(a)}</span></div><button class="btn gold sm" onclick="startStudentProbe('${a.id}')">▶ Start progress check</button></div>`).join("")}</div>`:"";
+  const sidCard=`<div class="card" style="${AUTH.studentId?'':'border:2px solid var(--gold);background:#fffdf5'}"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">🆔 Student ID</h2><p class="sub" style="margin:2px 0 0">${AUTH.studentId?('Your ID: <b>'+String(AUTH.studentId).replace(/</g,"&lt;")+'</b> — this links your past results to your progress.'):'Add your MOE Student ID so your teacher can link your previous results to your progress.'}</p></div></div>
+    <div class="row" style="margin-top:8px"><div class="col"><input id="my_sid" value="${(AUTH.studentId||'').replace(/"/g,'&quot;')}" placeholder="e.g. 20230004282"></div><div class="col" style="display:flex;align-items:flex-end"><button class="btn" onclick="saveStudentId()">${AUTH.studentId?'Update ID':'Save my ID'}</button> <span id="sidMsg" style="font-size:12px;margin-left:8px"></span></div></div></div>`;
   return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">${me.email} · Student dashboard</p></div>
+  ${sidCard}
   ${probeBanner}
   <div class="card"><h2>Join a class</h2><p class="sub">Got a class code from your teacher? Enter it, and add your parent's WhatsApp number so your teacher can send them your reports.</p>
     <div class="row"><div class="col"><label>Class code</label><input id="joinCode" placeholder="e.g. K7P2QX" style="text-transform:uppercase;letter-spacing:2px"></div>
