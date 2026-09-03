@@ -163,7 +163,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28h";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28i";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -209,6 +209,42 @@ function computeAchiever(qs,answers){
   return {tier:tier, ratio:Math.round(ratio*100), bands:lb};
 }
 function achieverCls(t){ return t==="High"?"green":t==="Medium"?"amber":"red"; }
+/* ===== RTI / MTSS tier model ===== achiever band → tier of support (tunable). */
+var RTI_TIERS={
+ High:  {tier:1,label:"Tier 1 · Universal",  short:"Tier 1", cls:"green", benchmark:80, freq:"Whole-class core instruction; screen once per term.", desc:"On track with quality core teaching."},
+ Medium:{tier:2,label:"Tier 2 · Targeted",   short:"Tier 2", cls:"amber", benchmark:15, freq:"Small-group targeted support ~2–3×/week; monitor every ~3 weeks.", desc:"Needs targeted small-group support on specific gaps."},
+ Low:   {tier:3,label:"Tier 3 · Intensive",  short:"Tier 3", cls:"red",   benchmark:5,  freq:"Intensive individual support, daily; monitor weekly.", desc:"Needs intensive, individualised intervention."}
+};
+function rtiFor(band){ return RTI_TIERS[band]||null; }
+function rtiForAssignment(a){ var t=(a&&(a.achieverTier||(a.achiever&&a.achiever.tier)))||null; return rtiFor(t); }
+function rtiChip(band){ var r=rtiFor(band); return r?('<span class="pill '+r.cls+'" title="'+r.desc+'">'+r.short+'</span>'):''; }
+// Count students per tier for a set of completed assignments.
+function tierCounts(list){ var c={1:0,2:0,3:0,none:0}; list.forEach(function(a){ var r=rtiForAssignment(a); if(r)c[r.tier]++; else c.none++; }); return c; }
+// MTSS/RTI tier-distribution "pyramid" card vs the ~80/15/5 benchmark.
+function mtssPyramidCard(list){
+  if(!list||!list.length) return "";
+  var c=tierCounts(list), n=list.length;
+  var P=function(x){ return n?Math.round(x/n*100):0; };
+  var rows=[{t:3,label:"Tier 3 · Intensive",count:c[3],cls:"red",bench:5,w:36},
+            {t:2,label:"Tier 2 · Targeted",count:c[2],cls:"amber",bench:15,w:64},
+            {t:1,label:"Tier 1 · Universal",count:c[1],cls:"ok",bench:80,w:100}];
+  var bars=rows.map(function(r){ var p=P(r.count);
+    var flag=(r.t===1)?(p<70?'<span class="pill red" style="font-size:10px">low</span>':'<span class="pill green" style="font-size:10px">ok</span>')
+                      :(p>r.bench+ (r.t===3?8:12)?'<span class="pill red" style="font-size:10px">above</span>':'<span class="pill green" style="font-size:10px">ok</span>');
+    return '<div style="display:flex;align-items:center;gap:10px;margin:5px 0">'
+      +'<div style="width:150px;font-size:12px;text-align:right;color:var(--muted)">'+r.label+'</div>'
+      +'<div style="flex:1;display:flex;justify-content:center"><div style="width:'+r.w+'%;background:var(--'+r.cls+');color:#fff;border-radius:6px;padding:9px 10px;font-size:12px;font-weight:700;text-align:center">'+r.count+' · '+p+'%</div></div>'
+      +'<div style="width:150px;font-size:11px;color:var(--muted)">target ~'+r.bench+'% &nbsp;'+flag+'</div></div>';
+  }).join("");
+  var t1=P(c[1]);
+  var note = t1>=80 ? "Healthy distribution — core (Tier 1) instruction is reaching most students."
+    : t1>=60 ? "Some students need extra support. Strengthen Tier 1 core instruction while running Tier 2/3 groups."
+    : "More than 40% need support — this usually signals Tier 1 (whole-class core teaching) needs review, not just individual intervention.";
+  return '<div class="card"><h2 style="margin:0 0 2px">🔺 MTSS / RTI tier distribution — this term</h2>'
+    +'<p class="sub">Where students fall across the tiers of support, against the usual RTI benchmark (~80% Tier 1, ~15% Tier 2, ~5% Tier 3).</p>'
+    +bars
+    +'<p class="muted" style="font-size:12px;margin-top:8px">'+note+' <span style="color:var(--muted)">('+n+' completed this term)</span></p></div>';
+}
 function achieverBandName(k){ return k==="F"?"Foundational (easy)":k==="C"?"Core (medium)":"Challenge (hard)"; }
 function achieverCardHtml(ac){
   if(!ac||!ac.bands) return "";
@@ -551,8 +587,9 @@ async function buildAnalysisWorkbook(title,subj,perTerm,isYear){
   sm.addRow([title]).font={bold:true,size:14};
   sm.addRow(["Subject: "+subj+"     Generated: "+new Date().toLocaleDateString()]);
   sm.addRow([]);
-  hdrRow(sm,["Period","Students","Class average %","High","Medium","Low"]);
-  perTerm.forEach(function(pt){ var d=pt.data; sm.addRow([(isYear?("Term "+pt.term):("Term "+pt.term)),d.n,d.overallAvg,d.tiers.High,d.tiers.Medium,d.tiers.Low]); });
+  hdrRow(sm,["Period","Students","Class average %","Tier 1 · Universal (High)","Tier 2 · Targeted (Medium)","Tier 3 · Intensive (Low)"]);
+  perTerm.forEach(function(pt){ var d=pt.data; sm.addRow([("Term "+pt.term),d.n,d.overallAvg,d.tiers.High,d.tiers.Medium,d.tiers.Low]); });
+  sm.addRow(["RTI benchmark (typical)","","","~80%","~15%","~5%"]);
   sm.addRow([]);
   hdrRow(sm,["Skill"].concat(perTerm.map(function(pt){return "Term "+pt.term+" avg %";})));
   areas.forEach(function(k){ sm.addRow([k].concat(perTerm.map(function(pt){return pt.data.skillAvg[k];}))); });
@@ -560,17 +597,19 @@ async function buildAnalysisWorkbook(title,subj,perTerm,isYear){
   var last=perTerm[perTerm.length-1].data;
   var skillBar=await chartPNG({type:"bar",data:{labels:areas,datasets:perTerm.map(function(pt,idx){return {label:"Term "+pt.term,data:areas.map(function(k){return pt.data.skillAvg[k];}),backgroundColor:idx===0?("#"+BLUE):idx===1?("#"+GREEN):("#"+AMBER)};})},options:{plugins:{title:{display:true,text:"Class average by skill"},legend:{display:perTerm.length>1}},scales:{y:{min:0,max:100}}}},560,320);
   var dough=await chartPNG({type:"doughnut",data:{labels:["High","Medium","Low"],datasets:[{data:[last.tiers.High,last.tiers.Medium,last.tiers.Low],backgroundColor:["#"+GREEN,"#"+AMBER,"#"+RED]}]},options:{plugins:{title:{display:true,text:"Achiever distribution ("+(isYear?"latest term":"this term")+")"}}}},360,320);
-  var id1=wb.addImage({base64:skillBar,extension:"png"}); sm.addImage(id1,{tl:{col:0,row:(6+perTerm.length+areas.length)},ext:{width:560,height:320}});
+  var baseRow=7+perTerm.length+areas.length; // +1 for the RTI benchmark row added under the tier table
+  var id1=wb.addImage({base64:skillBar,extension:"png"}); sm.addImage(id1,{tl:{col:0,row:baseRow},ext:{width:560,height:320}});
   var id2=wb.addImage({base64:dough,extension:"png"}); sm.addImage(id2,{tl:{col:6,row:3},ext:{width:360,height:320}});
   if(isYear){
     var trend=await chartPNG({type:"line",data:{labels:perTerm.map(function(pt){return "Term "+pt.term;}),datasets:[{label:"Class average %",data:perTerm.map(function(pt){return pt.data.overallAvg;}),borderColor:"#"+BLUE,backgroundColor:"#"+BLUE,tension:.25}]},options:{plugins:{title:{display:true,text:"Class average across the year"}},scales:{y:{min:0,max:100}}}},560,300);
-    var id3=wb.addImage({base64:trend,extension:"png"}); sm.addImage(id3,{tl:{col:0,row:(6+perTerm.length+areas.length+18)},ext:{width:560,height:300}});
+    var id3=wb.addImage({base64:trend,extension:"png"}); sm.addImage(id3,{tl:{col:0,row:baseRow+18},ext:{width:560,height:300}});
   }
   // ---- Students ----
   var st=wb.addWorksheet("Students"); st.columns=[{width:8},{width:26},{width:12},{width:8},{width:12}].concat(areas.map(function(){return {width:16};}));
-  hdrRow(st,["Term","Student","Overall %"].concat(subj==="English"?["CEFR"]:[]).concat(["Achiever"]).concat(areas.map(function(k){return k+" %";})));
+  hdrRow(st,["Term","Student","Overall %"].concat(subj==="English"?["CEFR"]:[]).concat(["Achiever","RTI tier"]).concat(areas.map(function(k){return k+" %";})));
   perTerm.forEach(function(pt){ pt.data.students.sort(function(a,b){return b.overall-a.overall;}).forEach(function(s){
-    var row=["T"+pt.term,s.name,s.overall].concat(subj==="English"?[s.cefr]:[]).concat([s.tier]).concat(areas.map(function(k){return s.skills[k]!=null?s.skills[k]:"";}));
+    var rt=rtiFor(s.tier);
+    var row=["T"+pt.term,s.name,s.overall].concat(subj==="English"?[s.cefr]:[]).concat([s.tier,(rt?rt.label:"")]).concat(areas.map(function(k){return s.skills[k]!=null?s.skills[k]:"";}));
     var r=st.addRow(row); var tc=r.getCell(subj==="English"?5:4); var col=s.tier==="High"?GREEN:s.tier==="Medium"?AMBER:s.tier==="Low"?RED:"64748b"; tc.font={bold:true,color:{argb:"FF"+col}};
   }); });
   // ---- Sub-skill gaps ----
@@ -685,8 +724,9 @@ function viewAnalysis(){
     +'<p class="sub" style="margin:2px 0 0">'+subjChip(subj)+' · based on '+gLabel(a.prevGrade)+' · '+(a.className||"")+' · Term '+aTerm(a)+'</p></div>'
     +'<div style="text-align:right">'
     +(cefr?('<div><span class="pill '+tierCls+'" style="font-size:16px;padding:6px 14px">CEFR '+cefr+'</span></div>'):'')
-    +(tier?('<div style="margin-top:6px"><span class="pill '+tierCls+'">'+tier+' achiever</span></div>'):'')
+    +(tier?('<div style="margin-top:6px"><span class="pill '+tierCls+'">'+tier+' achiever</span> '+rtiChip(tier)+'</div>'):'')
     +'</div></div>'
+    +(rtiFor(tier)?('<div class="notice" style="margin-top:10px;background:#f8fafc"><b>'+rtiFor(tier).label+'</b> — '+rtiFor(tier).desc+'<br><span class="muted" style="font-size:12px">Recommended intensity: '+rtiFor(tier).freq+'</span></div>'):'')
     +'<div class="kpi" style="margin-top:10px"><div class="box"><div class="n">'+overall+'%</div><div class="l">Overall</div></div>'
     +(snap&&snap.achiever?('<div class="box"><div class="n">'+snap.achiever.ratio+'%</div><div class="l">Weighted (harder Qs count more)</div></div>'):'')
     +'<div class="box"><div class="n"><span class="pill '+tierCls+'" style="font-size:13px">'+(tier||"—")+'</span></div><div class="l">Achiever band</div></div></div>'
@@ -738,8 +778,10 @@ function viewAnalysis(){
   var weak=areas.filter(function(k){ if(haveQ){ var x=per[k]; return x&&x.t&&(x.c/x.t*100)<70; } var p=(a.skillPct||{})[k]; return p!=null&&p<70; });
   var isHigh=(tier==="High");
   var tinfo=TIER_STRATEGIES[tier||"Medium"]||TIER_STRATEGIES.Medium;
+  var rti=rtiFor(tier);
   html+='<div class="card" style="border-left:4px solid var(--'+(tierCls==='green'?'ok':tierCls==='amber'?'amber':'red')+')">'
-    +'<h2>'+(isHigh?"How to challenge this student":"How to move this student up a level")+'</h2>'
+    +'<div class="flex-between" style="flex-wrap:wrap;gap:8px"><h2 style="margin:0">'+(isHigh?"How to challenge this student":"How to move this student up a level")+'</h2>'+(rti?('<span class="pill '+rti.cls+'">'+rti.label+'</span>'):'')+'</div>'
+    +(rti?('<p class="muted" style="font-size:12px;margin:4px 0 0">RTI intensity: '+rti.freq+'</p>'):'')
     +'<p class="sub">'+tinfo.title+'</p>'
     +'<ul style="font-size:13px;line-height:1.6;margin:6px 0 4px;padding-left:18px">'+tinfo.items.map(function(s){return '<li>'+s+'</li>';}).join("")+'</ul>';
   var focusSkills=isHigh?areas:(weak.length?weak:areas);
@@ -1509,7 +1551,7 @@ function viewClass(id){
   const rosterRows=ca.length?ca.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map(a=>{
     const tier=a.achieverTier||(a.achiever&&a.achiever.tier)||null;
     const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
-    const flag=(a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span>`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`));
+    const flag=(a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span> ${rtiChip(tier)}`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`));
     const termsDone=caAll.filter(x=>x.studentEmail===a.studentEmail&&x.status==="completed").length;
     const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
@@ -1552,6 +1594,7 @@ function viewClass(id){
     if(has) return `<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">✅ Term ${term} diagnostic generated for ${ca.length} student(s)${Number(term)>1?`, built on their Term ${Number(term)-1} results`:""}. <button class="btn ghost sm" onclick="generateTerm('${c.id}','${term}')">Generate for newly-joined students</button></div>`;
     return `<div class="card" style="border:1px solid #c7b8f5;background:#faf8ff"><h3 style="margin:0 0 4px;font-size:15px">⚡ Term ${term} not generated yet</h3><p class="sub" style="margin:0 0 10px">Students see Term ${term} only after you generate it. It will be built on each student's Term ${Number(term)-1} results, so the goals and activities continue from where they left off.</p><button class="btn" onclick="generateTerm('${c.id}','${term}')">Generate Term ${term} diagnostic for the class</button></div>`;
   })()}
+  ${mtssPyramidCard(done)}
   <div class="card"><div class="flex-between" style="align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Class roster — Term ${term}</h2>${caAll.some(a=>a.status==="completed")?`<button class="btn gold sm" onclick="downloadClassMarked('${c.id}')">⬇ Download all marked tests (all terms)</button>`:""}</div>
     <p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish. Use the per-row <b>⬇ Marked</b> for a single test, <b>⬇ All terms</b> for one student across terms, or <b>Download all marked tests</b> above for the whole class.</p>
     ${(function(){ if(!done.length)return ""; var t={High:0,Medium:0,Low:0}; done.forEach(function(a){var tt=a.achieverTier||(a.achiever&&a.achiever.tier); if(tt&&t[tt]!=null)t[tt]++;}); if(!(t.High+t.Medium+t.Low))return ""; return `<div class="notice" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:#f8fafc"><b style="font-size:13px">Achiever spread:</b><span class="pill green">${t.High} High</span><span class="pill amber">${t.Medium} Medium</span><span class="pill red">${t.Low} Low</span><span class="muted" style="font-size:11px">from ${done.length} completed test(s) this term</span></div>`; })()}
