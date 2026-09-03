@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28r";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28s";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -839,29 +839,43 @@ var TIER_STRATEGIES={
 function cefrForAssignment(snap,a){ var p=(snap&&snap.overallPct!=null)?snap.overallPct:(a.score!=null?a.score:0); return cefrFromPct(p); }
 
 /* ===== Import past results (subject-agnostic) + progress-over-time ===== */
+// SheetJS reads .xlsx (including files with charts/images) without choking — ExcelJS throws on charts.
+function ensureSheetJS(){
+  return new Promise(function(res,rej){
+    if(window.XLSX) return res();
+    var s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload=function(){ window.XLSX?res():rej(new Error("The spreadsheet reader did not initialise.")); };
+    s.onerror=function(){ rej(new Error("Couldn't load the spreadsheet reader — check your internet.")); };
+    document.head.appendChild(s);
+  });
+}
 function handleResultsImport(input){
   var file=input.files&&input.files[0], msg=document.getElementById("impMsg");
   if(!file) return;
   if(msg){msg.style.color="var(--muted)";msg.textContent="Reading "+file.name+"…";}
-  ensureXlsxLibs()
+  ensureSheetJS()
     .then(function(){ return file.arrayBuffer(); })
-    .then(function(buf){ var wb=new ExcelJS.Workbook(); return wb.xlsx.load(buf).then(function(){ return wb; }); })
-    .then(function(wb){
-      var ws=wb.getWorksheet("All terms (stacked)")||wb.worksheets[0];
-      if(!ws) throw new Error("No worksheet found.");
-      var H={}; ws.getRow(1).eachCell(function(cell,col){ if(cell.value!=null) H[String(cell.value).trim().toLowerCase()]=col; });
-      var cTerm=H["term"], cId=H["student id"], cName=H["student name"], cGrade=H["track / stream"]||H["grade"];
-      if(!cId||!cTerm) throw new Error("The sheet must have 'Student ID' and 'Term' columns (use the 'All terms (stacked)' sheet).");
+    .then(function(buf){
+      var wb=XLSX.read(new Uint8Array(buf),{type:"array"});
+      var name=(wb.SheetNames.indexOf("All terms (stacked)")>=0)?"All terms (stacked)":wb.SheetNames[0];
+      var ws=wb.Sheets[name]; if(!ws) throw new Error("No worksheet found.");
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      if(!rows.length) throw new Error("The sheet is empty.");
+      var hdr=(rows[0]||[]).map(function(h){return h==null?"":String(h).trim();});
+      var idx={}; hdr.forEach(function(h,i){ if(h) idx[h.toLowerCase()]=i; });
+      var cTerm=idx["term"], cId=idx["student id"], cName=idx["student name"];
+      var cGrade=(idx["track / stream"]!=null?idx["track / stream"]:idx["grade"]);
+      if(cId==null||cTerm==null) throw new Error("The sheet must have 'Student ID' and 'Term' columns (use the 'All terms (stacked)' sheet).");
       var identity={"term":1,"student name":1,"student id":1,"grade":1,"track / stream":1,"section":1};
-      var subjCols=Object.keys(H).filter(function(k){return !identity[k];}).map(function(k){return {name:k,col:H[k]};});
-      function disp(k){ if(k==="overall average"||k==="overall") return "Overall"; return k.replace(/\b\w/g,function(c){return c.toUpperCase();}); }
+      var subjCols=[]; hdr.forEach(function(h,i){ if(h && !identity[h.toLowerCase()]) subjCols.push({name:h,i:i}); });
+      function disp(k){ k=k.toLowerCase(); if(k==="overall average"||k==="overall") return "Overall"; return k.replace(/\b\w/g,function(c){return c.toUpperCase();}); }
       var byId={};
-      ws.eachRow(function(row,rn){ if(rn===1) return;
-        var sid=row.getCell(cId).value; if(sid==null) return; sid=String(sid).trim(); if(!sid) return;
-        var term=String((row.getCell(cTerm).value)||"").trim(); if(!term) return;
-        var rec=byId[sid]||(byId[sid]={studentId:sid,name:(cName?String(row.getCell(cName).value||""):""),grade:(cGrade?String(row.getCell(cGrade).value||""):""),bySubject:{}});
-        subjCols.forEach(function(s){ var num=parseFloat(row.getCell(s.col).value); if(!isNaN(num)){ var d=disp(s.name); (rec.bySubject[d]||(rec.bySubject[d]={}))[term]=Math.round(num*100)/100; } });
-      });
+      for(var r=1;r<rows.length;r++){ var row=rows[r]; if(!row) continue;
+        var sid=row[cId]; if(sid==null) continue; sid=String(sid).trim(); if(!sid) continue;
+        var term=String(row[cTerm]||"").trim(); if(!term) continue;
+        var rec=byId[sid]||(byId[sid]={studentId:sid,name:(cName!=null?String(row[cName]||""):""),grade:(cGrade!=null?String(row[cGrade]||""):""),bySubject:{}});
+        subjCols.forEach(function(s){ var num=parseFloat(row[s.i]); if(!isNaN(num)){ var d=disp(s.name); (rec.bySubject[d]||(rec.bySubject[d]={}))[term]=Math.round(num*100)/100; } });
+      }
       var ids=Object.keys(byId);
       if(!ids.length) throw new Error("No rows with a Student ID were found.");
       if(msg) msg.textContent="Saving "+ids.length+" students…";
