@@ -163,7 +163,7 @@ const MATH_SKILLS = ["Number & Operations","Algebra","Geometry","Data & Probabil
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28j";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28l";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -268,10 +268,83 @@ function rtiRecommendation(hist){
 function tierCadenceDays(tier){ return tier===3?7:tier===2?21:90; }
 function nextCheckInfo(a){
   var r=rtiForAssignment(a); if(!r) return null;
-  var base=a.completedAt||a.createdAt||Date.now();
+  var probes=a.rtiProbes||[];
+  var base=probes.length?probes[probes.length-1].at:(a.completedAt||a.createdAt||Date.now());
   var due=base + tierCadenceDays(r.tier)*24*3600*1000;
   var overdue=Date.now()>due;
-  return {due:due,overdue:overdue,tier:r.tier,everyDays:tierCadenceDays(r.tier)};
+  return {due:due,overdue:overdue,tier:r.tier,everyDays:tierCadenceDays(r.tier),lastProbe:probes.length?probes[probes.length-1]:null};
+}
+/* ===== Progress-monitoring probe: short targeted re-check on weak sub-skills ===== */
+function weakSubsFromAssignment(a){
+  var d=qsAns(a), w={}; if(d.qs&&d.ans){ d.qs.forEach(function(q,i){ if(q.sub && d.ans[i]!==q.answer) w[q.skill+"|"+q.sub]=true; }); } return w;
+}
+function weakSkillsFromAssignment(a){
+  var sp=a.skillPct||{}, w={}; Object.keys(sp).forEach(function(k){ if(sp[k]!=null && sp[k]<70) w[k]=true; }); return w;
+}
+function buildProbe(a){
+  var subj=a.subject||"English", grade=a.prevGrade;
+  var weakSub=weakSubsFromAssignment(a), weakSk=weakSkillsFromAssignment(a);
+  var prefer=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:[];
+  var all=[]; for(var g in QUESTION_POOL){ var arr=QUESTION_POOL[g]&&QUESTION_POOL[g][subj]; if(arr) all=all.concat(arr); }
+  function K(q){ return q.skill+"|"+q.sub; }
+  var seen={}, out=[];
+  function add(list,test){ list.forEach(function(q){ if(out.length>=10)return; if(seen[q.q])return; if(test(q)){ seen[q.q]=1; out.push({q:q.q,options:q.options.slice(),answer:q.answer,skill:q.skill,sub:q.sub}); } }); }
+  add(prefer,function(q){return weakSub[K(q)];});     // this grade, exact weak sub-skills
+  add(all,function(q){return weakSub[K(q)];});         // any grade, weak sub-skills
+  add(prefer,function(q){return weakSk[q.skill];});    // this grade, weak skills
+  add(all,function(q){return weakSk[q.skill];});       // any grade, weak skills
+  add(prefer,function(){return true;});                // top up with any this-grade
+  add(all,function(){return true;});
+  return out.slice(0,10);
+}
+var PROBE=null;
+function runProbe(id){
+  var a=(CACHE.assignments||[]).concat(CACHE.allAssign||[]).find(function(x){return x.id===id;});
+  if(!a){ alert("Record not found."); return; }
+  try{
+    var items=buildProbe(a);
+    if(!items.length){ alert("No targeted questions are available to build a probe for this subject/grade yet."); return; }
+    PROBE={id:id,a:a,items:items,resp:{},submitted:false}; renderProbe();
+  }catch(e){ alert("Couldn't start the progress check: "+((e&&e.message)||e)); }
+}
+function probePick(i,oi){ if(!PROBE||PROBE.submitted)return; PROBE.resp[i]=oi; renderProbe(); }
+function submitProbe(){ var c=0; PROBE.items.forEach(function(q,i){ if(PROBE.resp[i]===q.answer)c++; }); PROBE.correct=c; PROBE.total=PROBE.items.length; PROBE.score=Math.round(c/PROBE.total*100); PROBE.submitted=true; renderProbe(); }
+function saveProbe(){
+  var a=PROBE.a, probes=(a.rtiProbes||[]).slice();
+  probes.push({at:Date.now(),score:PROBE.score,correct:PROBE.correct,total:PROBE.total,by:(AUTH&&AUTH.name)||"" });
+  db.collection("assignments").doc(a.id).update({rtiProbes:probes}).then(function(){ closeProbe(); render(); }).catch(function(e){ alert(fbErr(e)); });
+}
+function closeProbe(){ PROBE=null; var m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
+function renderProbe(){
+  var m=document.getElementById("exModal"); if(!m)return; var P=PROBE, body="";
+  body+='<p class="sub">Short progress check — '+P.items.length+' questions on the skills this student is working on. Scored instantly and logged to the RTI record.</p>';
+  P.items.forEach(function(q,i){ body+='<div class="exq"><div style="font-weight:600;margin-bottom:4px">Q'+(i+1)+'. '+String(q.q).replace(/</g,"&lt;")+'</div>';
+    if(q.sub) body+='<div class="muted" style="font-size:11px;margin-bottom:6px">'+q.skill+' — '+q.sub+'</div>';
+    (q.options||[]).forEach(function(o,oi){ var cls="opt"; if(P.resp[i]===oi)cls+=" sel"; if(P.submitted){ if(oi===q.answer)cls+=" exok"; else if(P.resp[i]===oi)cls+=" exbad"; } body+='<label class="'+cls+'" onclick="probePick('+i+','+oi+')">'+String(o).replace(/</g,"&lt;")+'</label>'; });
+    body+='</div>'; });
+  var footer;
+  if(!P.submitted) footer='<button class="btn gold" onclick="submitProbe()">Check answers</button><button class="btn ghost" onclick="closeProbe()">Cancel</button>';
+  else footer='<div class="notice" style="flex:1 1 100%;margin:0;background:'+(P.score>=60?'#ccfbf1':'#fef3c7')+';border-color:#cbd5e1">Score: <b>'+P.correct+'/'+P.total+' ('+P.score+'%)</b> — save it to plot the trend and update the next check.</div><button class="btn" onclick="saveProbe()">✓ Save to RTI record</button><button class="btn ghost" onclick="closeProbe()">Discard</button>';
+  m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">📋 Progress check — '+(P.a.studentName||"Student")+'</h2><button class="btn ghost sm" onclick="closeProbe()">✕</button></div>'+body+'<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+footer+'</div></div></div>';
+  m.style.display="block";
+}
+// Small inline SVG trend of probe scores (with the baseline term score as the first point) vs a goal line.
+function probeTrendSvg(a){
+  var pts=[]; var base=(a.score!=null?a.score:null);
+  if(base!=null) pts.push({label:"Baseline",v:base});
+  (a.rtiProbes||[]).forEach(function(p,i){ pts.push({label:"#"+(i+1),v:p.score}); });
+  if(pts.length<2) return "";
+  var W=460,H=140,padL=28,padB=20,padT=10,goal=70;
+  var n=pts.length, xw=(W-padL-10)/(n-1);
+  function X(i){ return padL+i*xw; } function Y(v){ return padT+(100-v)/100*(H-padT-padB); }
+  var line=pts.map(function(p,i){ return (i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1); }).join(" ");
+  var dots=pts.map(function(p,i){ return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="3.5" fill="#4f46e5"></circle><text x="'+X(i).toFixed(1)+'" y="'+(Y(p.v)-7).toFixed(1)+'" font-size="9" text-anchor="middle" fill="#334155">'+p.v+'</text>'; }).join("");
+  var gy=Y(goal).toFixed(1);
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff">'
+    +'<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-10)+'" y2="'+gy+'" stroke="#16a34a" stroke-dasharray="4 4" stroke-width="1"></line>'
+    +'<text x="'+(W-12)+'" y="'+(gy-4)+'" font-size="9" text-anchor="end" fill="#16a34a">goal '+goal+'%</text>'
+    +'<path d="'+line+'" fill="none" stroke="#4f46e5" stroke-width="2"></path>'+dots
+    +'<text x="'+padL+'" y="'+(H-6)+'" font-size="9" fill="#64748b">Baseline → probes over time</text></svg>';
 }
 function fmtDay(ms){ try{ return new Date(ms).toLocaleDateString(); }catch(e){ return "—"; } }
 function logRtiDecision(id){
@@ -305,6 +378,12 @@ function rtiProgressCard(a){
     +mtssCycleHtml(a)
     +'<div class="notice" style="background:#f8fafc;border-color:var(--'+rec.cls+');margin-top:8px"><b>Response to intervention:</b> '+rec.text+'</div>'
     +(nc?('<p style="font-size:13px;margin:8px 0 0">📅 <b>Next progress check:</b> '+fmtDay(nc.due)+' &nbsp;<span class="muted">(Tier '+nc.tier+' cadence: every '+(nc.everyDays===7?"week":nc.everyDays===21?"~3 weeks":"term")+')</span> '+(nc.overdue?'<span class="pill red">overdue</span>':'<span class="pill green">scheduled</span>')+'</p>'):'')
+    +'<div style="margin-top:8px"><button class="btn gold sm" onclick="runProbe(\''+a.id+'\')">▶ Run progress check now</button> <span class="muted" style="font-size:11px">Teacher-run: a short, targeted re-check on this student\'s weak sub-skills.</span></div>'
+    +(function(){ var pr=(a.rtiProbes||[]); var svg=probeTrendSvg(a);
+        var tbl=pr.length?('<table style="margin-top:6px"><thead><tr><th>Date</th><th>Score</th><th>Result</th></tr></thead><tbody>'
+          +pr.slice().reverse().map(function(p){ return '<tr><td style="font-size:11px">'+fmtDay(p.at)+'</td><td>'+p.score+'%</td><td>'+p.correct+'/'+p.total+'</td></tr>'; }).join("")+'</tbody></table>'):'';
+        if(!svg && !tbl) return "";
+        return '<h3 style="font-size:14px;margin:14px 0 4px">Progress-check trend</h3>'+(svg||'')+tbl; })()
     +'<h3 style="font-size:14px;margin:14px 0 4px">Term-by-term history</h3>'
     +(hist.length?('<table><thead><tr><th>Period</th><th>Score</th><th>Achiever</th><th>Tier</th><th>Taken</th></tr></thead><tbody>'+rows+'</tbody></table>'):'<p class="muted" style="font-size:12px">Only one term so far.</p>')
     +'<h3 style="font-size:14px;margin:14px 0 4px">Log an RTI decision</h3>'
