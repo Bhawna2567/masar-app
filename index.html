@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28p";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-08-28q";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1108,8 +1108,9 @@ function viewTeacher(){
     +`</div>`;
   const studentsBody=`<div class="card"><h2>👁 Preview a diagnostic</h2><p class="sub">See exactly what students will get — including the reading passage — before you assign it.</p>
     <div class="row"><div class="col"><label>Subject</label><select id="pv_subject"><option value="English">English</option><option value="Math">Mathematics</option></select></div>
-      <div class="col"><label>Grade</label><select id="pv_grade">${grades}</select></div>
+      <div class="col"><label>Class</label><select id="pv_grade">${CLASS_PRESETS.map(p=>`<option value="${p.grade}|${p.label}">${p.label}</option>`).join("")}</select></div>
       <div class="col"><label>Test</label><select id="pv_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
+    <p class="muted" style="font-size:11px;margin:2px 0 0">Preview shows the exact test that class's students receive — the previous grade's content (e.g. Grade 7 class → Grade 6 test).</p>
     <div style="margin-top:10px"><button class="btn" onclick="previewDiagnostic()">Open preview</button> <button class="btn gold" onclick="downloadDiagnosticPDF()">⬇ Download as PDF</button></div>
     <p class="muted" style="font-size:12px;margin-top:8px">The PDF includes the full test (and reading passage) plus an answer key on the last page for you.</p>
   </div>
@@ -1457,7 +1458,9 @@ function saveImportedTest(){
 function deleteTest(id){ if(!confirm("Delete this imported test? Diagnostics already assigned with it are not affected."))return; db.collection("tests").doc(id).delete().catch(function(e){alert(fbErr(e));}); }
 function buildDiagnosticData(){
   var subj=(document.getElementById("pv_subject")||{}).value||"English";
-  var grade=(document.getElementById("pv_grade")||{}).value||"6";
+  var pvRaw=(document.getElementById("pv_grade")||{}).value||"6";
+  var classGrade=(pvRaw.indexOf("|")>=0)?pvRaw.split("|")[0]:pvRaw;
+  var grade=prevGradeOf(classGrade);  // preview the exact test students get (the previous grade)
   var testId=(document.getElementById("pv_test")||{}).value||"";
   var ct=testId?teacherTests().find(function(x){return x.id===testId;}):null;
   var qs, passage=null, title;
