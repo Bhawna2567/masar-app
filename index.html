@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -984,20 +984,28 @@ function handleResultsImport(input){
     })
     .catch(function(e){ var m2=(e&&e.message)||(""+e); var extra=/permission|insufficient|denied/i.test(m2)?" — Your account may not have admin rights, OR the Firestore rules for ‘priorResults’ aren’t published. In the Firebase console publish firestore.rules, and confirm your own user document has admin:true.":""; if(msg){msg.style.color="var(--red)";msg.textContent="Import failed: "+m2+extra;} });
 }
-// Two-series line: report-card grade (dashed) vs Adeptly diagnostic (solid), over term labels.
+// Combo chart: Adeptly diagnostic as bold BARS, report-card grade as an overlaid line. Big + gridlines + value labels.
 function progressTwoSeriesSvg(labels, reportVals, diagVals){
-  var W=520,H=170,padL=30,padB=26,padT=12;
   var n=labels.length; if(n<1) return "";
-  var xw=(n>1)?((W-padL-14)/(n-1)):0;
-  function X(i){ return padL+i*xw; } function Y(v){ return padT+(100-v)/100*(H-padT-padB); }
-  function path(vals){ var d="",started=false; vals.forEach(function(v,i){ if(v==null)return; d+=(started?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" "; started=true; }); return d.trim(); }
-  function dots(vals,color){ return vals.map(function(v,i){ if(v==null)return ""; return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.2" fill="'+color+'"></circle><text x="'+X(i).toFixed(1)+'" y="'+(Y(v)-6).toFixed(1)+'" font-size="8.5" text-anchor="middle" fill="#334155">'+v+'</text>'; }).join(""); }
-  var xlabels=labels.map(function(l,i){ return '<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" font-size="9" text-anchor="middle" fill="#64748b">'+l+'</text>'; }).join("");
-  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff">'
-    +'<path d="'+path(reportVals)+'" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 4"></path>'+dots(reportVals,"#f59e0b")
-    +'<path d="'+path(diagVals)+'" fill="none" stroke="#4f46e5" stroke-width="2"></path>'+dots(diagVals,"#4f46e5")
-    +xlabels+'</svg>'
-    +'<div style="font-size:11px;margin-top:4px"><span style="color:#f59e0b">▬▬</span> Report-card grade (previous terms) &nbsp; <span style="color:#4f46e5">▬▬</span> Adeptly diagnostic</div>';
+  var W=680,H=300,padL=40,padR=18,padT=22,padB=42;
+  var plotW=W-padL-padR, plotH=H-padT-padB, base=padT+plotH;
+  var band=plotW/n;
+  function cx(i){ return padL+band*i+band/2; }
+  function Y(v){ return padT+(100-v)/100*plotH; }
+  var grid="",yl="";
+  [0,25,50,75,100].forEach(function(g){ var y=Y(g); grid+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="#eef2f6" stroke-width="1"></line>'; yl+='<text x="'+(padL-7)+'" y="'+(y+3.5).toFixed(1)+'" font-size="11" text-anchor="end" fill="#94a3b8">'+g+'</text>'; });
+  var bw=Math.min(64,band*0.5);
+  var bars=diagVals.map(function(v,i){ if(v==null)return ""; var x=cx(i)-bw/2, y=Y(v), h=Math.max(0,base-y); return '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="5" fill="#4f46e5"></rect>'+'<text x="'+cx(i).toFixed(1)+'" y="'+(y-7).toFixed(1)+'" font-size="13" font-weight="800" text-anchor="middle" fill="#4338ca">'+v+'%</text>'; }).join("");
+  var d="",started=false; reportVals.forEach(function(v,i){ if(v==null)return; d+=(started?"L":"M")+cx(i).toFixed(1)+" "+Y(v).toFixed(1)+" "; started=true; });
+  var line=d?'<path d="'+d.trim()+'" fill="none" stroke="#f59e0b" stroke-width="3"></path>':"";
+  var rdots=reportVals.map(function(v,i){ if(v==null)return ""; return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="4.5" fill="#fff" stroke="#f59e0b" stroke-width="3"></circle>'+'<text x="'+cx(i).toFixed(1)+'" y="'+(Y(v)-11).toFixed(1)+'" font-size="11" font-weight="700" text-anchor="middle" fill="#b45309">'+v+'%</text>'; }).join("");
+  var axis='<line x1="'+padL+'" y1="'+base.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+base.toFixed(1)+'" stroke="#cbd5e1" stroke-width="1.5"></line>';
+  var xlabels=labels.map(function(l,i){ return '<text x="'+cx(i).toFixed(1)+'" y="'+(H-16)+'" font-size="12" font-weight="600" text-anchor="middle" fill="#475569">'+l+'</text>'; }).join("");
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:#fff">'
+    +grid+yl+axis+bars+line+rdots+xlabels+'</svg>'
+    +'<div style="font-size:13px;margin-top:8px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">'
+    +'<span style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-block;width:16px;height:12px;background:#4f46e5;border-radius:3px"></span> Adeptly diagnostic</span>'
+    +'<span style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-block;width:18px;height:0;border-top:3px solid #f59e0b"></span> Report‑card grade (previous terms)</span></div>';
 }
 // Find a subject's grade object inside a prior record, tolerant of case + English/Maths aliases.
 function _priorSubjObj(prior, subjName, rawSubj){
