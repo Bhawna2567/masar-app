@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -970,9 +970,19 @@ function handleResultsImport(input){
       var chunks=[]; for(var i=0;i<ids.length;i+=400) chunks.push(ids.slice(i,i+400));
       var chain=Promise.resolve();
       chunks.forEach(function(ck){ chain=chain.then(function(){ var b=db.batch(); ck.forEach(function(sid){ var rec=byId[sid]; rec.importedAt=Date.now(); rec.importedBy=(AUTH&&AUTH.name)||""; b.set(db.collection("priorResults").doc(sid),rec,{merge:true}); }); return b.commit(); }); });
-      return chain.then(function(){ CACHE.prior={}; if(msg){msg.style.color="var(--ok)";msg.textContent="Imported "+ids.length+" students · subjects: "+subjCols.map(function(s){return disp(s.name);}).join(", ")+" ✓";} });
+      return chain.then(function(){
+        CACHE.prior={};
+        var checkId=(ids.indexOf("2015002974")>=0)?"2015002974":ids[0];
+        return db.collection("priorResults").doc(checkId).get().then(function(d){
+          var data=d.exists?d.data():null, verify="";
+          if(data&&data.bySubject){
+            verify=" · verified read-back for "+checkId+" → "+Object.keys(data.bySubject).map(function(k){ var tv=data.bySubject[k]||{}; return k+": "+Object.keys(tv).map(function(t){return (""+t).replace("Term ","T")+"="+tv[t];}).join(", "); }).join("  |  ");
+          } else { verify=" · ⚠ read-back found no data for "+checkId+" (write may have been blocked)."; }
+          if(msg){msg.style.color="var(--ok)";msg.textContent="Imported "+ids.length+" students · subjects: "+subjCols.map(function(s){return disp(s.name);}).join(", ")+" ✓"+verify;}
+        });
+      });
     })
-    .catch(function(e){ if(msg){msg.style.color="var(--red)";msg.textContent="Import failed: "+((e&&e.message)||e);} });
+    .catch(function(e){ var m2=(e&&e.message)||(""+e); var extra=/permission|insufficient|denied/i.test(m2)?" — Your account may not have admin rights, OR the Firestore rules for ‘priorResults’ aren’t published. In the Firebase console publish firestore.rules, and confirm your own user document has admin:true.":""; if(msg){msg.style.color="var(--red)";msg.textContent="Import failed: "+m2+extra;} });
 }
 // Two-series line: report-card grade (dashed) vs Adeptly diagnostic (solid), over term labels.
 function progressTwoSeriesSvg(labels, reportVals, diagVals){
