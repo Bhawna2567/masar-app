@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04e";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04f";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1112,6 +1112,10 @@ function chartPNG(cfg,w,h){
 function downloadBlob(buf,fname,mime){ var blob=new Blob([buf],{type:mime}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},1500); }
 function classCompletedForTerm(classId,term){ return assignments().filter(function(a){ return a.classId===classId && a.status==="completed" && aTerm(a)===String(term); }); }
 function qsAns(a){ var qs=a.qsnapshot||(a.snapshot&&a.snapshot.result&&a.snapshot.result.qsnapshot); var ans=a.answers||(a.snapshot&&a.snapshot.result&&a.snapshot.result.answers); return {qs:qs,ans:ans}; }
+// Backfill a question's sub-skill from the question pool (older snapshots were saved without it).
+var _SUBMAP=null;
+function _buildSubMap(){ _SUBMAP={}; try{ if(typeof QUESTION_POOL!=="undefined"){ for(var g in QUESTION_POOL){ var byS=QUESTION_POOL[g]||{}; for(var subj in byS){ (byS[subj]||[]).forEach(function(q){ if(q&&q.q&&q.sub) _SUBMAP[String(q.q).trim()]=q.sub; }); } } } }catch(e){} }
+function _subForQ(q){ if(q&&q.sub)return q.sub; if(!_SUBMAP)_buildSubMap(); return (q&&q.q&&_SUBMAP[String(q.q).trim()])||null; }
 function analyzeSet(list,subj){
   var areas=skillsFor(subj);
   var students=list.map(function(a){ var sp=a.skillPct||{}, overall=(a.score!=null?a.score:0);
@@ -1119,7 +1123,7 @@ function analyzeSet(list,subj){
   var skillAvg={}; areas.forEach(function(k){ var s=0,n=0; students.forEach(function(st){ if(st.skills[k]!=null){s+=st.skills[k];n++;} }); skillAvg[k]=n?Math.round(s/n):0; });
   var overallAvg=students.length?Math.round(students.reduce(function(s,st){return s+st.overall;},0)/students.length):0;
   var tiers={High:0,Medium:0,Low:0}; students.forEach(function(st){ if(tiers[st.tier]!=null)tiers[st.tier]++; });
-  var subAgg={}; list.forEach(function(a){ var d=qsAns(a); if(!d.qs||!d.ans)return; d.qs.forEach(function(q,i){ if(!q.sub)return; var key=q.skill+" — "+q.sub; if(!subAgg[key])subAgg[key]={skill:q.skill,sub:q.sub,correct:0,total:0}; subAgg[key].total++; if(d.ans[i]===q.answer)subAgg[key].correct++; }); });
+  var subAgg={}; list.forEach(function(a){ var d=qsAns(a); if(!d.qs||!d.ans)return; d.qs.forEach(function(q,i){ var sub=_subForQ(q); if(!sub)return; var key=q.skill+" — "+sub; if(!subAgg[key])subAgg[key]={skill:q.skill,sub:sub,correct:0,total:0}; subAgg[key].total++; if(d.ans[i]===q.answer)subAgg[key].correct++; }); });
   return {students:students,areas:areas,skillAvg:skillAvg,overallAvg:overallAvg,tiers:tiers,subAgg:subAgg,n:students.length};
 }
 function hdrRow(ws,rowArr){ var r=ws.addRow(rowArr); r.font={bold:true}; r.eachCell(function(c){ c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFEEF2FF"}}; c.border={bottom:{style:"thin",color:{argb:"FFCBD5E1"}}}; }); return r; }
@@ -1307,7 +1311,7 @@ function viewAnalysis(){
     if(anyMissed){
       // Sub-skill focus: which specific sub-skills the student lost marks on.
       var subLost={};
-      areas.forEach(function(k){ var x=per[k]; if(!x)return; x.missed.forEach(function(mm){ var key=k+" — "+(mm.q.sub||"General"); subLost[key]=(subLost[key]||0)+1; }); });
+      areas.forEach(function(k){ var x=per[k]; if(!x)return; x.missed.forEach(function(mm){ var key=k+" — "+(_subForQ(mm.q)||"General"); subLost[key]=(subLost[key]||0)+1; }); });
       var subKeys=Object.keys(subLost);
       if(subKeys.length){
         html+='<div class="notice" style="background:#fff7f5;border-color:#ffd9cf;margin-top:14px"><b style="font-size:13px">Specific sub-skills to reteach:</b> '
@@ -1318,7 +1322,7 @@ function viewAnalysis(){
       areas.forEach(function(k){ var x=per[k]; if(!x)return; x.missed.forEach(function(mm){ var q=mm.q; var lvlName=q.level==="F"?"Easy":q.level==="H"?"Hard":q.level==="C"?"Medium":"—";
         var chosen=(mm.chosen!=null&&q.options[mm.chosen]!=null)?q.options[mm.chosen]:"(no answer)";
         var lostSkill=Math.round(1/x.t*100);
-        html+='<tr><td>Q'+(mm.i+1)+'</td><td>'+k+'</td><td style="font-size:12px"><b>'+(q.sub||"—")+'</b></td><td>'+lvlName+'</td><td style="font-size:12px">'+String(q.q).replace(/</g,"&lt;")+'</td>'
+        html+='<tr><td>Q'+(mm.i+1)+'</td><td>'+k+'</td><td style="font-size:12px"><b>'+(_subForQ(q)||"—")+'</b></td><td>'+lvlName+'</td><td style="font-size:12px">'+String(q.q).replace(/</g,"&lt;")+'</td>'
           +'<td style="font-size:12px;color:var(--red)">'+String(chosen).replace(/</g,"&lt;")+'</td>'
           +'<td style="font-size:12px;color:var(--ok)">'+String(q.options[q.answer]).replace(/</g,"&lt;")+'</td>'
           +'<td>'+lostSkill+'%</td></tr>';
@@ -2648,7 +2652,7 @@ function renderMarkedInto(ctx,a,newPage){
   qs.forEach(function(q,i){
     var pick=snap.noAnswers?undefined:ans[i], correct=q.answer;
     markWrap(ctx,"Q"+(i+1)+". "+(q.q||""),11,"bold",0);
-    if(q.skill){ markWrap(ctx,"Skill tested: "+q.skill+(q.sub?(" — "+q.sub):"")+(lvlName(q.level)?("   ·   Level: "+lvlName(q.level)):""),9,"italic",14,[90,90,120]); }
+    if(q.skill){ var _qsub=_subForQ(q); markWrap(ctx,"Skill tested: "+q.skill+(_qsub?(" — "+_qsub):"")+(lvlName(q.level)?("   ·   Level: "+lvlName(q.level)):""),9,"italic",14,[90,90,120]); }
     (q.options||[]).forEach(function(o,oi){
       var tag="", col=null;
       if(snap.noAnswers){ if(oi===correct){ tag="   <- correct answer"; col=[16,122,60]; } }
@@ -2747,7 +2751,7 @@ function grade(){
   S.result.writingAssess=writingAssessObj;
   // Save answers + a question snapshot so the teacher can download a marked PDF later (keep the difficulty level).
   S.result.answers=Object.assign({},S.answers);
-  S.result.qsnapshot=qs.map(function(q){return {q:q.q,options:q.options,answer:q.answer,skill:q.skill,level:q.level||null};});
+  S.result.qsnapshot=qs.map(function(q){return {q:q.q,options:q.options,answer:q.answer,skill:q.skill,sub:q.sub||null,level:q.level||null};});
   S.result.passageTitle=(subj==="English")?(readingCompRot(S.student.prevGrade,S.curTerm,studentNonce())||{}).title||null:null;
   S.plan=generatePlan();
   lockdownEnd();
