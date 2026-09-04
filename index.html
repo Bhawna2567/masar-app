@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -945,7 +945,14 @@ function handleResultsImport(input){
     .then(function(){ return file.arrayBuffer(); })
     .then(function(buf){
       var wb=XLSX.read(new Uint8Array(buf),{type:"array"});
-      var name=(wb.SheetNames.indexOf("All terms (stacked)")>=0)?"All terms (stacked)":wb.SheetNames[0];
+      // Pick the best sheet: prefer one that has Student ID + Term AND an English/Maths column;
+      // then the named "All terms (stacked)" sheet; then any sheet with Student ID + Term; else the first.
+      function headerOf(sn){ try{ var rr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null}); return (rr[0]||[]).map(function(x){return x==null?"":String(x).trim().toLowerCase();}); }catch(e){ return []; } }
+      var name=null;
+      for(var si=0; si<wb.SheetNames.length; si++){ var hh=headerOf(wb.SheetNames[si]); if(hh.indexOf("student id")>=0 && hh.indexOf("term")>=0 && (hh.indexOf("english")>=0||hh.indexOf("maths")>=0||hh.indexOf("math")>=0)){ name=wb.SheetNames[si]; break; } }
+      if(!name && wb.SheetNames.indexOf("All terms (stacked)")>=0) name="All terms (stacked)";
+      if(!name){ for(var sj=0; sj<wb.SheetNames.length; sj++){ var h2=headerOf(wb.SheetNames[sj]); if(h2.indexOf("student id")>=0 && h2.indexOf("term")>=0){ name=wb.SheetNames[sj]; break; } } }
+      if(!name) name=wb.SheetNames[0];
       var ws=wb.Sheets[name]; if(!ws) throw new Error("No worksheet found.");
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
       if(!rows.length) throw new Error("The sheet is empty.");
@@ -956,6 +963,8 @@ function handleResultsImport(input){
       if(cId==null||cTerm==null) throw new Error("The sheet must have 'Student ID' and 'Term' columns (use the 'All terms (stacked)' sheet).");
       var identity={"term":1,"student name":1,"student id":1,"grade":1,"track / stream":1,"section":1};
       var subjCols=[]; hdr.forEach(function(h,i){ if(h && !identity[h.toLowerCase()]) subjCols.push({name:h,i:i}); });
+      var hasSubject=subjCols.some(function(s){return /english|math/i.test(s.name);});
+      var pickedSheet=name;
       function disp(k){ k=k.toLowerCase(); if(k==="overall average"||k==="overall") return "Overall"; return k.replace(/\b\w/g,function(c){return c.toUpperCase();}); }
       var byId={};
       for(var r=1;r<rows.length;r++){ var row=rows[r]; if(!row) continue;
@@ -978,7 +987,11 @@ function handleResultsImport(input){
           if(data&&data.bySubject){
             verify=" · verified read-back for "+checkId+" → "+Object.keys(data.bySubject).map(function(k){ var tv=data.bySubject[k]||{}; return k+": "+Object.keys(tv).map(function(t){return (""+t).replace("Term ","T")+"="+tv[t];}).join(", "); }).join("  |  ");
           } else { verify=" · ⚠ read-back found no data for "+checkId+" (write may have been blocked)."; }
-          if(msg){msg.style.color="var(--ok)";msg.textContent="Imported "+ids.length+" students · subjects: "+subjCols.map(function(s){return disp(s.name);}).join(", ")+" ✓"+verify;}
+          if(!hasSubject){
+            if(msg){msg.style.color="var(--red)";msg.textContent="⚠ Imported "+ids.length+" students from sheet \""+pickedSheet+"\", but NO English/Maths columns were found — only: "+subjCols.map(function(s){return disp(s.name);}).join(", ")+". This looks like an overall-only file. Import the combined workbook that has separate English and Maths columns."+verify;}
+          } else {
+            if(msg){msg.style.color="var(--ok)";msg.textContent="Imported "+ids.length+" students from \""+pickedSheet+"\" · subjects: "+subjCols.map(function(s){return disp(s.name);}).join(", ")+" ✓"+verify;}
+          }
         });
       });
     })
