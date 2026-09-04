@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1032,6 +1032,12 @@ function progressOverTimeCard(a){
   var prior=CACHE.prior[sid];
   var subjName=(a.subject==="Math")?"Maths":"English";
   var priorSubj=_priorSubjObj(prior, subjName, a.subject);
+  var usedOverall=false;
+  if(!priorSubj && prior && prior.bySubject){
+    var ks=Object.keys(prior.bySubject);
+    for(var oi=0; oi<ks.length; oi++){ if(/overall|average/i.test(ks[oi])){ priorSubj=prior.bySubject[ks[oi]]; usedOverall=true; break; } }
+  }
+  var reportLabel=usedOverall?"Overall term average":(subjName+" report grade");
   var hist=studentTermHistory(a); var diagByTerm={}; hist.forEach(function(h){ diagByTerm[h.term]=h.score; });
   var labels=["Term 1","Term 2","Term 3"];
   var reportVals=[1,2,3].map(function(t){ return _priorTermVal(priorSubj,t); });
@@ -1048,8 +1054,9 @@ function progressOverTimeCard(a){
       +labels.map(function(l,i){ return '<tr><td>'+l+'</td><td>—</td><td>'+(diagVals[i]!=null?diagVals[i]+"%":"—")+'</td></tr>'; }).join("")+'</tbody></table>';
   }
   else {
-    body=progressTwoSeriesSvg(labels,reportVals,diagVals)
-      +'<table style="margin-top:10px"><thead><tr><th>Period</th><th>'+subjName+' report grade</th><th>Adeptly diagnostic</th></tr></thead><tbody>'
+    var overallNote = usedOverall ? '<div class="notice" style="background:#fffbeb;border-color:#fde68a;font-size:12px;margin-bottom:8px">The imported file has no separate <b>'+subjName+'</b> column for this student, so the orange line shows the <b>overall term average</b>. To plot '+subjName+' specifically, import the combined workbook that has separate <b>English</b> and <b>Maths</b> columns.</div>' : '';
+    body=overallNote+progressTwoSeriesSvg(labels,reportVals,diagVals)
+      +'<table style="margin-top:10px"><thead><tr><th>Period</th><th>'+reportLabel+'</th><th>Adeptly diagnostic</th></tr></thead><tbody>'
       +labels.map(function(l,i){ return '<tr><td>'+l+'</td><td>'+(reportVals[i]!=null?reportVals[i]+"%":"—")+'</td><td>'+(diagVals[i]!=null?diagVals[i]+"%":"—")+'</td></tr>'; }).join("")
       +'</tbody></table>'
       +'<p class="muted" style="font-size:11px;margin-top:6px">The two lines are <b>different measures</b>: the report‑card grade is the school term grade; the Adeptly diagnostic is a harder, subject‑readiness test. Read each line\'s own trend rather than comparing the two directly.</p>';
