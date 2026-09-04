@@ -989,6 +989,28 @@ function progressTwoSeriesSvg(labels, reportVals, diagVals){
     +xlabels+'</svg>'
     +'<div style="font-size:11px;margin-top:4px"><span style="color:#f59e0b">▬▬</span> Report-card grade (previous terms) &nbsp; <span style="color:#4f46e5">▬▬</span> Adeptly diagnostic</div>';
 }
+// Find a subject's grade object inside a prior record, tolerant of case + English/Maths aliases.
+function _priorSubjObj(prior, subjName, rawSubj){
+  if(!prior||!prior.bySubject) return null;
+  var bs=prior.bySubject;
+  if(bs[subjName]) return bs[subjName];
+  if(rawSubj&&bs[rawSubj]) return bs[rawSubj];
+  var want=[subjName.toLowerCase()];
+  if(subjName==="Maths") want.push("math","maths","mathematics","math.");
+  if(subjName==="English") want.push("english","eng","ela","language");
+  var keys=Object.keys(bs);
+  for(var i=0;i<keys.length;i++){ if(want.indexOf(keys[i].toLowerCase().trim())>=0) return bs[keys[i]]; }
+  return null;
+}
+// Pull one term's value, tolerant of "Term 1" / "1" / "T1" / "term1" / trailing-number keys.
+function _priorTermVal(subjObj, termNum){
+  if(!subjObj) return null;
+  var cands=["Term "+termNum,String(termNum),"T"+termNum,"term "+termNum,"Term"+termNum,"term"+termNum];
+  for(var i=0;i<cands.length;i++){ var v=subjObj[cands[i]]; if(v!=null&&!isNaN(v)) return v; }
+  var keys=Object.keys(subjObj);
+  for(var j=0;j<keys.length;j++){ var m=(""+keys[j]).match(/(\d+)\s*$/); if(m&&m[1]===String(termNum)){ var w=subjObj[keys[j]]; if(w!=null&&!isNaN(w)) return w; } }
+  return null;
+}
 function progressOverTimeCard(a){
   var sid=a.studentId||null;
   if(!sid) return '<div class="card"><h2 style="margin:0 0 2px">📉 Progress over time</h2><p class="sub">This student\'s <b>Student ID</b> isn\'t linked yet, so imported past results can\'t be matched. Ask them to add it on their dashboard (🆔 Student ID), then it appears here.</p></div>';
@@ -999,16 +1021,22 @@ function progressOverTimeCard(a){
   }
   var prior=CACHE.prior[sid];
   var subjName=(a.subject==="Math")?"Maths":"English";
-  var priorSubj=(prior&&prior.bySubject)?(prior.bySubject[subjName]||prior.bySubject[a.subject]||null):null;
-  var overall=(prior&&prior.bySubject)?prior.bySubject["Overall"]:null;
+  var priorSubj=_priorSubjObj(prior, subjName, a.subject);
   var hist=studentTermHistory(a); var diagByTerm={}; hist.forEach(function(h){ diagByTerm[h.term]=h.score; });
   var labels=["Term 1","Term 2","Term 3"];
-  var reportVals=labels.map(function(l){ var v=priorSubj?priorSubj[l]:null; return (v==null||isNaN(v))?null:v; });
-  var diagVals=labels.map(function(l){ var t=l.replace("Term ",""); return diagByTerm[t]!=null?diagByTerm[t]:null; });
-  var haveAny=reportVals.some(function(v){return v!=null;})||diagVals.some(function(v){return v!=null;});
+  var reportVals=[1,2,3].map(function(t){ return _priorTermVal(priorSubj,t); });
+  var diagVals=[1,2,3].map(function(t){ return diagByTerm[String(t)]!=null?diagByTerm[String(t)]:null; });
+  var haveReport=reportVals.some(function(v){return v!=null;});
+  var haveAny=haveReport||diagVals.some(function(v){return v!=null;});
   var body="";
-  if(!prior){ body='<div class="notice">No imported history found for Student ID <b>'+sid+'</b>. Import the results workbook in the panel above, or check the ID matches the sheet.</div>'; }
-  else if(!haveAny){ body='<p class="muted" style="font-size:13px">History found, but no '+subjName+' grades for the terms yet.</p>'; }
+  if(!prior){ body='<div class="notice">No imported history found for Student ID <b>'+esc(sid)+'</b>. As an admin, import the results workbook in the panel above (and make sure the Firestore rules are published), or check the ID matches the sheet exactly.</div>'; }
+  else if(!haveReport){
+    var stored=(prior.bySubject?Object.keys(prior.bySubject):[]);
+    var detail = stored.length ? ('This ID has stored: '+stored.map(function(k){ return '<b>'+esc(k)+'</b> ('+Object.keys(prior.bySubject[k]||{}).map(function(x){return esc(x);}).join(", ")+')'; }).join("; ")+'.') : 'This record has no subject grades stored.';
+    body='<div class="notice">A history record exists for <b>'+esc(sid)+'</b>, but no <b>'+subjName+'</b> term grades were found in it. '+detail+'<br><span class="muted" style="font-size:12px">Re-import the results workbook from the admin panel — the current build stores English/Maths by term. If it still shows empty after a successful import, send me this message.</span></div>'
+      +'<table style="margin-top:10px"><thead><tr><th>Period</th><th>'+subjName+' report grade</th><th>Adeptly diagnostic</th></tr></thead><tbody>'
+      +labels.map(function(l,i){ return '<tr><td>'+l+'</td><td>—</td><td>'+(diagVals[i]!=null?diagVals[i]+"%":"—")+'</td></tr>'; }).join("")+'</tbody></table>';
+  }
   else {
     body=progressTwoSeriesSvg(labels,reportVals,diagVals)
       +'<table style="margin-top:10px"><thead><tr><th>Period</th><th>'+subjName+' report grade</th><th>Adeptly diagnostic</th></tr></thead><tbody>'
