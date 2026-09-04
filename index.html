@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-08-28v";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1503,7 +1503,7 @@ function adminMenu(){
   var sec=S.adminSection||"reports";
   return '<div class="card"><div class="flex-between"><h2 style="margin:0">Admin</h2><button class="btn ghost sm" onclick="setAdmin(\'_close\')">← Back to my dashboard</button></div>'
    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">'
-   +[["reports","📊 Admin Reports"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
+   +[["reports","📊 Admin Reports"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
    +' <button class="btn ghost sm" onclick="exportUsersCSV()">⬇ Export users CSV</button> <button class="btn ghost sm" onclick="exportStudentsByClass()">🏫 Export students by class</button>'
    +'</div></div>';
 }
@@ -1535,7 +1535,51 @@ function adminDisk(){
 function adminTwoFactor(){
   return '<div class="card"><h2>Two-factor authentication</h2><p class="sub">Extra login security for accounts.</p><p style="font-size:14px;line-height:1.7">Built-in SMS two-factor for teacher/student logins needs Firebase’s paid <b>Blaze</b> plan. On the current free plan, your accounts are already protected by:</p><ul style="font-size:14px;line-height:1.8"><li><b>App Check</b> is enforced — only the real app can reach your data.</li><li>Passwords must be at least <b>8 characters</b>.</li><li><b>Email verification</b> is requested at sign-up.</li><li>You can <b>block</b> any suspicious account from Manage users.</li></ul><p class="muted" style="font-size:12px">Also turn on <b>2FA for your GitHub account</b> — that protects the whole app. If you upgrade to Blaze later, SMS multi-factor for teachers can be switched on.</p></div>';
 }
-function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="manage"?adminManage() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports())); return adminMenu()+body; }
+function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
+
+/* ===== ADMIN: drill into any teacher's classes and their students' progress ===== */
+function esc(s){ return (""+(s==null?"":s)).replace(/[&<>"]/g,function(m){return m==="&"?"&amp;":m==="<"?"&lt;":m===">"?"&gt;":"&quot;";}); }
+function setAdminTeacher(uid){ S.adminTeacher=(uid==="_all")?null:uid; render(); }
+function adminActivity(){
+  var us=adminUsers(), as=adminAssign(), cls=adminClasses();
+  var teachers=us.filter(function(u){return u.role==="teacher";});
+  if(!S.adminTeacher){
+    var rows=teachers.slice().sort(function(a,b){return (""+(a.name||"")).localeCompare(b.name||"");}).map(function(t){
+      var ta=as.filter(function(a){return a.teacherUid===t.uid;});
+      var tc=cls.filter(function(c){return c.teacherUid===t.uid;});
+      var done=ta.filter(function(a){return a.status==="completed";});
+      var stu={}; ta.forEach(function(a){ if(a.studentEmail) stu[a.studentEmail]=1; });
+      var avg=done.length?Math.round(done.reduce(function(s,a){return s+(a.score||0);},0)/done.length):null;
+      var last=done.reduce(function(m,a){return Math.max(m,a.completedAt||0);},0);
+      return '<tr style="cursor:pointer" onclick="setAdminTeacher(\''+t.uid+'\')"><td><b>'+esc(t.name||"—")+'</b><div class="muted" style="font-size:11px">'+esc(t.email||"")+'</div></td><td>'+tc.length+'</td><td>'+Object.keys(stu).length+'</td><td>'+done.length+'</td><td>'+(avg!=null?avg+'%':"—")+'</td><td class="muted" style="font-size:12px">'+(last?fmtDay(last):"—")+'</td><td style="color:var(--muted)">›</td></tr>';
+    }).join("");
+    return '<div class="card"><h2>Teachers &amp; students</h2><p class="sub">Every teacher’s classes, students and how they’re progressing. Tap a teacher to open their full activity.</p>'
+     +'<table><thead><tr><th>Teacher</th><th>Classes</th><th>Students</th><th>Diagnostics</th><th>Avg</th><th>Last activity</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" class="muted">No teachers registered yet.</td></tr>')+'</tbody></table></div>';
+  }
+  var t=us.filter(function(u){return u.uid===S.adminTeacher;})[0]||{};
+  var tc=cls.filter(function(c){return c.teacherUid===t.uid;});
+  var ta=as.filter(function(a){return a.teacherUid===t.uid;});
+  var head='<div class="card"><div class="flex-between"><div><h2 style="margin:0">'+esc(t.name||"Teacher")+'</h2><p class="sub" style="margin:2px 0 0">'+esc(t.email||"")+' · '+tc.length+' class'+(tc.length===1?"":"es")+'</p></div><button class="btn ghost sm" onclick="setAdminTeacher(\'_all\')">← All teachers</button></div></div>';
+  var body=tc.slice().sort(function(a,b){return (""+(a.name||"")).localeCompare(b.name||"");}).map(function(c){
+    var ca=ta.filter(function(a){return a.classId===c.id;});
+    var byStu={}; ca.forEach(function(a){ var k=a.studentEmail||a.studentName||"?"; (byStu[k]=byStu[k]||[]).push(a); });
+    var rrows=Object.keys(byStu).sort().map(function(k){
+      var name=byStu[k][0].studentName||k;
+      var arr=byStu[k].filter(function(a){return a.status==="completed";}).sort(function(p,q){return (""+aTerm(p)).localeCompare(aTerm(q));});
+      if(!arr.length) return '<tr><td><b>'+esc(name)+'</b><div class="muted" style="font-size:11px">'+esc(k)+'</div></td><td class="muted" colspan="4">Not taken yet</td></tr>';
+      var last=arr[arr.length-1];
+      var band=last.achieverTier||(last.achiever&&last.achiever.tier)||null, rt=rtiFor(band);
+      var delta=arr.length>1?(last.score-arr[arr.length-2].score):null;
+      var darrow=delta==null?"":(delta>0?' <span style="color:var(--ok)">▲'+delta+'</span>':(delta<0?' <span style="color:var(--red)">▼'+Math.abs(delta)+'</span>':' <span class="muted">▬</span>'));
+      var trend=arr.map(function(a){return "T"+aTerm(a)+" "+(a.score!=null?a.score+"%":"–");}).join(" → ");
+      return '<tr><td><b>'+esc(name)+'</b><div class="muted" style="font-size:11px">'+esc(k)+(last.studentId?(" · ID "+esc(last.studentId)):"")+'</div></td><td>'+last.score+'%'+darrow+'</td><td>'+(last.level?'<span class="pill '+(last.levelCls||'grey')+'">'+esc(last.level)+'</span>':"—")+'</td><td>'+(rt?'<span class="pill '+rt.cls+'" title="'+esc(rt.desc)+'">'+rt.short+'</span>':"—")+'</td><td class="muted" style="font-size:12px">'+trend+'</td></tr>';
+    }).join("");
+    return '<div class="card"><h3 style="margin:0 0 2px">'+esc(c.name||"Class")+'</h3><p class="muted" style="font-size:12px;margin:0 0 8px">Diagnosing Grade '+esc(c.prev||"?")+' → current Grade '+esc(c.cur||"?")+' · join code '+esc(c.code||"—")+'</p>'
+     +'<table><thead><tr><th>Student</th><th>Latest</th><th>Level</th><th>RTI tier</th><th>Progress by term</th></tr></thead><tbody>'+(rrows||'<tr><td colspan="5" class="muted">No students in this class.</td></tr>')+'</tbody></table></div>';
+  }).join("");
+  if(!tc.length) body='<div class="card"><p class="muted" style="margin:0">This teacher has not created any classes yet.</p></div>';
+  return head+body;
+}
 function blockedView(){ return '<div class="card" style="max-width:460px;margin:28px auto;text-align:center"><div style="font-size:44px">⛔</div><h2>Account blocked</h2><p class="sub">Your Adeptly account has been blocked by an administrator. Please contact your school.</p><button class="btn ghost" onclick="logout()">Log out</button></div>'; }
 function csvDownload(rows,name){
   var csv=rows.map(function(r){return r.map(function(c){var s=(""+(c==null?"":c)).replace(/"/g,'""'); return /[",\n]/.test(s)?'"'+s+'"':s;}).join(",");}).join("\n");
