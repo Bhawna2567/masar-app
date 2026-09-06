@@ -98,7 +98,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 .subj.eng{background:#f3e8ff;color:#6d28d9;border-color:#e4d4fb}
 .subj.math{background:#fff1e6;color:#c2410c;border-color:#fcd9bf}
 .print-only{display:none}
-#exModal .ovl{position:fixed;inset:0;background:rgba(16,24,40,.55);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:100;overflow:auto}
+#exModal .ovl{position:fixed;inset:0;background:rgba(16,24,40,.55);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:300;overflow:auto}
 #exModal .ex{background:#fff;max-width:780px;width:100%;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.28);padding:22px;margin:auto}
 .exq{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
 .opt.exok{border-color:var(--ok);background:#ccfbf1}
@@ -183,7 +183,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-06d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-06e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3182,11 +3182,15 @@ function buildExercise(skill,taskText,seed){
 // Recover the exact activity text the student tapped, from its folder key (term-week-index).
 function taskTextFromKey(key){ try{ var p=String(key).split("-"); var t=p[0], wk=parseInt(p[1],10), i=parseInt(p[2],10); var wkObj=S.plan&&S.plan.terms[t]&&S.plan.terms[t].weeks[wk-1]; return (wkObj&&wkObj.tasks[i])||""; }catch(e){ return ""; } }
 let EX=null;
-// Practice is low-stakes: no exam lockdown/fullscreen (that overlay was hiding the activity).
+// Practice runs in the same secure "lockdown" environment as the diagnostic (fullscreen, blocked
+// copy/paste/right-click, tab-switch/leave detection). Uses the "activity" context, so leaving is
+// flagged with the on-screen guard but the practice is NOT auto-submitted or ended (it isn't graded).
 function launchExercise(key,skill){
   // Practice opens for students AND for teachers previewing a student (read-only just means
   // ticking the box won't be saved). Any error is surfaced instead of failing silently.
-  try{ var taskText=taskTextFromKey(key); EX={key,skill,taskText:taskText,def:buildExercise(skill,taskText,seedFromKey(key)),resp:{},submitted:false,readonly:READONLY}; renderExercise(); }
+  try{ var taskText=taskTextFromKey(key); EX={key,skill,taskText:taskText,def:buildExercise(skill,taskText,seedFromKey(key)),resp:{},submitted:false,readonly:READONLY};
+    try{ lockdownStart("activity"); }catch(e){}   // secure mode for practice too (students only; skipped for teacher preview)
+    renderExercise(); }
   catch(e){ alert("Couldn't open this practice activity: "+((e&&e.message)||e)); }
 }
 function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
