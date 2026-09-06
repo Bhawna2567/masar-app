@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04f";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04g";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3139,24 +3139,27 @@ function take10(bank,extra){
   bank.concat(extra||[]).forEach(function(x){ if(out.length<10 && x && !seen[x.q]){ seen[x.q]=1; out.push(x); } });
   return out;
 }
-function buildExercise(skill){
-  if(skill==="Writing") return {type:"writing",prompt:WRITING_PRACTICE_PROMPTS[exRnd(0,WRITING_PRACTICE_PROMPTS.length-1)]};
+function buildExercise(skill,taskText){
+  var instr=taskText||"";
+  if(skill==="Writing") return {type:"writing",instr:instr,prompt:(taskText?("<b>Your task:</b> "+taskText+". Aim for 8–10 sentences with a clear beginning, middle and end."):WRITING_PRACTICE_PROMPTS[exRnd(0,WRITING_PRACTICE_PROMPTS.length-1)])};
   if(skill==="Reading"){
     var items=orderByWeak(collectPoolItems("English","Reading"),"Reading");
-    if(items.length>=10) return {type:"mcq",items:items.slice(0,10)};
+    if(items.length>=10) return {type:"mcq",instr:instr,items:items.slice(0,10)};
     var p=READING_PASSAGES[exRnd(0,READING_PASSAGES.length-1)];
-    return {type:"mcq",intro:`<b>${p.title}</b><br>${p.text}`,items:take10(items,p.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer};}))};
+    return {type:"mcq",instr:instr,intro:`<b>${p.title}</b><br>${p.text}`,items:take10(items,p.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer};}))};
   }
-  if(skill==="Grammar")    return {type:"mcq",items:take10(orderByWeak(collectPoolItems("English","Grammar"),"Grammar"),GRAMMAR_POOL)};
-  if(skill==="Vocabulary") return {type:"mcq",items:take10(orderByWeak(collectPoolItems("English","Vocabulary"),"Vocabulary"),VOCAB_POOL)};
-  return {type:"mathinput",items:genMath(skill,10)};
+  if(skill==="Grammar")    return {type:"mcq",instr:instr,items:take10(orderByWeak(collectPoolItems("English","Grammar"),"Grammar"),GRAMMAR_POOL)};
+  if(skill==="Vocabulary") return {type:"mcq",instr:instr,items:take10(orderByWeak(collectPoolItems("English","Vocabulary"),"Vocabulary"),VOCAB_POOL)};
+  return {type:"mathinput",instr:instr,items:genMath(skill,10)};
 }
+// Recover the exact activity text the student tapped, from its folder key (term-week-index).
+function taskTextFromKey(key){ try{ var p=String(key).split("-"); var t=p[0], wk=parseInt(p[1],10), i=parseInt(p[2],10); var wkObj=S.plan&&S.plan.terms[t]&&S.plan.terms[t].weeks[wk-1]; return (wkObj&&wkObj.tasks[i])||""; }catch(e){ return ""; } }
 let EX=null;
 // Practice is low-stakes: no exam lockdown/fullscreen (that overlay was hiding the activity).
 function launchExercise(key,skill){
   // Practice opens for students AND for teachers previewing a student (read-only just means
   // ticking the box won't be saved). Any error is surfaced instead of failing silently.
-  try{ EX={key,skill,def:buildExercise(skill),resp:{},submitted:false,readonly:READONLY}; renderExercise(); }
+  try{ var taskText=taskTextFromKey(key); EX={key,skill,taskText:taskText,def:buildExercise(skill,taskText),resp:{},submitted:false,readonly:READONLY}; renderExercise(); }
   catch(e){ alert("Couldn't open this practice activity: "+((e&&e.message)||e)); }
 }
 function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
@@ -3177,6 +3180,7 @@ function renderExercise(){
     body=`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
       <textarea oninput="exWrite(this.value)" rows="8" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(EX.resp.text||"").replace(/</g,"&lt;")}</textarea>`;
   } else {
+    if(d.instr) body+=`<div class="notice" style="margin:0 0 12px;background:#eef2ff;border-color:#c7d2fe"><b>Activity:</b> ${String(d.instr).replace(/</g,"&lt;")} <span class="muted">— practise this ${EX.skill} skill with the ${d.type==="mcq"?"questions":"problems"} below.</span></div>`;
     if(d.intro) body+=`<div class="exq" style="background:#f9fbfc">${d.intro}</div>`;
     if(d.type==="mcq"){
       d.items.forEach((it,i)=>{
@@ -3209,7 +3213,7 @@ function renderExercise(){
   }
   m.innerHTML=`<div class="ovl"><div class="ex">
     <div class="flex-between"><h2 style="margin:0">Practice — ${EX.skill}</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
-    <p class="sub">Complete the activity below. When you finish, it is ticked off and your progress updates automatically.</p>
+    <p class="sub">${EX.taskText?('<b>'+String(EX.taskText).replace(/</g,"&lt;")+'</b>'):'Complete the activity below.'} When you finish, it is ticked off and your progress updates automatically.</p>
     ${body}
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">${footer}</div>
   </div></div>`;
