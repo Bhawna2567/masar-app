@@ -182,7 +182,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-04g";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-04h";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3139,14 +3139,34 @@ function take10(bank,extra){
   bank.concat(extra||[]).forEach(function(x){ if(out.length<10 && x && !seen[x.q]){ seen[x.q]=1; out.push(x); } });
   return out;
 }
+// All comprehension passages (fixed set + rotating bands), normalised to {title,text,qs}.
+function _passageBank(){
+  var out=[];
+  try{ (READING_PASSAGES||[]).forEach(function(p){ if(p&&p.text) out.push({title:p.title,text:p.text,qs:p.qs||[]}); }); }catch(e){}
+  try{ for(var b in EXTRA_READING){ (EXTRA_READING[b]||[]).forEach(function(p){ if(p&&(p.passage||p.text)) out.push({title:p.title,text:p.passage||p.text,qs:p.qs||[]}); }); } }catch(e){}
+  return out;
+}
+function _pickPassages(n){ var b=_passageBank(); for(var i=b.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=b[i]; b[i]=b[j]; b[j]=t; } return b.slice(0,Math.min(n,b.length)); }
+function _passageBox(p,label){ return '<div class="exq" style="background:#f9fbfc;line-height:1.6">'+(label?('<div class="muted" style="font-size:11px;margin-bottom:2px">'+label+'</div>'):'')+'<b>'+p.title+'</b><br>'+p.text+'</div>'; }
 function buildExercise(skill,taskText){
   var instr=taskText||"";
   if(skill==="Writing") return {type:"writing",instr:instr,prompt:(taskText?("<b>Your task:</b> "+taskText+". Aim for 8–10 sentences with a clear beginning, middle and end."):WRITING_PRACTICE_PROMPTS[exRnd(0,WRITING_PRACTICE_PROMPTS.length-1)])};
   if(skill==="Reading"){
+    var tl=(taskText||"").toLowerCase();
+    var needsTwo=/two short articles|two articles|compare two/.test(tl);
+    var isMCQ=/comprehension question|answer \d|answer the questions|5 comprehension/.test(tl);
+    if(needsTwo){
+      var ps=_pickPassages(2);
+      if(ps.length>=2){ var ph=_passageBox(ps[0],"Text 1")+_passageBox(ps[1],"Text 2");
+        return {type:"writing",instr:instr,passageHtml:ph,prompt:"<b>Your task:</b> "+taskText+". Use BOTH texts above in your answer."}; }
+    }
+    if(isMCQ){ var pm=_pickPassages(1)[0];
+      if(pm&&pm.qs&&pm.qs.length) return {type:"mcq",instr:instr,intro:_passageBox(pm),items:pm.qs.map(function(x){return {q:x.q,options:x.options.slice(),answer:x.answer};})}; }
+    // Default for reading tasks: give a real passage + a response box for the exact activity.
+    var p1=_pickPassages(1)[0];
+    if(p1) return {type:"writing",instr:instr,passageHtml:_passageBox(p1),prompt:"<b>Your task:</b> "+(taskText||"Read the text and respond")+". Base your answer on the text above."};
     var items=orderByWeak(collectPoolItems("English","Reading"),"Reading");
-    if(items.length>=10) return {type:"mcq",instr:instr,items:items.slice(0,10)};
-    var p=READING_PASSAGES[exRnd(0,READING_PASSAGES.length-1)];
-    return {type:"mcq",instr:instr,intro:`<b>${p.title}</b><br>${p.text}`,items:take10(items,p.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer};}))};
+    return {type:"mcq",instr:instr,items:items.slice(0,10)};
   }
   if(skill==="Grammar")    return {type:"mcq",instr:instr,items:take10(orderByWeak(collectPoolItems("English","Grammar"),"Grammar"),GRAMMAR_POOL)};
   if(skill==="Vocabulary") return {type:"mcq",instr:instr,items:take10(orderByWeak(collectPoolItems("English","Vocabulary"),"Vocabulary"),VOCAB_POOL)};
@@ -3177,7 +3197,7 @@ function closeExercise(){ lockdownEnd(); EX=null; const m=document.getElementByI
 function renderExercise(){
   const m=document.getElementById("exModal"); const d=EX.def; let body="";
   if(d.type==="writing"){
-    body=`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
+    body=(d.passageHtml||"")+`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
       <textarea oninput="exWrite(this.value)" rows="8" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(EX.resp.text||"").replace(/</g,"&lt;")}</textarea>`;
   } else {
     if(d.instr) body+=`<div class="notice" style="margin:0 0 12px;background:#eef2ff;border-color:#c7d2fe"><b>Activity:</b> ${String(d.instr).replace(/</g,"&lt;")} <span class="muted">— practise this ${EX.skill} skill with the ${d.type==="mcq"?"questions":"problems"} below.</span></div>`;
