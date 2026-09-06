@@ -206,14 +206,14 @@ var GRAMMAR_BANK = {
 
 /* ---------- VOCABULARY: activity -> sub-skill, and questions per sub-skill ---------- */
 var VOCAB_ACT = {
-  "Learn 5 new academic words and use each in a sentence":"academic",
+  "Learn 5 new academic words and use each in a sentence":"usage",
   "Match 8 synonyms and 8 antonyms":"synant",
   "Break 5 words into prefix / root / suffix and give meanings":"affix",
   "Use context clues to define 5 unknown words":"context",
   "Identify and explain 6 examples of figurative language":"figurative",
   "Sort 10 words by connotation (positive / negative / neutral)":"connotation",
   "Make a word web for 5 new words (synonyms, antonyms, examples)":"synant",
-  "Use 6 new words correctly in a short paragraph":"academic",
+  "Use 6 new words correctly in a short paragraph":"usage",
   "Find 5 words with the same root and explain the link":"root",
   "Replace 8 weak words with stronger, more precise choices":"precise",
   "Make flashcards for 10 subject-specific words":"academic",
@@ -227,6 +227,14 @@ var VOCAB_BANK = {
   {q:"What does 'essential' mean?",options:["necessary","extra","broken","empty"],answer:0},
   {q:"What does 'reduce' mean?",options:["increase","make less","repeat","colour"],answer:1},
   {q:"What does 'accurate' mean?",options:["wrong","correct","funny","heavy"],answer:1}
+ ],
+ usage:[
+  {q:"Which sentence uses 'benefit' correctly?",options:["The rain will benefit the crops.","I benefit my shoes every day.","The benefit ran across the road.","She felt very benefit."],answer:0},
+  {q:"Which sentence uses 'rapid' correctly?",options:["The rapid river flowed very quickly.","I rapid to school this morning.","He bought a rapid for lunch.","The wall was painted rapid."],answer:0},
+  {q:"Which sentence uses 'observe' correctly?",options:["We observe the stars at night.","I observe a sandwich for lunch.","The observe is very tall.","She observed blue."],answer:0},
+  {q:"Which sentence uses 'essential' correctly?",options:["Water is essential for life.","I essential the door shut.","He ran essential to the park.","The essential ate lunch."],answer:0},
+  {q:"Which sentence uses 'reduce' correctly?",options:["Please reduce the noise in class.","I reduce to the shop each day.","The reduce is bright red.","She felt very reduce today."],answer:0},
+  {q:"Which sentence uses 'accurate' correctly?",options:["Her answer was accurate and correct.","I accurate my bag this morning.","The accurate jumped over the fence.","We accurate our lunch quickly."],answer:0}
  ],
  synant:[
   {q:"Choose a SYNONYM for 'happy':",options:["sad","glad","angry","tired"],answer:1},
@@ -291,5 +299,144 @@ var VOCAB_BANK = {
   {q:"'Ring' can mean jewellery and also:",options:["to make a sound","to sleep","to eat","to read"],answer:0},
   {q:"'Light' can mean 'not heavy' and also:",options:["brightness","water","food","music"],answer:0},
   {q:"'Watch' can mean 'to look' and also:",options:["a clock you wear","a chair","a river","a plant"],answer:0}
+ ]
+};
+
+/* ---------- READING: activity -> sub-skill, and a passage + matched questions per sub-skill ---------- */
+var READING_ACT = {
+  "Read a short text and write the main idea + 2 supporting details":"main_idea",
+  "Highlight 3 pieces of evidence that support an inference":"inference",
+  "Compare two short articles and note 2 similarities and 2 differences":"compare",
+  "Summarise a one-page passage in 3–4 sentences":"summary",
+  "Answer 5 comprehension questions on a levelled text":"comprehension",
+  "Identify the author's purpose and tone in a short article":"purpose_tone",
+  "Make 3 predictions about a story and check them after reading":"prediction",
+  "Work out 5 unfamiliar words using context clues":"context",
+  "Put the main events of a story in the correct order":"sequence",
+  "Sort 4 facts from 4 opinions in a short text":"fact_opinion",
+  "Write 3 questions about a passage, then find the answers in it":"comprehension",
+  "Identify the cause and effect of 3 events in a text":"cause_effect",
+  "Explain the theme of a short story in 2–3 sentences":"theme",
+  "Make a story map: characters, setting, problem, solution":"story_elements",
+  "Read a news article and summarise the 5 Ws (who, what, when, where, why)":"five_ws"
+};
+// Each value is a list of passages; each passage has questions that test THAT sub-skill.
+var READING_BANK = {
+ main_idea:[
+  {title:"City Parks", text:"City parks give people a place to relax, exercise and meet friends. Trees in parks also clean the air and give shade on hot days. Many families visit parks at the weekend to play and enjoy nature.",
+   qs:[
+    {q:"What is the MAIN idea of the text?",options:["City parks are useful in many ways","Trees are green","Weekends are long","Friends are fun"],answer:0},
+    {q:"Which is a SUPPORTING detail?",options:["Trees clean the air","Parks are boring","People hate parks","Parks have no trees"],answer:0},
+    {q:"The BEST title for this text is:",options:["Why City Parks Matter","My Dog","A Rainy Day","Cars in the City"],answer:0},
+    {q:"Which detail supports the main idea?",options:["Families visit parks to play","The sky is blue","Cars are fast","Books are heavy"],answer:0}
+   ]}
+ ],
+ inference:[
+  {title:"The Wet Umbrella", text:"When Layla came into the classroom, her umbrella was dripping and her shoes left wet marks on the floor. She shivered and rubbed her cold hands together.",
+   qs:[
+    {q:"What can you INFER from the text?",options:["It was raining outside","It was a sunny day","Layla was at the beach","Layla was sleeping"],answer:0},
+    {q:"Which detail is EVIDENCE that it was raining?",options:["Her umbrella was dripping","She smiled","The room was dark","She had a book"],answer:0},
+    {q:"The text suggests Layla felt:",options:["cold","hot","hungry","angry"],answer:0},
+    {q:"Which is another clue about the weather?",options:["Wet marks on the floor","A loud bell","A green door","A tall chair"],answer:0}
+   ]}
+ ],
+ compare:[
+  {title:"Two Short Articles", text:"Text 1: Cats make good pets. They are quiet, they clean themselves, and they do not need long walks.\nText 2: Dogs make good pets too. They are friendly and playful, but they need daily walks and lots of space.",
+   qs:[
+    {q:"What do BOTH texts say?",options:["The animal makes a good pet","The animal needs long walks","The animal is very quiet","The animal is large"],answer:0},
+    {q:"One DIFFERENCE between the texts is:",options:["Dogs need walks but cats do not","Both animals are fish","Neither animal is a pet","Both need lots of space"],answer:0},
+    {q:"According to Text 1, cats are:",options:["quiet and clean","loud and messy","big and slow","wild"],answer:0},
+    {q:"According to Text 2, dogs need:",options:["daily walks and space","no care at all","to be alone","only a bath"],answer:0}
+   ]}
+ ],
+ summary:[
+  {title:"The School Trip", text:"Last week, Class 6 visited a science museum. They saw a model of the solar system, watched a short film about space, and tried a fun experiment with magnets. Everyone said it was the best trip of the year.",
+   qs:[
+    {q:"Which is the BEST summary of the text?",options:["Class 6 enjoyed a science museum trip with space and magnet activities","Class 6 ate lunch together","The film was very long","Magnets are made of metal"],answer:0},
+    {q:"Which detail is TOO SMALL to include in a short summary?",options:["The exact colour of the magnets","They visited a science museum","They watched a space film","They enjoyed the trip"],answer:0},
+    {q:"A good summary should focus on:",options:["the main events","one tiny detail","the weather only","nothing at all"],answer:0},
+    {q:"What is the main point of the text?",options:["The class had a great museum trip","Museums are far away","Space is very big","Class 6 is small"],answer:0}
+   ]}
+ ],
+ purpose_tone:[
+  {title:"Save Water!", text:"Please remember to turn off the tap while brushing your teeth. Every drop counts! Together, we can protect our precious water and help our community.",
+   qs:[
+    {q:"The author's PURPOSE is to:",options:["persuade people to save water","tell a funny story","sell a new toy","describe a holiday"],answer:0},
+    {q:"The TONE of the text is:",options:["encouraging","angry","bored","frightened"],answer:0},
+    {q:"The writer mainly wants readers to:",options:["use less water","waste more water","buy bottled water","ignore the tap"],answer:0},
+    {q:"Which word helps create the caring tone?",options:["precious","broken","boring","empty"],answer:0}
+   ]}
+ ],
+ prediction:[
+  {title:"Dark Clouds", text:"Omar looked up at the sky. Dark grey clouds were gathering and the wind began to blow harder. He quickly picked up his bag and started walking faster towards home.",
+   qs:[
+    {q:"What will MOST LIKELY happen next?",options:["It will rain","The sun will come out","Omar will go swimming","Omar will fall asleep"],answer:0},
+    {q:"Which clue best supports your prediction?",options:["Dark grey clouds were gathering","Omar smiled","The street was empty","His bag was red"],answer:0},
+    {q:"Why did Omar walk faster?",options:["To get home before the rain","He was playing a game","He lost his bag","He was very tired"],answer:0},
+    {q:"Based on the clues, the weather will probably:",options:["get worse","get sunnier","stay exactly the same","become very hot"],answer:0}
+   ]}
+ ],
+ context:[
+  {title:"The Brave Firefighter", text:"The firefighter was fearless as she ran into the burning building to rescue the trapped family. Afterwards, everyone praised her courage.",
+   qs:[
+    {q:"In the text, 'fearless' means:",options:["not afraid","very tired","very hungry","full of fear"],answer:0},
+    {q:"'Rescue' means to:",options:["save","hide","break","paint"],answer:0},
+    {q:"'Praised' means they:",options:["said good things about her","shouted at her","ignored her","paid her"],answer:0},
+    {q:"'Courage' means:",options:["bravery","fear","speed","luck"],answer:0}
+   ]}
+ ],
+ sequence:[
+  {title:"Making Tea", text:"First, Sara boiled the water. Next, she put a tea bag in the cup. Then she poured the hot water over it. Finally, she added a little sugar and stirred.",
+   qs:[
+    {q:"What did Sara do FIRST?",options:["Boiled the water","Added the sugar","Poured the water","Stirred the tea"],answer:0},
+    {q:"What did she do LAST?",options:["Added sugar and stirred","Boiled the water","Put in the tea bag","Filled the kettle"],answer:0},
+    {q:"What came right AFTER boiling the water?",options:["Put a tea bag in the cup","Added the sugar","Drank the tea","Went to sleep"],answer:0},
+    {q:"Which shows the correct order?",options:["Boil, tea bag, pour, sugar","Sugar, pour, boil, tea bag","Pour, boil, sugar, tea bag","Tea bag, sugar, boil, pour"],answer:0}
+   ]}
+ ],
+ fact_opinion:[
+  {title:"The Football Match", text:"The match started at 5 o'clock. The stadium held 20,000 people. I think football is the most exciting sport in the world, and everyone should watch it.",
+   qs:[
+    {q:"Which statement is a FACT?",options:["The match started at 5 o'clock","Football is the most exciting sport","Everyone should watch it","Football is simply the best"],answer:0},
+    {q:"Which statement is an OPINION?",options:["Football is the most exciting sport","The stadium held 20,000 people","The match started at 5 o'clock","There was a stadium"],answer:0},
+    {q:"'The stadium held 20,000 people' is a:",options:["fact","opinion","question","command"],answer:0},
+    {q:"How do you know 'everyone should watch it' is an opinion?",options:["It is a personal belief, not proof","It contains numbers","It states a time","It names a place"],answer:0}
+   ]}
+ ],
+ cause_effect:[
+  {title:"The Broken Window", text:"Because the boys were playing football too close to the house, the ball hit the window and it broke. As a result, they had to pay for a new one.",
+   qs:[
+    {q:"WHY did the window break? (the cause)",options:["The ball hit it","It was very old","The wind blew hard","It was a hot day"],answer:0},
+    {q:"What was the EFFECT of the broken window?",options:["They had to pay for a new one","They won a prize","They went swimming","Nothing happened"],answer:0},
+    {q:"The window broke BECAUSE:",options:["the boys played too close","it was raining","it was night-time","the house was small"],answer:0},
+    {q:"Which word signals cause and effect?",options:["Because","Happy","Blue","Slowly"],answer:0}
+   ]}
+ ],
+ theme:[
+  {title:"The Ant and the Grain", text:"All summer the little ant worked hard to store grain, while the others only played. When winter came and food was scarce, only the ant had enough to eat. The others wished they had prepared too.",
+   qs:[
+    {q:"What is the THEME (message) of the story?",options:["Hard work and planning pay off","Winter is very cold","Ants are small","Games are fun"],answer:0},
+    {q:"The story teaches us to:",options:["prepare for the future","never do any work","always play games","only eat grain"],answer:0},
+    {q:"Which lesson fits best?",options:["Plan ahead","Be lazy","Waste your time","Ignore the winter"],answer:0},
+    {q:"Why did only the ant have food in winter?",options:["It worked and prepared","It was simply lucky","It was the biggest","It stole the food"],answer:0}
+   ]}
+ ],
+ story_elements:[
+  {title:"Nora and the Lost Key", text:"Nora was a curious girl who lived by the sea. One morning she could not find the key to her boat. She searched everywhere and, at last, found it under a pile of nets. Happily, she sailed out to fish.",
+   qs:[
+    {q:"Who is the MAIN character?",options:["Nora","the sea","the boat","a fish"],answer:0},
+    {q:"Where does the story take place (the SETTING)?",options:["by the sea","in a big city","in a forest","in space"],answer:0},
+    {q:"What is the PROBLEM in the story?",options:["Nora lost her boat key","The sea was too cold","The boat was old","Nora was hungry"],answer:0},
+    {q:"How is the problem SOLVED?",options:["She finds the key under the nets","She buys a new boat","She goes back home","She calls a friend"],answer:0}
+   ]}
+ ],
+ five_ws:[
+  {title:"News: School Wins Prize", text:"Yesterday, Al Noor School in Ajman won the national science prize because its students built a clever solar robot. The award was given at a ceremony in Dubai.",
+   qs:[
+    {q:"WHO won the prize?",options:["Al Noor School","A famous singer","A football team","A big company"],answer:0},
+    {q:"WHAT did they win?",options:["The national science prize","A new car","A free holiday","A story book"],answer:0},
+    {q:"WHERE was the award given?",options:["Dubai","London","Cairo","Paris"],answer:0},
+    {q:"WHY did they win?",options:["Students built a solar robot","They were lucky","They were the oldest","They paid money"],answer:0}
+   ]}
  ]
 };

@@ -183,7 +183,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-06a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-06b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3141,7 +3141,7 @@ function take10(bank,extra){
   return out;
 }
 function _exShuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
-function _passageInner(p){ return '<b>'+p.title+'</b><br>'+p.text; }
+function _passageInner(p){ return '<b>'+p.title+'</b><br>'+String(p.text).replace(/\n/g,'<br>'); }
 // Build a matched MCQ exercise from a sub-skill bank; fall back to the skill pool if the activity isn't mapped.
 function _bankExercise(bankMap,actMap,taskText,poolSubject,poolExtra){
   var subtype=(actMap&&actMap[taskText])||null;
@@ -3160,8 +3160,10 @@ function buildExercise(skill,taskText){
     return {type:"writing",instr:instr,prompt:prompt};
   }
   if(skill==="Reading"){
-    var bank=(typeof PRACTICE_PASSAGES!=="undefined"&&PRACTICE_PASSAGES.length)?PRACTICE_PASSAGES:null;
-    if(bank){ var p=_exShuffle(bank)[0];
+    var rsub=(typeof READING_ACT!=="undefined"&&READING_ACT[taskText])||null;
+    var rbank=(rsub&&typeof READING_BANK!=="undefined"&&READING_BANK[rsub])?READING_BANK[rsub]:null;
+    var passages=rbank||((typeof PRACTICE_PASSAGES!=="undefined"&&PRACTICE_PASSAGES.length)?PRACTICE_PASSAGES:null);
+    if(passages&&passages.length){ var p=_exShuffle(passages)[0];
       return {type:"mcq",instr:instr,intro:_passageInner(p),items:(p.qs||[]).map(function(q){return {q:q.q,options:q.options.slice(),answer:q.answer};})}; }
     var items=orderByWeak(collectPoolItems("English","Reading"),"Reading");
     return {type:"mcq",instr:instr,items:items.slice(0,10)};
