@@ -28,7 +28,13 @@ if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
    {skill:"Motion & Forces",level:"C",sub:"Energy",q:"The energy an object has because it is moving is called:",options:["potential energy","chemical energy","kinetic energy","light energy"],answer:2},
    {skill:"Motion & Forces",level:"H",sub:"Speed",q:"A cyclist rides at 8 m/s for 5 s. How far does she travel?",options:["13 m","1.6 m","40 m","45 m"],answer:2},
    {skill:"Motion & Forces",level:"H",sub:"Balanced forces",q:"If all the forces on a moving object are balanced, the object will:",options:["keep moving at constant velocity","always speed up","stop instantly","change colour"],answer:0},
-   {skill:"Measurement & Units",level:"H",sub:"Unit prefixes",q:"1 kilometre is equal to how many metres?",options:["10","100","1000","10000"],answer:2}
+   {skill:"Measurement & Units",level:"H",sub:"Unit prefixes",q:"1 kilometre is equal to how many metres?",options:["10","100","1000","10000"],answer:2},
+   {skill:"Measurement & Units",level:"F",sub:"Measuring quantities",q:"Which unit is used to measure volume?",options:["metre","litre","kilogram","second"],answer:1},
+   {skill:"Motion & Forces",level:"F",sub:"Forces",q:"Which of these is NOT a force?",options:["gravity","friction","magnetism","temperature"],answer:3},
+   {skill:"Measurement & Units",level:"F",sub:"Measuring tools",q:"A balance (scale) is used to measure:",options:["time","speed","mass","temperature"],answer:2},
+   {skill:"Motion & Forces",level:"F",sub:"Speed",q:"An object that is not moving has a speed of:",options:["10 m/s","zero","1 m/s","100 m/s"],answer:1},
+   {skill:"Motion & Forces",level:"C",sub:"Speed",q:"A bus travels 90 m in 9 s. Its speed is:",options:["9 m/s","81 m/s","10 m/s","810 m/s"],answer:2},
+   {skill:"Motion & Forces",level:"H",sub:"Speed",q:"A toy car moves at 5 m/s for 4 s. How far does it travel?",options:["9 m","20 m","1.25 m","54 m"],answer:1}
   ]);
 
   /* ---------- Grade 9 — Mechanics in One Dimension (for a Grade 10A class) ---------- */
@@ -50,7 +56,11 @@ if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
    {skill:"Motion & Forces",level:"H",sub:"Acceleration",q:"A car speeds up from 10 m/s to 30 m/s in 5 s. Its acceleration is:",options:["20 m/s²","8 m/s²","4 m/s²","40 m/s²"],answer:2},
    {skill:"Motion & Forces",level:"H",sub:"Motion graphs",q:"On a velocity–time graph, the slope of the line represents the:",options:["acceleration","distance","mass","force"],answer:0},
    {skill:"Motion & Forces",level:"H",sub:"Free fall",q:"An object is dropped from rest. After 2 s its speed is about (g ≈ 9.8 m/s²):",options:["about 5 m/s","about 20 m/s","about 40 m/s","0 m/s"],answer:1},
-   {skill:"Measurement & Units",level:"H",sub:"Significant figures",q:"How many significant figures are in the measurement 3.0 cm?",options:["1","2","3","0"],answer:1}
+   {skill:"Measurement & Units",level:"H",sub:"Significant figures",q:"How many significant figures are in the measurement 3.0 cm?",options:["1","2","3","0"],answer:1},
+   {skill:"Measurement & Units",level:"F",sub:"SI units",q:"The SI unit of time is the:",options:["minute","second","hour","metre"],answer:1},
+   {skill:"Motion & Forces",level:"F",sub:"Acceleration",q:"An object moving at constant velocity has an acceleration of:",options:["9.8 m/s²","10 m/s²","zero","increasing"],answer:2},
+   {skill:"Motion & Forces",level:"F",sub:"Motion graphs",q:"On a distance–time graph, a flat (horizontal) line means the object is:",options:["speeding up","at rest","moving quickly","falling"],answer:1},
+   {skill:"Motion & Forces",level:"C",sub:"Speed",q:"A train travels 300 m in 20 s. Its average speed is:",options:["20 m/s","15 m/s","6000 m/s","0.07 m/s"],answer:1}
   ]);
 
   /* ---------- Grade 10 — Waves & Light basics (for a Grade 11A class) ---------- */
@@ -72,7 +82,11 @@ if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
    {skill:"Waves & Sound",level:"H",sub:"Period and frequency",q:"A wave has a period of 0.5 s. Its frequency is:",options:["2 Hz","0.5 Hz","5 Hz","50 Hz"],answer:0},
    {skill:"Waves & Sound",level:"H",sub:"Longitudinal waves",q:"Sound waves are ___ waves.",options:["transverse","longitudinal","electromagnetic","standing"],answer:1},
    {skill:"Waves & Sound",level:"H",sub:"Wave equation",q:"A wave travels at 20 m/s with a frequency of 4 Hz. Its wavelength is:",options:["80 m","24 m","5 m","0.2 m"],answer:2},
-   {skill:"Light & Optics",level:"H",sub:"Nature of light",q:"Light is a type of ___ wave.",options:["sound","electromagnetic","water","seismic"],answer:1}
+   {skill:"Light & Optics",level:"H",sub:"Nature of light",q:"Light is a type of ___ wave.",options:["sound","electromagnetic","water","seismic"],answer:1},
+   {skill:"Waves & Sound",level:"F",sub:"Wave parts",q:"The highest point of a transverse wave is called the:",options:["trough","crest","node","medium"],answer:1},
+   {skill:"Waves & Sound",level:"F",sub:"Wave parts",q:"The lowest point of a transverse wave is called the:",options:["crest","amplitude","trough","period"],answer:2},
+   {skill:"Light & Optics",level:"F",sub:"Colour",q:"White light can be split into its colours using a:",options:["magnet","mirror","prism","wire"],answer:2},
+   {skill:"Waves & Sound",level:"C",sub:"Wave equation",q:"A wave has speed 12 m/s and wavelength 3 m. Its frequency is:",options:["36 Hz","4 Hz","15 Hz","9 Hz"],answer:1}
   ]);
 
   /* ---------- Grade 11 — Reflection, Refraction & Optics (for a Grade 12A class) ---------- */
@@ -94,6 +108,10 @@ if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
    {skill:"Light & Optics",level:"H",sub:"Curved mirrors",q:"A concave mirror can form:",options:["a real, inverted image","only virtual images","no image at all","always a larger upright image"],answer:0},
    {skill:"Light & Optics",level:"H",sub:"Critical angle",q:"Beyond the critical angle, light hitting a glass–air boundary is:",options:["completely reflected back into the glass","fully refracted out","absorbed","polarized"],answer:0},
    {skill:"Waves & Sound",level:"H",sub:"Doppler effect",q:"As a sound source moves towards you, the frequency you hear:",options:["increases","decreases","stays the same","becomes zero"],answer:0},
-   {skill:"Light & Optics",level:"H",sub:"Refraction",q:"As light passes from glass out into air, it bends:",options:["away from the normal","towards the normal","along the normal","straight back"],answer:0}
+   {skill:"Light & Optics",level:"H",sub:"Refraction",q:"As light passes from glass out into air, it bends:",options:["away from the normal","towards the normal","along the normal","straight back"],answer:0},
+   {skill:"Light & Optics",level:"F",sub:"Curved mirrors",q:"A mirror that curves inwards is called a:",options:["convex mirror","plane mirror","concave mirror","flat mirror"],answer:2},
+   {skill:"Light & Optics",level:"F",sub:"Lenses",q:"A lens that is thicker in the middle than at the edges is a:",options:["converging (convex) lens","diverging (concave) lens","plane mirror","prism"],answer:0},
+   {skill:"Light & Optics",level:"F",sub:"Refraction",q:"The bending of light as it passes from air into water is called:",options:["reflection","refraction","diffraction","absorption"],answer:1},
+   {skill:"Light & Optics",level:"C",sub:"Refraction",q:"When light travels from air into glass, its speed:",options:["increases","stays the same","decreases","becomes zero"],answer:2}
   ]);
 })();

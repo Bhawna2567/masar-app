@@ -189,7 +189,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-07d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-07e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -284,13 +284,13 @@ function genMathParametric(gradeId,seedStr,count){
 }
 function assembleDiagnostic(grade,subj,seedStr){
   // Maths is generated fresh (parametric) so it never repeats; English uses the tagged pool.
-  if(subj==="Math"){ return genMathParametric(grade,seedStr,16); }
+  if(subj==="Math"){ return genMathParametric(grade,seedStr,20); }
   var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
   if(!pool||!pool.length) return null;
   var rand=_seedRand(seedStr);
   var byL={F:[],C:[],H:[]};
   pool.forEach(function(q){ (byL[q.level]||(byL[q.level]=[])).push(q); });
-  var T=Math.min(pool.length,16);
+  var T=Math.min(pool.length,20);
   // Lean easier: ~55% Foundational, ~30% Core, ~15% Challenge — still a full spread so the
   // test separates low/medium/high, but most questions are accessible.
   var want={F:Math.round(T*0.55), C:Math.round(T*0.30)}; want.H=Math.max(1,T-want.F-want.C);
