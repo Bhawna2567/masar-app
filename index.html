@@ -189,7 +189,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-07c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-07d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1786,9 +1786,11 @@ function buildDiagnosticData(){
   var qs, passage=null, title;
   if(ct){ qs=ct.questions||[]; subj=ct.subject; grade=ct.grade; title=(ct.title||"Imported test")+" (imported)"; }
   else {
-    var bank=(QUESTION_BANK[grade]&&QUESTION_BANK[grade][subj])?QUESTION_BANK[grade][subj]:null;
-    if(subj==="English"){ var rc=readingCompFor(grade); passage=rc; var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); qs=bank?cq.concat(bank):cq; }
-    else { qs=bank; }
+    // Use the SAME engine students get (tagged pool / parametric Maths), so the preview matches the real test.
+    var assembled=assembleDiagnostic(grade,subj,diagSeed(AUTH&&AUTH.email,grade,subj,"1",0));
+    if(subj==="English"){ var rc=readingCompFor(grade); passage=rc; var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); qs=assembled?cq.concat(assembled):cq; }
+    else { qs=assembled; }
+    if(!qs||!qs.length){ var bank=(QUESTION_BANK[grade]&&QUESTION_BANK[grade][subj])?QUESTION_BANK[grade][subj]:null; if(bank) qs=bank; }  // legacy fallback
     title="Diagnostic — "+gLabel(grade)+" "+subjLabelLong(subj);
   }
   return {subj:subj,grade:grade,qs:qs,passage:passage,title:title};
