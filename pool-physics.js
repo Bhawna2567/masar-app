@@ -1,0 +1,99 @@
+/* Adeptly — Physics diagnostic question pools (Advanced stream).
+   Aligned to MOE Term-1 2025-26 scope & sequence.
+   A class is diagnosed on the PREVIOUS grade's content (gap analysis):
+     Grade 9A class  -> tests grade "8"  (readiness: measurement, motion, forces)
+     Grade 10A class -> tests grade "9A" (Mechanics in One Dimension)
+     Grade 11A class -> tests grade "10A" (Waves & Light: waves, sound, light basics)
+     Grade 12A class -> tests grade "11A" (Waves & Light: reflection, refraction, optics, Doppler)
+   Each question: {skill, level(F/C/H), sub, q, options[4], answer(index)}.
+   Skills: "Measurement & Units", "Motion & Forces", "Waves & Sound", "Light & Optics". */
+if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
+(function(){
+  function put(grade, list){ QUESTION_POOL[grade]=QUESTION_POOL[grade]||{}; QUESTION_POOL[grade]["Physics"]=list; }
+
+  /* ---------- Grade 8 readiness (for a Grade 9A class) ---------- */
+  put("8", [
+   {skill:"Measurement & Units",level:"F",sub:"SI units",q:"Which is the SI unit of length?",options:["litre","metre","gram","hour"],answer:1},
+   {skill:"Measurement & Units",level:"F",sub:"Measuring tools",q:"Which tool best measures the length of a pencil?",options:["thermometer","stopwatch","ruler","balance"],answer:2},
+   {skill:"Measurement & Units",level:"F",sub:"SI units",q:"Which is the SI unit of mass?",options:["newton","metre","kilogram","second"],answer:2},
+   {skill:"Measurement & Units",level:"F",sub:"SI units",q:"Which is the SI unit of time?",options:["second","hour","metre","litre"],answer:0},
+   {skill:"Motion & Forces",level:"F",sub:"Forces",q:"A force is best described as a:",options:["colour","push or pull","sound","temperature"],answer:1},
+   {skill:"Motion & Forces",level:"F",sub:"Gravity",q:"What pulls objects down towards the ground?",options:["friction","magnetism","gravity","light"],answer:2},
+   {skill:"Motion & Forces",level:"F",sub:"Speed",q:"A car travels 100 m in 10 s. What is its speed?",options:["1 m/s","10 m/s","1000 m/s","110 m/s"],answer:1},
+   {skill:"Measurement & Units",level:"F",sub:"Measuring tools",q:"Which instrument measures temperature?",options:["ruler","balance","thermometer","ammeter"],answer:2},
+   {skill:"Motion & Forces",level:"C",sub:"Speed",q:"A runner covers 60 m in 12 s. What is the average speed?",options:["12 m/s","72 m/s","0.2 m/s","5 m/s"],answer:3},
+   {skill:"Motion & Forces",level:"C",sub:"Friction",q:"Friction between two surfaces usually acts to:",options:["oppose motion","speed up motion","create light","add mass"],answer:0},
+   {skill:"Measurement & Units",level:"C",sub:"Derived units",q:"Speed is normally measured in:",options:["kilograms","metres per second","seconds","newtons"],answer:1},
+   {skill:"Motion & Forces",level:"C",sub:"Mass and weight",q:"The weight of an object depends mainly on:",options:["its colour","gravity","its temperature","its speed"],answer:1},
+   {skill:"Motion & Forces",level:"C",sub:"Energy",q:"The energy an object has because it is moving is called:",options:["potential energy","chemical energy","kinetic energy","light energy"],answer:2},
+   {skill:"Motion & Forces",level:"H",sub:"Speed",q:"A cyclist rides at 8 m/s for 5 s. How far does she travel?",options:["13 m","1.6 m","40 m","45 m"],answer:2},
+   {skill:"Motion & Forces",level:"H",sub:"Balanced forces",q:"If all the forces on a moving object are balanced, the object will:",options:["keep moving at constant velocity","always speed up","stop instantly","change colour"],answer:0},
+   {skill:"Measurement & Units",level:"H",sub:"Unit prefixes",q:"1 kilometre is equal to how many metres?",options:["10","100","1000","10000"],answer:2}
+  ]);
+
+  /* ---------- Grade 9 — Mechanics in One Dimension (for a Grade 10A class) ---------- */
+  put("9A", [
+   {skill:"Measurement & Units",level:"F",sub:"Base quantities",q:"Which of these is a base quantity?",options:["speed","time","force","energy"],answer:1},
+   {skill:"Measurement & Units",level:"F",sub:"SI units",q:"The SI unit of mass is the:",options:["newton","joule","kilogram","metre"],answer:2},
+   {skill:"Motion & Forces",level:"F",sub:"Scalars and vectors",q:"Which quantity is a vector (it has direction)?",options:["distance","mass","displacement","time"],answer:2},
+   {skill:"Motion & Forces",level:"F",sub:"Distance and displacement",q:"Distance differs from displacement because distance:",options:["has no direction","is always negative","is measured in seconds","is a vector"],answer:0},
+   {skill:"Motion & Forces",level:"F",sub:"Speed",q:"A car moves 150 m in 30 s at a steady speed. Its speed is:",options:["15 m/s","5 m/s","180 m/s","0.2 m/s"],answer:1},
+   {skill:"Measurement & Units",level:"F",sub:"Measuring tools",q:"Which tool measures small lengths most precisely?",options:["metre ruler","measuring tape","vernier caliper","trundle wheel"],answer:2},
+   {skill:"Motion & Forces",level:"F",sub:"Velocity",q:"Velocity is best defined as:",options:["speed in a given direction","distance only","mass times speed","the time taken"],answer:0},
+   {skill:"Measurement & Units",level:"C",sub:"Precision and accuracy",q:"Accuracy describes how close a measurement is to:",options:["the average reading","the true value","zero","the largest reading"],answer:1},
+   {skill:"Motion & Forces",level:"C",sub:"Acceleration",q:"Acceleration is the rate of change of:",options:["velocity","distance","mass","force"],answer:0},
+   {skill:"Motion & Forces",level:"C",sub:"Acceleration",q:"A car speeds up from 0 to 20 m/s in 4 s. Its acceleration is:",options:["80 m/s²","24 m/s²","5 m/s²","0.2 m/s²"],answer:2},
+   {skill:"Motion & Forces",level:"C",sub:"Motion graphs",q:"On a position–time graph, a straight sloped line shows the object moving at:",options:["constant velocity","rest","increasing acceleration","zero speed"],answer:0},
+   {skill:"Motion & Forces",level:"C",sub:"Velocity",q:"A cyclist travels 240 m in 30 s. The average velocity is:",options:["6 m/s","8 m/s","270 m/s","0.125 m/s"],answer:1},
+   {skill:"Measurement & Units",level:"C",sub:"Derived quantities",q:"Which of these is a derived quantity?",options:["time","mass","speed","length"],answer:2},
+   {skill:"Motion & Forces",level:"H",sub:"Free fall",q:"Ignoring air resistance, objects near Earth fall with an acceleration of about:",options:["1 m/s²","9.8 m/s²","100 m/s²","0 m/s²"],answer:1},
+   {skill:"Motion & Forces",level:"H",sub:"Acceleration",q:"A car speeds up from 10 m/s to 30 m/s in 5 s. Its acceleration is:",options:["20 m/s²","8 m/s²","4 m/s²","40 m/s²"],answer:2},
+   {skill:"Motion & Forces",level:"H",sub:"Motion graphs",q:"On a velocity–time graph, the slope of the line represents the:",options:["acceleration","distance","mass","force"],answer:0},
+   {skill:"Motion & Forces",level:"H",sub:"Free fall",q:"An object is dropped from rest. After 2 s its speed is about (g ≈ 9.8 m/s²):",options:["about 5 m/s","about 20 m/s","about 40 m/s","0 m/s"],answer:1},
+   {skill:"Measurement & Units",level:"H",sub:"Significant figures",q:"How many significant figures are in the measurement 3.0 cm?",options:["1","2","3","0"],answer:1}
+  ]);
+
+  /* ---------- Grade 10 — Waves & Light basics (for a Grade 11A class) ---------- */
+  put("10A", [
+   {skill:"Waves & Sound",level:"F",sub:"Frequency",q:"The number of waves passing a point each second is the:",options:["wavelength","frequency","amplitude","speed"],answer:1},
+   {skill:"Waves & Sound",level:"F",sub:"Wavelength",q:"The distance between two neighbouring crests of a wave is the:",options:["wavelength","frequency","amplitude","period"],answer:0},
+   {skill:"Waves & Sound",level:"F",sub:"Amplitude",q:"The distance from the middle of a wave to a crest is the:",options:["wavelength","frequency","amplitude","period"],answer:2},
+   {skill:"Waves & Sound",level:"F",sub:"Sound medium",q:"Sound waves need a ___ in order to travel.",options:["vacuum","magnet","material medium","battery"],answer:2},
+   {skill:"Light & Optics",level:"F",sub:"Light travel",q:"In everyday situations, light normally travels in:",options:["straight lines","tight circles","zig-zags","random curves"],answer:0},
+   {skill:"Waves & Sound",level:"F",sub:"Units",q:"Frequency is measured in:",options:["metres","hertz (Hz)","seconds","newtons"],answer:1},
+   {skill:"Light & Optics",level:"F",sub:"Speed of light",q:"Light travels fastest in:",options:["water","glass","a vacuum","diamond"],answer:2},
+   {skill:"Waves & Sound",level:"C",sub:"Wave equation",q:"A wave has frequency 5 Hz and wavelength 2 m. Its speed is:",options:["2.5 m/s","10 m/s","7 m/s","0.4 m/s"],answer:1},
+   {skill:"Waves & Sound",level:"C",sub:"Transverse waves",q:"In a transverse wave, the vibration is:",options:["at right angles to the wave direction","along the wave direction","in a circle","absent"],answer:0},
+   {skill:"Waves & Sound",level:"C",sub:"Pitch",q:"A sound of higher frequency is heard as a:",options:["louder sound","higher pitch","quieter sound","lower pitch"],answer:1},
+   {skill:"Waves & Sound",level:"C",sub:"Loudness",q:"A sound wave with a larger amplitude sounds:",options:["higher","quieter","louder","faster"],answer:2},
+   {skill:"Light & Optics",level:"C",sub:"Reflection",q:"When light bounces off a mirror, this is called:",options:["reflection","refraction","diffraction","absorption"],answer:0},
+   {skill:"Waves & Sound",level:"C",sub:"Period",q:"The time taken for one complete wave is the:",options:["frequency","amplitude","period","wavelength"],answer:2},
+   {skill:"Waves & Sound",level:"H",sub:"Wave equation",q:"A sound wave travels at 340 m/s with wavelength 2 m. Its frequency is:",options:["170 Hz","680 Hz","342 Hz","85 Hz"],answer:0},
+   {skill:"Waves & Sound",level:"H",sub:"Period and frequency",q:"A wave has a period of 0.5 s. Its frequency is:",options:["2 Hz","0.5 Hz","5 Hz","50 Hz"],answer:0},
+   {skill:"Waves & Sound",level:"H",sub:"Longitudinal waves",q:"Sound waves are ___ waves.",options:["transverse","longitudinal","electromagnetic","standing"],answer:1},
+   {skill:"Waves & Sound",level:"H",sub:"Wave equation",q:"A wave travels at 20 m/s with a frequency of 4 Hz. Its wavelength is:",options:["80 m","24 m","5 m","0.2 m"],answer:2},
+   {skill:"Light & Optics",level:"H",sub:"Nature of light",q:"Light is a type of ___ wave.",options:["sound","electromagnetic","water","seismic"],answer:1}
+  ]);
+
+  /* ---------- Grade 11 — Reflection, Refraction & Optics (for a Grade 12A class) ---------- */
+  put("11A", [
+   {skill:"Light & Optics",level:"F",sub:"Law of reflection",q:"In reflection, the angle of incidence equals the angle of:",options:["reflection","refraction","diffraction","elevation"],answer:0},
+   {skill:"Light & Optics",level:"F",sub:"Refraction",q:"When light passes from air into glass and changes direction, this is called:",options:["reflection","refraction","diffraction","polarization"],answer:1},
+   {skill:"Light & Optics",level:"F",sub:"Plane mirrors",q:"The image formed by a flat (plane) mirror is:",options:["upright and virtual","upside down and real","larger and real","on the mirror surface"],answer:0},
+   {skill:"Light & Optics",level:"F",sub:"Specular reflection",q:"Reflection from a smooth, shiny mirror is called:",options:["diffuse reflection","specular reflection","refraction","diffraction"],answer:1},
+   {skill:"Waves & Sound",level:"F",sub:"Doppler effect",q:"The change in a wave's frequency caused by motion of the source or observer is the:",options:["Doppler effect","law of reflection","refraction","polarization"],answer:0},
+   {skill:"Light & Optics",level:"F",sub:"Diffraction",q:"The spreading of light as it passes through a very narrow gap is called:",options:["reflection","refraction","diffraction","absorption"],answer:2},
+   {skill:"Light & Optics",level:"F",sub:"The normal",q:"Angles of incidence and reflection are measured from the:",options:["mirror surface","normal (perpendicular line)","ground","horizontal"],answer:1},
+   {skill:"Light & Optics",level:"C",sub:"Snell's law",q:"Snell's law relates the angle of incidence to the angle of:",options:["reflection","refraction","diffraction","elevation"],answer:1},
+   {skill:"Light & Optics",level:"C",sub:"Refraction",q:"As light enters a denser medium such as glass, it slows down and bends:",options:["towards the normal","away from the normal","straight back","upwards"],answer:0},
+   {skill:"Light & Optics",level:"C",sub:"Total internal reflection",q:"Total internal reflection can occur when light travels from:",options:["air into glass","glass into air beyond the critical angle","a vacuum into glass","air into water"],answer:1},
+   {skill:"Light & Optics",level:"C",sub:"Optical fibres",q:"Optical fibres carry light signals by using:",options:["total internal reflection","diffraction","refraction only","polarization"],answer:0},
+   {skill:"Waves & Sound",level:"C",sub:"Doppler applications",q:"A police radar speed gun measures a car's speed using the:",options:["Doppler effect","law of reflection","Snell's law","diffraction"],answer:0},
+   {skill:"Light & Optics",level:"C",sub:"Polarization",q:"Polarization of light is possible because light is a:",options:["transverse wave","longitudinal wave","sound wave","standing wave"],answer:0},
+   {skill:"Light & Optics",level:"H",sub:"Law of reflection",q:"A ray strikes a mirror at 30° to the normal. The angle of reflection is:",options:["60°","30°","15°","90°"],answer:1},
+   {skill:"Light & Optics",level:"H",sub:"Curved mirrors",q:"A concave mirror can form:",options:["a real, inverted image","only virtual images","no image at all","always a larger upright image"],answer:0},
+   {skill:"Light & Optics",level:"H",sub:"Critical angle",q:"Beyond the critical angle, light hitting a glass–air boundary is:",options:["completely reflected back into the glass","fully refracted out","absorbed","polarized"],answer:0},
+   {skill:"Waves & Sound",level:"H",sub:"Doppler effect",q:"As a sound source moves towards you, the frequency you hear:",options:["increases","decreases","stays the same","becomes zero"],answer:0},
+   {skill:"Light & Optics",level:"H",sub:"Refraction",q:"As light passes from glass out into air, it bends:",options:["away from the normal","towards the normal","along the normal","straight back"],answer:0}
+  ]);
+})();
