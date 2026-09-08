@@ -189,7 +189,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-07e";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-07f";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1599,12 +1599,23 @@ function adminManage(){
   var us=adminUsers().slice().sort(function(a,b){return (""+(a.name||"")).localeCompare(b.name||"");});
   var rows=us.map(function(u){
     var me=AUTH&&u.uid===AUTH.uid;
-    var btn=me?'<span class="muted" style="font-size:11px">(you)</span>':(u.blocked?'<button class="btn sm" onclick="setBlocked(\''+u.uid+'\',false)">Unblock</button>':'<button class="btn ghost sm" onclick="setBlocked(\''+u.uid+'\',true)">Block</button>');
-    return '<tr><td><b>'+((u.name||"—")+"").replace(/</g,"&lt;")+'</b><div class="muted" style="font-size:11px">'+((u.email||"")+"").replace(/</g,"&lt;")+'</div></td><td>'+uRole(u)+'</td><td>'+uStatus(u)+'</td><td>'+btn+'</td></tr>';
+    var blockBtn=me?'<span class="muted" style="font-size:11px">(you)</span>':(u.blocked?'<button class="btn sm" onclick="setBlocked(\''+u.uid+'\',false)">Unblock</button>':'<button class="btn ghost sm" onclick="setBlocked(\''+u.uid+'\',true)">Block</button>');
+    var roleBtn=me?'':(u.role==="teacher"
+      ? '<button class="btn ghost sm" onclick="setRole(\''+u.uid+'\',\'student\')">→ Make student</button>'
+      : (u.role==="student" ? '<button class="btn ghost sm" onclick="setRole(\''+u.uid+'\',\'teacher\')">→ Make teacher</button>' : ''));
+    return '<tr><td><b>'+((u.name||"—")+"").replace(/</g,"&lt;")+'</b><div class="muted" style="font-size:11px">'+((u.email||"")+"").replace(/</g,"&lt;")+'</div></td><td>'+uRole(u)+'</td><td>'+uStatus(u)+'</td><td style="white-space:nowrap">'+roleBtn+' '+blockBtn+'</td></tr>';
   }).join("");
-  return '<div class="card"><h2>Manage users</h2><p class="sub">Block a user to stop them signing in; unblock to restore access.</p><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="muted">No users.</td></tr>')+'</tbody></table></div>';
+  return '<div class="card"><h2>Manage users</h2><p class="sub">Change a user’s role or block/unblock them. If a student registered as a teacher by mistake, use <b>→ Make student</b> — it switches the role and unblocks the account, so they log in with the <b>same email and password</b> and join their class. (Emails can’t be re-used to register twice, so fixing the existing account is the way.)</p><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="muted">No users.</td></tr>')+'</tbody></table></div>';
 }
 function setBlocked(uid,val){ if(!isAdmin())return; if(!confirm(val?"Block this user? They will not be able to use Adeptly until you unblock them.":"Unblock this user?"))return; db.collection("users").doc(uid).update({blocked:val}).catch(function(e){alert(fbErr(e));}); }
+function setRole(uid,role){ if(!isAdmin())return;
+  var msg=(role==="student")
+    ? "Change this account to a STUDENT and unblock it?\n\nThey can then log in with the SAME email and password they already used, and join a class with the class code."
+    : "Change this account to a TEACHER?";
+  if(!confirm(msg))return;
+  var upd={role:role}; if(role==="student") upd.blocked=false;   // switching a mistaken teacher back to a student also restores access
+  db.collection("users").doc(uid).update(upd).catch(function(e){alert(fbErr(e));});
+}
 function adminDisk(){
   var u=adminUsers().length, a=adminAssign().length, c=adminClasses().length;
   return '<div class="card"><h2>Usage overview</h2><p class="sub">Adeptly runs on Firebase (free Spark plan). This is your data footprint.</p><div class="kpi"><div class="box"><div class="n">'+u+'</div><div class="l">User records</div></div><div class="box"><div class="n">'+a+'</div><div class="l">Diagnostics</div></div><div class="box"><div class="n">'+c+'</div><div class="l">Classes</div></div></div><p class="muted" style="font-size:12px;margin-top:10px">The free plan has generous limits. For exact reads/writes and storage, see the Firebase console → Firestore → Usage.</p></div>';
