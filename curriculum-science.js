@@ -75,4 +75,12 @@ if (typeof CURRICULUM === "undefined") { var CURRICULUM = {}; }
     "2":{ "Physical Science":["Forces in One Dimension — force and motion; weight and drag force; Newton's third law.","Displacement and Force in Two Dimensions — vectors; friction; forces in two dimensions."] },
     "3":{ "Physical Science":["Work, Energy and Machines — work and energy; machines.","Vibrations and Waves — periodic motion; wave properties; wave behavior.","Solids, Liquids and Gases — matter and thermal energy; properties of fluids; behavior of gases.","Matter — Properties and Change — properties of matter; changes in matter; elements and compounds; mixtures and matter."] }
   });
+
+  /* Grade 10 General — Science (Term 3 provided; atomic-structure / chemistry strand) */
+  add("10G", {
+    "3":{ "Physical Science":[
+            "Atomic Structure — early ideas about the atom; defining the atom; how atoms differ; unstable nuclei and radioactive decay.",
+            "Electrons in the Atom — light and quantum energy; quantum theory and the atom; electron configuration.",
+            "The Periodic Table — development of the modern periodic table; classification of the elements; periodic trends."] }
+  });
 })();

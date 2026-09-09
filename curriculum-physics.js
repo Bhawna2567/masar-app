@@ -53,6 +53,31 @@ if (typeof CURRICULUM === "undefined") { var CURRICULUM = {}; }
     ]
   });
 
+  /* Grade 12 General — Physics: Electricity & Magnetism (Terms 1-3).
+     Keeps the four base strands present (empty → "—") for card alignment,
+     and adds an "Electricity & Magnetism" strand carrying the General-stream units. */
+  function addTerm(grade, term, physics){
+    CURRICULUM[grade]=CURRICULUM[grade]||{};
+    CURRICULUM[grade][term]=CURRICULUM[grade][term]||{};
+    CURRICULUM[grade][term]["Physics"]=Object.assign(
+      {"Measurement & Units":[],"Motion & Forces":[],"Waves & Sound":[],"Light & Optics":[],"Electricity & Magnetism":[]},
+      physics);
+  }
+  addTerm("12G","1",{ "Electricity & Magnetism":[
+    "Static Electricity — Electric Charge: describe charging by friction, conduction and induction; electric forces between charges.",
+    "Static Electricity — Electric Fields: describe the electric field around a charge and represent it with field lines; electric potential."
+  ]});
+  addTerm("12G","2",{ "Electricity & Magnetism":[
+    "Current and Circuits — Current and Resistance: define electric current, potential difference and resistance; apply Ohm's law.",
+    "Current and Circuits — Electrical Energy and Power: calculate electrical energy and power in circuits."
+  ]});
+  addTerm("12G","3",{ "Electricity & Magnetism":[
+    "Simple Circuits — Series and Parallel: analyse series and parallel resistor circuits.",
+    "Applications of Circuits — Household Circuits and Safety: describe practical circuits, fuses and safety devices.",
+    "Understanding Magnetism — Magnets and Magnetic Fields: describe magnetic fields and the field around a current-carrying conductor.",
+    "Applying Magnetic Forces — Forces and Motors: describe the force on a current in a magnetic field and its use in motors; electromagnetic induction."
+  ]});
+
   /* Grade 12 Advanced — Units: Momentum and Energy, Subatomic Physics */
   add("12A", {
     "Motion & Forces":[
