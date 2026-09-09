@@ -189,7 +189,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-07f";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-09a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -229,13 +229,21 @@ function pmNoMakers(b,r){ var NO="Number & Operations",L=[];
     L.push(function(){var p=pmRi(r,1,4),q=pmRi(r,5,9),g2=pmRi(r,2,4);return pmItem(NO,"C","Fractions","Write "+(p*g2)+"/"+(q*g2)+" in its simplest form.",p+"/"+q,[(p*g2)+"/"+q,p+"/"+(q*g2),(p+1)+"/"+q],r);});
     L.push(function(){var base=pmPick(r,[200,400,600]),p=pmPick(r,[15,30,40]);return pmItem(NO,"H","Percentages","A jacket is "+base+" dirhams. "+p+"% off. How much do you save?",base*p/100,pmNear(base*p/100),r);});
     L.push(function(){var a=pmRi(r,2,5);return pmItem(NO,"H","Powers","What is "+a+" cubed? ("+a+" x "+a+" x "+a+")",a*a*a,pmNear(a*a*a),r);});
-  } else {
+  } else if(b<=8){
     L.push(function(){var p=pmPick(r,[10,20,25,50]),bs=pmPick(r,[40,80,120,200]);return pmItem(NO,"F","Percentages","What is "+p+"% of "+bs+"?",p*bs/100,pmNear(p*bs/100),r);});
     L.push(function(){var n=pmPick(r,[16,25,36,49,64,81,100]);return pmItem(NO,"F","Square roots","What is the square root of "+n+"?",Math.round(Math.sqrt(n)),pmNear(Math.round(Math.sqrt(n))),r);});
     L.push(function(){var a=pmRi(r,20,40),c=pmRi(r,8,18);return pmItem(NO,"F","Addition","What is "+a+" + "+c+"?",a+c,pmNear(a+c),r);});
     L.push(function(){var a=-pmRi(r,2,9),c=pmRi(r,3,9);return pmItem(NO,"C","Integers","What is ("+a+") + "+c+"?",a+c,pmNear(a+c),r);});
     L.push(function(){var base=pmPick(r,[250,400,600]),p=pmPick(r,[12,15]);return pmItem(NO,"H","Percentages","A phone is "+base+" dirhams. Tax is "+p+"%. What is the total?",base+base*p/100,pmNear(base+base*p/100),r);});
     L.push(function(){var a=pmRi(r,2,5);return pmItem(NO,"H","Powers","Simplify 2^"+a+" x 2^3. Write as 2 to a power.","2^"+(a+3),["2^"+(a*3),"2^"+(a+4),"4^"+(a+3)],r);});
+  } else {
+    // Grades 9-12: indices, roots, standard form, surds, percentage change
+    L.push(function(){var a=pmRi(r,3,5),c=pmRi(r,2,3);return pmItem(NO,"F","Indices","Evaluate 2^"+a+" x 2^"+c+".",Math.pow(2,a+c),pmNear(Math.pow(2,a+c)),r);});
+    L.push(function(){var n=pmPick(r,[11,12,13,14,15]);return pmItem(NO,"F","Square roots","What is the square root of "+(n*n)+"?",n,pmNear(n),r);});
+    L.push(function(){var p=pmPick(r,[15,35,45,60]),base=pmPick(r,[120,200,240,400]);return pmItem(NO,"C","Percentages","What is "+p+"% of "+base+"?",Math.round(p*base/100),pmNear(Math.round(p*base/100)),r);});
+    L.push(function(){var base=pmPick(r,[200,400,500,800]);return pmItem(NO,"C","Percentage change","A price of "+base+" rises 10% then falls 10%. What is the final price?",Math.round(base*1.1*0.9),[base,Math.round(base*1.2),Math.round(base*0.81)],r);});
+    L.push(function(){var s=pmPick(r,[["45000","4.5 x 10^4"],["6300","6.3 x 10^3"],["120000","1.2 x 10^5"],["780000","7.8 x 10^5"]]);return pmItem(NO,"H","Standard form","Write "+s[0]+" in standard form.",s[1],["4.5 x 10^3","4.5 x 10^5","6.3 x 10^4","1.2 x 10^4"],r);});
+    L.push(function(){var t=pmPick(r,[[50,5,2],[18,3,2],[32,4,2],[72,6,2],[75,5,3]]);return pmItem(NO,"H","Surds","The square root of "+t[0]+" can be written as a times the square root of "+t[2]+". What is a?",t[1],pmNear(t[1]),r);});
   }
   return L; }
 function pmAlgMakers(b,r){ var ALG="Algebra",L=[];
@@ -246,10 +254,18 @@ function pmAlgMakers(b,r){ var ALG="Algebra",L=[];
     L.push(function(){var a=pmRi(r,2,6),x=pmRi(r,2,9);return pmItem(ALG,"F","Solving equations","Solve: "+a+" x n = "+(a*x),x,pmNear(x),r);});
     L.push(function(){var m=pmRi(r,2,5),x=pmRi(r,2,8),bb=pmRi(r,1,6);return pmItem(ALG,"C","Evaluating expressions","If n = "+x+", what is "+m+" n + "+bb+"?",m*x+bb,pmNear(m*x+bb),r);});
     L.push(function(){var a=pmRi(r,2,5),x=pmRi(r,2,9),bb=pmRi(r,1,9);return pmItem(ALG,"H","Solving equations","Solve: "+a+" n + "+bb+" = "+(a*x+bb),x,pmNear(x),r);});
-  } else {
+  } else if(b<=8){
     L.push(function(){var a=pmRi(r,2,6),x=pmRi(r,2,9),bb=pmRi(r,1,9);return pmItem(ALG,"F","Solving equations","Solve: "+a+" x + "+bb+" = "+(a*x+bb),x,pmNear(x),r);});
     L.push(function(){var first=pmRi(r,1,5),d=pmRi(r,2,5),n=pmRi(r,4,8);return pmItem(ALG,"C","Patterns & sequences","Pattern: start "+first+", add "+d+" each time. What is the "+n+"th number?",first+(n-1)*d,pmNear(first+(n-1)*d),r);});
     L.push(function(){var x1=pmRi(r,0,3),y1=pmRi(r,0,3),x2=x1+pmRi(r,1,3),dy=pmRi(r,2,6);var y2=y1+dy,dx=x2-x1;var sl=(dy%dx===0)?(dy/dx):Math.round(dy/dx*10)/10;return pmItem(ALG,"H","Slope of a line","Find the slope of the line through ("+x1+","+y1+") and ("+x2+","+y2+").",sl,[sl+1,sl-1,sl+2],r);});
+  } else {
+    // Grades 9-12: two-step equations, functions, quadratics, indices, sequences, simultaneous
+    L.push(function(){var a=pmRi(r,2,5),x=pmRi(r,2,9),bb=pmRi(r,1,9);return pmItem(ALG,"F","Solving equations","Solve: "+a+"x + "+bb+" = "+(a*x+bb),x,pmNear(x),r);});
+    L.push(function(){var a=pmRi(r,2,4),bb=pmRi(r,1,6),x=pmRi(r,2,8);return pmItem(ALG,"F","Functions","If f(x) = "+a+"x + "+bb+", find f("+x+").",a*x+bb,pmNear(a*x+bb),r);});
+    L.push(function(){var p=pmRi(r,3,12);return pmItem(ALG,"C","Quadratic equations","Solve x^2 = "+(p*p)+" (give the positive value).",p,pmNear(p),r);});
+    L.push(function(){var a=pmRi(r,4,7),c=pmRi(r,1,3);return pmItem(ALG,"C","Indices","Simplify x^"+a+" ÷ x^"+c+".","x^"+(a-c),["x^"+(a+c),"x^"+(a*c),"x^"+a],r);});
+    L.push(function(){var first=pmRi(r,2,6),d=pmRi(r,2,6),n=pmRi(r,6,12);return pmItem(ALG,"H","Sequences","The sequence "+first+", "+(first+d)+", "+(first+2*d)+", ... What is the "+n+"th term?",first+(n-1)*d,pmNear(first+(n-1)*d),r);});
+    L.push(function(){var s=2*pmRi(r,5,10),d=pmPick(r,[2,4,6]);return pmItem(ALG,"H","Simultaneous equations","If x + y = "+s+" and x - y = "+d+", what is x?",(s+d)/2,pmNear((s+d)/2),r);});
   }
   return L; }
 function pmGeoMakers(b,r){ var GEO="Geometry",L=[];
@@ -257,11 +273,19 @@ function pmGeoMakers(b,r){ var GEO="Geometry",L=[];
     L.push(function(){return pmItem(GEO,"F","2-D shapes","How many sides does a triangle have?",3,[4,5,6],r);});
     L.push(function(){var l=pmRi(r,3,8),w=pmRi(r,2,6);return pmItem(GEO,"C","Perimeter","A rectangle is "+l+" cm by "+w+" cm. What is the perimeter?",2*(l+w),pmNear(2*(l+w)),r);});
     L.push(function(){var s=pmRi(r,3,9);return pmItem(GEO,"H","Perimeter","A square has sides of "+s+" cm. What is the perimeter?",4*s,pmNear(4*s),r);});
-  } else {
+  } else if(b<=8){
     L.push(function(){var l=pmRi(r,3,12),w=pmRi(r,2,9);return pmItem(GEO,"F","Area","A rectangle is "+l+" cm by "+w+" cm. What is the area?",l*w,pmNear(l*w),r);});
     L.push(function(){var ang=pmRi(r,30,150);return pmItem(GEO,"C","Angles","Two angles make a straight line (180). One is "+ang+". What is the other?",180-ang,pmNear(180-ang),r);});
     if(b>=8){L.push(function(){var t=pmPick(r,[[3,4,5],[6,8,10],[5,12,13]]);return pmItem(GEO,"H","Pythagoras","A right triangle has short sides "+t[0]+" and "+t[1]+". How long is the longest side?",t[2],pmNear(t[2]),r);});}
     else {L.push(function(){var base=pmRi(r,4,12),h=pmPick(r,[2,4,6,8]);return pmItem(GEO,"H","Area","A triangle has base "+base+" and height "+h+". What is the area?",base*h/2,pmNear(base*h/2),r);});}
+  } else {
+    // Grades 9-12: Pythagoras, polygon angles, trigonometry, coordinate geometry, circles
+    L.push(function(){var t=pmPick(r,[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15]]);return pmItem(GEO,"F","Pythagoras","A right triangle has legs "+t[0]+" and "+t[1]+". Find the hypotenuse.",t[2],pmNear(t[2]),r);});
+    L.push(function(){var p=pmPick(r,[["a pentagon",540],["a hexagon",720],["a quadrilateral",360],["an octagon",1080]]);return pmItem(GEO,"F","Angles","What is the sum of the interior angles of "+p[0]+"?",p[1],[p[1]+180,p[1]-180,360],r);});
+    L.push(function(){var t=pmPick(r,[["sin 30",0.5],["cos 60",0.5],["tan 45",1],["sin 90",1],["cos 0",1]]);return pmItem(GEO,"C","Trigonometry","What is "+t[0]+" degrees?",t[1],[0,0.87,(t[1]===1?0.5:1)],r);});
+    L.push(function(){var t=pmPick(r,[[3,4,5],[6,8,10],[5,12,13]]);return pmItem(GEO,"C","Coordinate geometry","Find the distance between (0, 0) and ("+t[0]+", "+t[1]+").",t[2],pmNear(t[2]),r);});
+    L.push(function(){var rad=pmPick(r,[7,14,21]);return pmItem(GEO,"H","Circles","Find the area of a circle with radius "+rad+" (use pi = 22/7).",Math.round(22/7*rad*rad),pmNear(Math.round(22/7*rad*rad)),r);});
+    L.push(function(){var x1=pmRi(r,0,4),y1=pmRi(r,0,4),x2=x1+2*pmRi(r,1,3),y2=y1+2*pmRi(r,1,3);return pmItem(GEO,"H","Coordinate geometry","What is the midpoint of ("+x1+", "+y1+") and ("+x2+", "+y2+")?","("+((x1+x2)/2)+", "+((y1+y2)/2)+")",["("+(x1+x2)+", "+(y1+y2)+")","("+((x2-x1)/2)+", "+((y2-y1)/2)+")","("+((x1+x2)/2)+", "+(y1+y2)+")"],r);});
   }
   return L; }
 function pmDataMakers(b,r){ var DATA="Data & Probability",L=[];
@@ -269,6 +293,12 @@ function pmDataMakers(b,r){ var DATA="Data & Probability",L=[];
   L.push(function(){var n=s5().sort(function(a,b){return a-b;});return pmItem(DATA,"F","Range","What is the range (biggest minus smallest)? "+n.join(", "),n[4]-n[0],pmNear(n[4]-n[0]),r);});
   L.push(function(){var n=s5();var s=n.reduce(function(a,b){return a+b;},0);return pmItem(DATA,"C","Mean (average)","What is the mean (average)? "+n.join(", "),Math.round(s/5*100)/100,[Math.round(s/5)+1,Math.round(s/5)-1,n.slice().sort(function(a,b){return a-b;})[2]],r);});
   L.push(function(){var tot=pmPick(r,[6,8,10]),fav=pmRi(r,1,tot-1),g=pmGcd(fav,tot);return pmItem(DATA,"H","Probability","A bag has "+tot+" balls. "+fav+" are red. What is the chance of red?",(fav/g)+"/"+(tot/g),[(tot/g)+"/"+(fav/g),fav+"/"+(tot+2),(fav/g+1)+"/"+(tot/g+1)],r);});
+  if(b>=9){
+    // Grades 9-12: median, compound probability, counting
+    L.push(function(){var arr=[],pool=[];for(var i=2;i<40;i++)pool.push(i);for(var k=0;k<5;k++)arr.push(pool.splice(Math.floor(r()*pool.length),1)[0]);var sorted=arr.slice().sort(function(a,b){return a-b;});return pmItem(DATA,"C","Median","What is the median of "+arr.join(", ")+"?",sorted[2],pmNear(sorted[2]),r);});
+    L.push(function(){return pmItem(DATA,"C","Probability","Two fair coins are tossed. What is the probability of getting two heads?","1/4",["1/2","1/3","3/4"],r);});
+    L.push(function(){return pmItem(DATA,"H","Counting","In how many different orders can 3 different books be arranged on a shelf?",6,[3,9,12],r);});
+  }
   return L; }
 function genMathParametric(gradeId,seedStr,count){
   count=count||16; var m=String(gradeId).match(/\d+/), b=m?parseInt(m[0],10):6, r=_seedRand(seedStr);
