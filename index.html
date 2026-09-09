@@ -130,6 +130,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="questions.js"></script>
 <script src="questions-ar.js"></script>
 <script src="pool-math.js"></script>
+<script src="pool-math-hs.js"></script>
 <script src="pool-english.js"></script>
 <script src="pool-physics.js"></script>
 <script src="practice-bank.js"></script>
@@ -189,7 +190,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-09a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-09b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -313,9 +314,10 @@ function genMathParametric(gradeId,seedStr,count){
   return out.slice(0,count);
 }
 function assembleDiagnostic(grade,subj,seedStr){
-  // Maths is generated fresh (parametric) so it never repeats; English uses the tagged pool.
-  if(subj==="Math"){ return genMathParametric(grade,seedStr,20); }
+  // A curriculum-aligned pool (if present) overrides everything. For Maths grades without a pool,
+  // fall back to the parametric generator (fresh numbers, never repeats).
   var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
+  if(subj==="Math" && !(pool&&pool.length)){ return genMathParametric(grade,seedStr,20); }
   if(!pool||!pool.length) return null;
   var rand=_seedRand(seedStr);
   var byL={F:[],C:[],H:[]};
