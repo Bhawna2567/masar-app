@@ -196,7 +196,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-10d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2556,10 +2556,21 @@ function getQuestions(){
   // Preferred: assemble a difficulty-mixed test (Maths is fresh each time; English uses the pool). The
   // generation nonce makes each new diagnostic different so questions never repeat.
   var assembled=assembleDiagnostic(g,subj,diagSeed(AUTH&&AUTH.email,g,subj,S.curTerm,studentNonce()));
+  // English ALWAYS includes the reading-comprehension questions for the passage shown at the top of
+  // the test. The pool only holds Grammar/Vocabulary items, so we must add the Reading questions here
+  // too (the teacher preview already does). They are APPENDED after the pool so a student who is
+  // already mid-test keeps their existing answer positions (answers are keyed by question index)
+  // when the page refreshes to this build.
+  if(subj==="English" && !diagnosticIsArabic()){
+    var rc=readingCompRot(g,S.curTerm,studentNonce());
+    var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};});
+    var poolE=(assembled&&assembled.length)?assembled:((QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:[]);
+    return (poolE||[]).concat(cq);
+  }
   if(assembled&&assembled.length) return assembled;
   // Fallback to the older flat bank for any grade/subject not yet in the pool.
   var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
-  if(subj==="English"){ var rc=readingCompRot(g,S.curTerm,studentNonce()); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
+  if(subj==="English"){ var rc2=readingCompRot(g,S.curTerm,studentNonce()); var cq2=rc2.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? bank.concat(cq2) : cq2; }
   return bank;
 }
 function viewDiagnostic(){
