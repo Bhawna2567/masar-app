@@ -196,7 +196,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-09d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1579,8 +1579,15 @@ function kickOut(){
   if(LOCK.kicked) return;
   LOCK.kicked=true;
   try{ if(AUTH&&AUTH.role==="student"&&S.activeAssignment){ db.collection("assignments").doc(S.activeAssignment).update({violations:LOCK.leaves,kicked:true,kickedAt:Date.now()}).catch(function(){}); } }catch(e){}
-  try{ if(typeof S!=="undefined" && S.result==null){ grade(); } }catch(e){}   // auto-submit current answers so the attempt is recorded
+  // Force-submit whatever answers exist so the attempt is recorded AND the student
+  // is actually removed from the test screen. grade(true) scores unanswered items as
+  // incorrect, sets S.result, tears down lockdown, and re-renders to the results view.
+  var graded=false;
+  try{ if(typeof S!=="undefined" && S.result==null){ grade(true); graded=(S.result!=null); } }catch(e){}
   lockdownEnd();
+  // Fallback: if grading couldn't run for any reason, still eject the student from the
+  // test so they can't keep working — leave the diagnostic tab and re-render.
+  if(!graded){ try{ S.activeTab="results"; save(); render(); }catch(e){} }
   try{ alert("You left the test screen "+MAX_VIOLATIONS+" times.\n\nFor test integrity, your diagnostic has been ended and submitted. Please ask your teacher if you need to retake it."); }catch(e){}
 }
 function showScreenGuard(on){
@@ -2033,7 +2040,11 @@ function deleteAssignment(id){
 function allowRetake(id){
   const a=assignments().find(x=>x.id===id); if(!a)return;
   const now=!a.retakeAllowed;
-  db.collection("assignments").doc(id).update({retakeAllowed:now})
+  var upd={retakeAllowed:now};
+  // When unlocking a retake, clear any prior integrity flags so the fresh attempt
+  // starts clean and the roster no longer shows the "removed after violations" badge.
+  if(now){ upd.kicked=false; upd.kickedAt=null; upd.violations=0; upd.leaveCount=0; upd.lastLeftAt=null; }
+  db.collection("assignments").doc(id).update(upd)
     .then(()=>{ if(now) alert("Retake unlocked — the student can now redo this diagnostic once."); })
     .catch(e=>alert(fbErr(e)));
 }
@@ -2347,7 +2358,13 @@ function openAssignment(id,completed){
   S.student={name:AUTH.name,subject:a.subject,prevGrade:a.prevGrade,curGrade:a.curGrade,language:a.language||"English",genNonce:a.genNonce||0};
   S.prior=a.prior||null; S.curTerm=a.term||"1";
   S.customQuestions=a.customQuestions||null; S.customTitle=a.customTitle||null;
-  S.answers={};S.result=null;S.plan=null;S.taskDone={};S.writeResponse="";S.activeTab="diagnostic";
+  // Retake = RESUME where the student left off. The paper regenerates identically from
+  // the same seed (genNonce unchanged), so the saved answers still line up by question
+  // index. Restore them (and any written response) instead of wiping the attempt.
+  var snap=a.snapshot&&a.snapshot.result;
+  var priorAns = (a.status==="completed") ? (a.answers || (snap&&snap.answers) || {}) : {};
+  var priorWrite = (a.status==="completed") ? (a.writeResponse || (snap&&snap.writeResponse) || "") : "";
+  S.answers=Object.assign({},priorAns);S.result=null;S.plan=null;S.taskDone={};S.writeResponse=priorWrite;S.activeTab="diagnostic";
   save(); render(); lockdownStart("diagnostic");
 }
 
@@ -2785,12 +2802,14 @@ function downloadStudentMarked(email,classId){
   if(skipped) setTimeout(function(){ alert(done+" term(s) exported. "+skipped+" custom test(s) without a saved paper were skipped."); },250);
  }catch(e){ alert("Sorry — couldn't build the student PDF: "+((e&&e.message)||e)); }
 }
-function grade(){
+function grade(force){
   if(READONLY) return;
   if(S.result){ S.activeTab="results"; save(); render(); return; }
   const qs=getQuestions();
   const unanswered=qs.filter((q,i)=>S.answers[i]==null).length;
-  if(unanswered>0){ alert("Please answer all "+qs.length+" questions before submitting. You still have "+unanswered+" left."); return; }
+  // Normal submit requires every question answered. A forced submit (integrity
+  // kick-out) grades whatever is there and scores the rest as incorrect.
+  if(unanswered>0 && !force){ alert("Please answer all "+qs.length+" questions before submitting. You still have "+unanswered+" left."); return; }
   const subj=S.student.subject, areas=skillsFor(subj);
   const per={}; areas.forEach(a=>per[a]={correct:0,total:0});
   let correct=0;
@@ -2802,7 +2821,7 @@ function grade(){
   // Classify the student as a Low / Medium / High achiever from performance across the
   // Foundational / Core / Challenge difficulty bands (the core purpose of the diagnostic).
   const achiever=computeAchiever(qs, S.answers);
-  S.result={ when:new Date().toISOString(), overallPct, correct, total:qs.length, skillPct, per, level:levelFromPct(overallPct), achiever:achiever };
+  S.result={ when:new Date().toISOString(), overallPct, correct, total:qs.length, skillPct, per, level:levelFromPct(overallPct), achiever:achiever, terminated:!!force };
   S.result.writePrompt=(subj==="English")?(writingPromptRot(S.student.prevGrade,S.curTerm,studentNonce())||null):null;
   S.result.writeResponse=S.writeResponse||"";
   S.result.writingProvisional=writingProvisional;
