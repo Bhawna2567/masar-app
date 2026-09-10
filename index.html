@@ -53,6 +53,16 @@ input:focus,select:focus{outline:none;border-color:var(--green)}
 .pill.red{background:#ffe4e6;color:var(--red)}
 .pill.grey{background:#eef1f5;color:var(--muted)}
 .q{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+/* Side-by-side reading layout: passage stays visible while the questions scroll. */
+.readtest{display:flex;gap:16px;align-items:flex-start;margin:8px 0 14px}
+.rt-passage{flex:0 0 42%;background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:14px;position:sticky;top:56px;max-height:calc(100vh - 96px);overflow:auto}
+.rt-passage h3{margin:0 0 6px;font-size:15px}
+.rt-passage .rt-text{font-size:14px;line-height:1.8}
+.rt-questions{flex:1 1 auto;min-width:0}
+@media(max-width:820px){
+  .readtest{flex-direction:column;gap:10px}
+  .rt-passage{flex:none;width:auto;position:sticky;top:44px;max-height:42vh;box-shadow:0 4px 10px rgba(0,0,0,.06)}
+}
 .q .meta{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
 .q .stem{font-size:15px;font-weight:600;margin-bottom:12px}
 .opt{display:block;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:.12s}
@@ -135,6 +145,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="pool-math-hs.js"></script>
 <script src="pool-english.js"></script>
 <script src="pool-physics.js"></script>
+<script src="english-gen.js"></script>
+<script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -196,7 +208,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-10g";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10k";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -231,8 +243,8 @@ function pmNoMakers(b,r){ var NO="Number & Operations",L=[];
   } else if(b<=7){
     L.push(function(){var a=pmRi(r,14,40),c=pmRi(r,5,15);return pmItem(NO,"F","Addition","What is "+a+" + "+c+"?",a+c,pmNear(a+c),r);});
     L.push(function(){var a=pmRi(r,20,60),c=pmRi(r,6,18);return pmItem(NO,"F","Subtraction","What is "+a+" - "+c+"?",a-c,pmNear(a-c),r);});
-    L.push(function(){var a=pmRi(r,4,9),c=pmRi(r,3,7);return pmItem(NO,"F","Multiplication","What is "+a+" x "+c+"?",a*c,pmNear(a*c),r);});
-    L.push(function(){var p=pmPick(r,[10,25,50]),bs=pmPick(r,[40,60,80,120,200]);return pmItem(NO,"C","Percentages","What is "+p+"% of "+bs+"?",p*bs/100,pmNear(p*bs/100),r);});
+    L.push(function(){var a=pmRi(r,4,12),c=pmRi(r,3,9);return pmItem(NO,"F","Multiplication","What is "+a+" x "+c+"?",a*c,pmNear(a*c),r);});
+    L.push(function(){var p=pmPick(r,[10,20,25,50,75]),bs=pmPick(r,[40,60,80,120,160,200,240]);return pmItem(NO,"C","Percentages","What is "+p+"% of "+bs+"?",p*bs/100,pmNear(p*bs/100),r);});
     L.push(function(){var p=pmRi(r,1,4),q=pmRi(r,5,9),g2=pmRi(r,2,4);return pmItem(NO,"C","Fractions","Write "+(p*g2)+"/"+(q*g2)+" in its simplest form.",p+"/"+q,[(p*g2)+"/"+q,p+"/"+(q*g2),(p+1)+"/"+q],r);});
     L.push(function(){var base=pmPick(r,[200,400,600]),p=pmPick(r,[15,30,40]);return pmItem(NO,"H","Percentages","A jacket is "+base+" dirhams. "+p+"% off. How much do you save?",base*p/100,pmNear(base*p/100),r);});
     L.push(function(){var a=pmRi(r,2,5);return pmItem(NO,"H","Powers","What is "+a+" cubed? ("+a+" x "+a+" x "+a+")",a*a*a,pmNear(a*a*a),r);});
@@ -247,7 +259,7 @@ function pmNoMakers(b,r){ var NO="Number & Operations",L=[];
     // Grades 9-12: indices, roots, standard form, surds, percentage change
     L.push(function(){var a=pmRi(r,3,5),c=pmRi(r,2,3);return pmItem(NO,"F","Indices","Evaluate 2^"+a+" x 2^"+c+".",Math.pow(2,a+c),pmNear(Math.pow(2,a+c)),r);});
     L.push(function(){var n=pmPick(r,[11,12,13,14,15]);return pmItem(NO,"F","Square roots","What is the square root of "+(n*n)+"?",n,pmNear(n),r);});
-    L.push(function(){var p=pmPick(r,[15,35,45,60]),base=pmPick(r,[120,200,240,400]);return pmItem(NO,"C","Percentages","What is "+p+"% of "+base+"?",Math.round(p*base/100),pmNear(Math.round(p*base/100)),r);});
+    L.push(function(){var p=pmPick(r,[15,25,35,45,55,60,75]),base=pmPick(r,[120,160,200,240,320,400,500]);return pmItem(NO,"C","Percentages","What is "+p+"% of "+base+"?",Math.round(p*base/100),pmNear(Math.round(p*base/100)),r);});
     L.push(function(){var base=pmPick(r,[200,400,500,800]);return pmItem(NO,"C","Percentage change","A price of "+base+" rises 10% then falls 10%. What is the final price?",Math.round(base*1.1*0.9),[base,Math.round(base*1.2),Math.round(base*0.81)],r);});
     L.push(function(){var s=pmPick(r,[["45000","4.5 x 10^4"],["6300","6.3 x 10^3"],["120000","1.2 x 10^5"],["780000","7.8 x 10^5"]]);return pmItem(NO,"H","Standard form","Write "+s[0]+" in standard form.",s[1],["4.5 x 10^3","4.5 x 10^5","6.3 x 10^4","1.2 x 10^4"],r);});
     L.push(function(){var t=pmPick(r,[[50,5,2],[18,3,2],[32,4,2],[72,6,2],[75,5,3]]);return pmItem(NO,"H","Surds","The square root of "+t[0]+" can be written as a times the square root of "+t[2]+". What is a?",t[1],pmNear(t[1]),r);});
@@ -268,8 +280,8 @@ function pmAlgMakers(b,r){ var ALG="Algebra",L=[];
   } else {
     // Grades 9-12: two-step equations, functions, quadratics, indices, sequences, simultaneous
     L.push(function(){var a=pmRi(r,2,5),x=pmRi(r,2,9),bb=pmRi(r,1,9);return pmItem(ALG,"F","Solving equations","Solve: "+a+"x + "+bb+" = "+(a*x+bb),x,pmNear(x),r);});
-    L.push(function(){var a=pmRi(r,2,4),bb=pmRi(r,1,6),x=pmRi(r,2,8);return pmItem(ALG,"F","Functions","If f(x) = "+a+"x + "+bb+", find f("+x+").",a*x+bb,pmNear(a*x+bb),r);});
-    L.push(function(){var p=pmRi(r,3,12);return pmItem(ALG,"C","Quadratic equations","Solve x^2 = "+(p*p)+" (give the positive value).",p,pmNear(p),r);});
+    L.push(function(){var a=pmRi(r,2,6),bb=pmRi(r,1,9),x=pmRi(r,2,12);return pmItem(ALG,"F","Functions","If f(x) = "+a+"x + "+bb+", find f("+x+").",a*x+bb,pmNear(a*x+bb),r);});
+    L.push(function(){var p=pmRi(r,3,15);return pmItem(ALG,"C","Quadratic equations","Solve x^2 = "+(p*p)+" (give the positive value).",p,pmNear(p),r);});
     L.push(function(){var a=pmRi(r,4,7),c=pmRi(r,1,3);return pmItem(ALG,"C","Indices","Simplify x^"+a+" ÷ x^"+c+".","x^"+(a-c),["x^"+(a+c),"x^"+(a*c),"x^"+a],r);});
     L.push(function(){var first=pmRi(r,2,6),d=pmRi(r,2,6),n=pmRi(r,6,12);return pmItem(ALG,"H","Sequences","The sequence "+first+", "+(first+d)+", "+(first+2*d)+", ... What is the "+n+"th term?",first+(n-1)*d,pmNear(first+(n-1)*d),r);});
     L.push(function(){var s=2*pmRi(r,5,10),d=pmPick(r,[2,4,6]);return pmItem(ALG,"H","Simultaneous equations","If x + y = "+s+" and x - y = "+d+", what is x?",(s+d)/2,pmNear((s+d)/2),r);});
@@ -320,6 +332,9 @@ function genMathParametric(gradeId,seedStr,count){
   return out.slice(0,count);
 }
 function assembleDiagnostic(grade,subj,seedStr){
+  // English is fully generated (grammar + vocabulary) so every paper is different and never repeats.
+  // Reading questions and the writing prompt are added by the callers (readingCompRot / writingPromptRot).
+  if(subj==="English" && typeof ENG_GEN!=="undefined" && ENG_GEN.items){ return ENG_GEN.items(grade,seedStr,12); }
   // A curriculum-aligned pool (if present) overrides everything. For Maths grades without a pool,
   // fall back to the parametric generator (fresh numbers, never repeats).
   var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
@@ -1902,9 +1917,10 @@ function downloadDiagnosticPDF(keepCurrent){
     d.qs.forEach(function(q,i){ wrap("Q"+(i+1)+". "+(q.q||""),11,"bold",0); nl(1);
       (q.options||[]).forEach(function(o,oi){ wrap(LET[oi]+")  "+o,10,"normal",14); }); nl(8); });
     // Writing task (English built-in tests) — a written response, not multiple choice
-    if(d.subj==="English" && d.passage && typeof WRITING_PROMPTS!=="undefined" && WRITING_PROMPTS[d.grade]){
+    var _pdfWp=(d.subj==="English" && d.passage)?writingPromptRot(d.grade,"1",pvNonce()):null;
+    if(_pdfWp){
       nl(6); wrap("Writing Task — written response",12,"bold",0); nl(1);
-      wrap(WRITING_PROMPTS[d.grade],11,"normal",0); nl(3);
+      wrap(_pdfWp,11,"normal",0); nl(3);
       wrap("Write your response on the lines below:",9,"italic",0); nl(8);
       doc.setDrawColor(200);
       for(var wl=0; wl<12; wl++){ if(y>H-M){ doc.addPage(); y=M; } doc.line(x,y,x+LW,y); y+=22; }
@@ -1924,11 +1940,14 @@ function previewDiagnostic(){
   var m=document.getElementById("exModal"); if(!m)return;
   if(!qs||!qs.length){ m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">Preview</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="muted" style="margin:0">No questions available for this selection yet.</p></div></div>'; m.style.display="block"; return; }
   var body="";
-  if(passage){ body+='<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px"><b>📖 Reading passage — '+passage.title+'</b><div style="font-size:13px;line-height:1.7;margin-top:6px">'+passage.passage.replace(/</g,"&lt;")+'</div></div>'; }
+  // Two-pane layout (same as the student test): passage in a sticky panel beside the questions.
+  if(passage){ body+='<div class="readtest"><aside class="rt-passage"><h3>📖 Reading passage — '+passage.title+'</h3><div class="rt-text">'+passage.passage.replace(/</g,"&lt;")+'</div></aside><div class="rt-questions">'; }
   body+=qs.map(function(q,i){ return '<div class="q"><div class="meta">'+(q.skill||"")+'</div><div class="stem">Q'+(i+1)+'. '+((q.q||"")+"").replace(/</g,"&lt;")+'</div>'+(q.options||[]).map(function(o,oi){ return '<label class="opt '+(oi===q.answer?"exok":"")+'">'+(oi===q.answer?"✅ ":"")+(""+o).replace(/</g,"&lt;")+'</label>'; }).join("")+'</div>'; }).join("");
-  if(subj==="English" && passage && typeof WRITING_PROMPTS!=="undefined" && WRITING_PROMPTS[grade]){
-    body+='<div class="q"><div class="meta">Writing · Written Response</div><div class="stem">✍️ Writing Task — students write a full response (not multiple choice):</div><p style="font-size:13px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0 0">'+(""+WRITING_PROMPTS[grade]).replace(/</g,"&lt;")+'</p></div>';
+  var _pvWp=(subj==="English" && passage)?writingPromptRot(grade,"1",pvNonce()):null;
+  if(_pvWp){
+    body+='<div class="q"><div class="meta">Writing · Written Response</div><div class="stem">✍️ Writing Task — students write a full response (not multiple choice):</div><p style="font-size:13px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0 0">'+(""+_pvWp).replace(/</g,"&lt;")+'</p></div>';
   }
+  if(passage){ body+='</div></div>'; }  // close .rt-questions and .readtest
   m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">👁 Preview — '+title+'</h2><div><button class="btn gold sm" style="margin-right:6px" onclick="downloadDiagnosticPDF(true)">⬇ Download PDF</button><button class="btn ghost sm" onclick="closeExercise()">✕</button></div></div><p class="sub">'+qs.length+' question(s) · correct answers are highlighted here for you. Students do not see the answers.</p>'+body+'</div></div>';
   m.style.display="block";
 }
@@ -2568,8 +2587,17 @@ var EXTRA_WRITING={
  D:["Should students use phones in class? Argue for or against, with reasons.","Write about a goal you have and how you plan to reach it.","Discuss the good and bad sides of social media, using examples."]
 };
 function rotIdx(term,nonce,len){ if(len<=0) return 0; var i=((parseInt(term,10)||1)-1)+(parseInt(nonce,10)||0); return ((i%len)+len)%len; }
-function readingCompRot(grade,term,nonce){ var list=[readingCompFor(grade)].concat(EXTRA_READING[engBand(grade)]||[]); return list[rotIdx(term,nonce,list.length)]; }
-function writingPromptRot(grade,term,nonce){ var base=(typeof WRITING_PROMPTS!=="undefined"&&WRITING_PROMPTS[grade])?[WRITING_PROMPTS[grade]]:[]; var list=base.concat(EXTRA_WRITING[engBand(grade)]||[]); if(!list.length) return null; return list[rotIdx(term,nonce,list.length)]; }
+function readingCompRot(grade,term,nonce){
+  // Fully generated passage + comprehension questions, seeded by grade/term/version so every
+  // diagnostic gets a totally different text — no repetition. Falls back to the static set if the
+  // generator file isn't present.
+  if(typeof ENG_GEN!=="undefined" && ENG_GEN.reading){ return ENG_GEN.reading(grade, "G"+grade+"|T"+(term||"1")+"|N"+(nonce||0)); }
+  var list=[readingCompFor(grade)].concat(EXTRA_READING[engBand(grade)]||[]); return list[rotIdx(term,nonce,list.length)];
+}
+function writingPromptRot(grade,term,nonce){
+  if(typeof ENG_GEN!=="undefined" && ENG_GEN.writing){ return ENG_GEN.writing(grade, "G"+grade+"|T"+(term||"1")+"|N"+(nonce||0)); }
+  var base=(typeof WRITING_PROMPTS!=="undefined"&&WRITING_PROMPTS[grade])?[WRITING_PROMPTS[grade]]:[]; var list=base.concat(EXTRA_WRITING[engBand(grade)]||[]); if(!list.length) return null; return list[rotIdx(term,nonce,list.length)];
+}
 function studentNonce(){ return (S.student&&S.student.genNonce)||0; }
 // The diagnostic is delivered in Arabic (RTL, Arabic bank) only when the class language
 // is Arabic AND the subject is Mathematics (the Arabic bank covers Maths).
@@ -2622,12 +2650,17 @@ function viewDiagnostic(){
     : `<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
     <p class="sub">${S.student.name} is entering ${gLabel(S.student.curGrade)}. This test checks mastery of the prior grade before measuring readiness for the new one.</p>
     ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">This is your <b>Term ${S.curTerm||""}</b> diagnostic — it builds on your <b>Term ${S.prior.term}</b> results (overall ${S.prior.score}%). Your plan continues to target the skills you were still developing.</div>`:""}`;
-  if(!AR && S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length)){
+  // When there is a reading passage, open a two-pane layout: the passage sits in a sticky panel
+  // (beside the questions on wide screens, pinned at the top on phones/tablets) so students can
+  // keep it in view while they scroll the questions. Otherwise the test is a single column.
+  var hasPassage = (!AR && S.student.subject==="English" && !(S.customQuestions&&S.customQuestions.length));
+  if(hasPassage){
     var _rc=readingCompRot(S.student.prevGrade,S.curTerm,studentNonce());
-    html+=`<div style="background:#f3f4ff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 14px">
-      <h3 style="margin:0 0 6px;font-size:15px">📖 Reading passage — ${_rc.title}</h3>
-      <div style="font-size:14px;line-height:1.75">${_rc.passage.replace(/</g,"&lt;")}</div>
-      <p class="muted" style="font-size:12px;margin:8px 0 0">Read the passage, then answer the reading questions that follow.</p></div>`;
+    html+=`<div class="readtest"><aside class="rt-passage">
+      <h3>📖 Reading passage — ${_rc.title}</h3>
+      <div class="rt-text">${_rc.passage.replace(/</g,"&lt;")}</div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">Keep this passage in view while you answer the reading questions.</p></aside>
+      <div class="rt-questions">`;
   }
   qs.forEach((q,i)=>{
     html+=`<div class="q"${AR?' dir="rtl" style="text-align:right"':''}><div class="meta">${skillLabel(q.skill,AR)}</div><div class="stem">${AR?("سؤال "+(i+1)+". "):("Q"+(i+1)+". ")}${q.q}</div>`;
@@ -2648,7 +2681,9 @@ function viewDiagnostic(){
   const answered=Object.keys(S.answers).length;
   const allDone=answered>=qs.length;
   html+=`<div class="flex-between"${AR?' dir="rtl"':''}><span class="muted">${counterText(answered,qs.length,allDone,AR)}</span>
-    <button id="submitBtn" class="btn gold" ${allDone?"":"disabled"} onclick="grade()">${AR?"إرسال وتحليل ←":"Submit &amp; analyse →"}</button></div></div>`;
+    <button id="submitBtn" class="btn gold" ${allDone?"":"disabled"} onclick="grade()">${AR?"إرسال وتحليل ←":"Submit &amp; analyse →"}</button></div>`;
+  if(hasPassage){ html+=`</div></div>`; }  // close .rt-questions and .readtest
+  html+=`</div>`;  // close .card
   return html;
 }
 function counterText(answered,total,allDone,ar){
@@ -2712,9 +2747,15 @@ function rebuildQuestionsForAssignment(a){
   if(isArabic(lang)&&subj==="Math"){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
   // Reproduce the same assembled pool test (deterministic from the student + grade + subject + term).
   var assembled=assembleDiagnostic(g,subj,diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0));
+  if(subj==="English"){
+    // Reproduce the same generated English paper (pool then reading), matching what the student saw.
+    var rc=readingCompRot(g,a.term,a.genNonce||0);
+    var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};});
+    var bankE=(assembled&&assembled.length)?assembled:((QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:[]);
+    return (bankE||[]).concat(cq);
+  }
   if(assembled&&assembled.length) return assembled;
   var bank=(QUESTION_BANK[g]&&QUESTION_BANK[g][subj])?QUESTION_BANK[g][subj]:null;
-  if(subj==="English"){ var rc=readingCompFor(g); var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:"Reading"};}); return bank? cq.concat(bank) : cq; }
   return bank;
 }
 // Normalize a completed assignment into the data the marked-PDF renderer needs, or null if
@@ -3082,6 +3123,7 @@ function viewFolders(){
           <span class="pill ${done===w.tasks.length?"green":done>0?"amber":"grey"}">${done}/${w.tasks.length} done</span>
         </div>
         <div class="body">
+          ${(typeof SKILL_TUTORIALS!=="undefined"&&SKILL_TUTORIALS[w.skill])?`<div class="notice" style="margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eff6ff;border-color:#bfdbfe;color:var(--ink)"><span>📘 New to <b>${w.skill}</b>? Read a quick explanation before you practise.</span><button class="btn sm" style="white-space:nowrap" onclick="showTutorial('${w.skill.replace(/'/g,"\\'")}')">📘 Learn this skill</button></div>`:""}
           ${w.tasks.map((tk,i)=>{const key=`${t}-${w.week}-${i}`;const ck=!!S.taskDone[key];
             return `<div class="task"><input type="checkbox" ${ck?"checked":""} onchange="toggleTask('${key}','${id}')">
             <div style="flex:1"><div class="tt" style="${ck?'text-decoration:line-through;color:#8a94a3':''}">${tk}</div>
@@ -3316,6 +3358,21 @@ let EX=null;
 // Practice runs in the same secure "lockdown" environment as the diagnostic (fullscreen, blocked
 // copy/paste/right-click, tab-switch/leave detection). Uses the "activity" context, so leaving is
 // flagged with the on-screen guard but the practice is NOT auto-submitted or ended (it isn't graded).
+// Show a student-facing explanation of a skill (from the weekly folder) before practising.
+// Read-only, no lockdown — it's just an explanation to learn from.
+function showTutorial(skill){
+  var tut=(typeof SKILL_TUTORIALS!=="undefined")?SKILL_TUTORIALS[skill]:null;
+  var m=document.getElementById("exModal"); if(!m)return;
+  if(!tut){ m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">'+skill+'</h2><button class="btn ghost sm" onclick="closeTutorial()">✕</button></div><p class="muted">An explanation for this skill isn\'t available yet.</p></div></div>'; m.style.display="block"; return; }
+  m.innerHTML='<div class="ovl"><div class="ex">'+
+    '<div class="flex-between" style="align-items:center"><h2 style="margin:0">📘 '+tut.title+'</h2><button class="btn ghost sm" onclick="closeTutorial()">✕</button></div>'+
+    '<p class="sub" style="margin:4px 0 12px">Read this, then close it and tap <b>▶ Practice</b> on a task to try it.</p>'+
+    '<div style="font-size:14px;line-height:1.6">'+tut.html+'</div>'+
+    '<div style="margin-top:16px;text-align:right"><button class="btn gold" onclick="closeTutorial()">Got it — start practising</button></div>'+
+    '</div></div>';
+  m.style.display="block";
+}
+function closeTutorial(){ var m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
 function launchExercise(key,skill){
   // Practice opens for students AND for teachers previewing a student (read-only just means
   // ticking the box won't be saved). Any error is surfaced instead of failing silently.
@@ -3338,6 +3395,12 @@ function finishExercise(){ if(EX){ S.taskDone[EX.key]=true; save(); } closeExerc
 function closeExercise(){ lockdownEnd(); EX=null; const m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
 function renderExercise(){
   const m=document.getElementById("exModal"); const d=EX.def; let body="";
+  // A collapsible explanation of the skill, right at the top, so students can review it while they
+  // work through the exercise (open by default before they submit).
+  var _tut=(typeof SKILL_TUTORIALS!=="undefined")?SKILL_TUTORIALS[EX.skill]:null;
+  if(_tut){ body+=`<details ${EX.submitted?"":"open"} style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:8px 12px;margin:0 0 12px">
+    <summary style="cursor:pointer;font-weight:700;font-size:14px">📘 Quick explanation — ${_tut.title}</summary>
+    <div style="font-size:13.5px;line-height:1.6;margin-top:8px">${_tut.html}</div></details>`; }
   if(d.type==="writing"){
     body=(d.passageHtml||"")+`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
       <textarea oninput="exWrite(this.value)" rows="8" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(EX.resp.text||"").replace(/</g,"&lt;")}</textarea>`;
