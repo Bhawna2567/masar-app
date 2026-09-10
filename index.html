@@ -196,7 +196,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-10c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1578,12 +1578,21 @@ function registerViolation(){
 function kickOut(){
   if(LOCK.kicked) return;
   LOCK.kicked=true;
-  try{ if(AUTH&&AUTH.role==="student"&&S.activeAssignment){ db.collection("assignments").doc(S.activeAssignment).update({violations:LOCK.leaves,kicked:true,kickedAt:Date.now()}).catch(function(){}); } }catch(e){}
   // Force-submit whatever answers exist so the attempt is recorded AND the student
   // is actually removed from the test screen. grade(true) scores unanswered items as
   // incorrect, sets S.result, tears down lockdown, and re-renders to the results view.
   var graded=false;
-  try{ if(typeof S!=="undefined" && S.result==null){ grade(true); graded=(S.result!=null); } }catch(e){}
+  try{ if(typeof S!=="undefined" && S.result==null){ grade(true); graded=(S.result!=null); } else if(typeof S!=="undefined" && S.result){ graded=true; } }catch(e){}
+  // ALWAYS stamp the removal on the assignment — status "completed" plus the kicked flag —
+  // so the teacher sees the student was flagged and can "Allow retake", even if auto-grading
+  // couldn't run. Merge, so grade()'s own score/level write (if it ran) is preserved.
+  try{
+    if(AUTH&&AUTH.role==="student"&&S.activeAssignment){
+      var rec={violations:LOCK.leaves,kicked:true,kickedAt:Date.now(),status:"completed",retakeAllowed:false};
+      if(!graded){ rec.score=0; rec.level=""; rec.levelCls="grey"; rec.completedAt=Date.now(); }
+      db.collection("assignments").doc(S.activeAssignment).set(rec,{merge:true}).catch(function(){});
+    }
+  }catch(e){}
   lockdownEnd();
   // Fallback: if grading couldn't run for any reason, still eject the student from the
   // test so they can't keep working — leave the diagnostic tab and re-render.
@@ -2226,10 +2235,13 @@ function viewClass(id){
   const students=new Set(caAll.map(a=>a.studentEmail)).size;
   const rosterRows=ca.length?ca.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map(a=>{
     const tier=a.achieverTier||(a.achiever&&a.achiever.tier)||null;
-    const st=a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`);
-    const flag=(a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span> ${rtiChip(tier)}`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`));
+    const st=a.kicked?`<span class="pill red">Removed</span>${a.status==="completed"?` <span class="pill ${a.levelCls||rag(a.score||0)}" style="margin-left:4px">${a.score||0}%</span>`:""}`:(a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`));
+    const flag=a.kicked?`<span class="pill red">⛔ Flagged — removed</span>`:((a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span> ${rtiChip(tier)}`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`)));
     const termsDone=caAll.filter(x=>x.studentEmail===a.studentEmail&&x.status==="completed").length;
-    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> <button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
+    // Allow retake appears for any completed attempt AND for any kicked-out student (even if the
+    // force-submit couldn't record a full result), so the teacher can always reopen the test.
+    const retakeBtn=(a.status==="completed"||a.kicked)?`<button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
+    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> ${retakeBtn}`:retakeBtn;
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
     return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
@@ -2813,7 +2825,9 @@ function grade(force){
   const subj=S.student.subject, areas=skillsFor(subj);
   const per={}; areas.forEach(a=>per[a]={correct:0,total:0});
   let correct=0;
-  qs.forEach((q,i)=>{ per[q.skill].total++; if(S.answers[i]===q.answer){correct++;per[q.skill].correct++;} });
+  // Guard against a question whose skill isn't in the subject's skill list (would otherwise
+  // throw and abort a forced/kick-out submit, leaving the attempt unrecorded).
+  qs.forEach((q,i)=>{ if(!per[q.skill])per[q.skill]={correct:0,total:0}; per[q.skill].total++; if(S.answers[i]===q.answer){correct++;per[q.skill].correct++;} });
   const overallPct=Math.round(correct/qs.length*100);
   const skillPct={}; areas.forEach(a=>{ skillPct[a]= per[a].total? Math.round(per[a].correct/per[a].total*100):0; });
   let writingProvisional=null, writingAssessObj=null;
