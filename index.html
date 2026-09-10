@@ -208,7 +208,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-10l";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10m";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3400,7 +3400,7 @@ function renderExercise(){
     <summary style="cursor:pointer;font-weight:700;font-size:14px">📘 Quick explanation — ${_tut.title}</summary>
     <div style="font-size:13.5px;line-height:1.6;margin-top:8px">${_tut.html}</div></details>`; }
   if(d.type==="writing"){
-    body=(d.passageHtml||"")+`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
+    body+=(d.passageHtml||"")+`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
       <textarea oninput="exWrite(this.value)" rows="8" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(EX.resp.text||"").replace(/</g,"&lt;")}</textarea>`;
   } else {
     if(d.instr) body+=`<div class="notice" style="margin:0 0 12px;background:#eef2ff;border-color:#c7d2fe"><b>Activity:</b> ${String(d.instr).replace(/</g,"&lt;")} <span class="muted">— practise this ${EX.skill} skill with the ${d.type==="mcq"?"questions":"problems"} below.</span></div>`;
