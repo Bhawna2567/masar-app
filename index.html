@@ -196,7 +196,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-10e";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10f";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3390,6 +3390,12 @@ if("serviceWorker" in navigator && location.protocol.startsWith("http")){
     }).catch(()=>{});
     // Check for an updated worker each time the app regains focus.
     document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{try{r.update();}catch(_){}})); } });
+    // AND poll on a timer. A student sitting in the fullscreen locked test never fires
+    // visibilitychange, so without this a freshly-deployed fix would never reach them.
+    // Every 25s we ask the browser to re-check sw.js; if it changed, the new worker activates,
+    // controllerchange fires, and the page reloads once (answers are saved in localStorage, so
+    // they survive the reload and the lockdown counter simply restarts at zero — no violation).
+    setInterval(function(){ try{ navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{try{r.update();}catch(_){}})); }catch(_){}}, 25000);
   });
 }
 
