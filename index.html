@@ -208,7 +208,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-10m";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-10n";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3121,7 +3121,7 @@ function viewFolders(){
           <span class="pill ${done===w.tasks.length?"green":done>0?"amber":"grey"}">${done}/${w.tasks.length} done</span>
         </div>
         <div class="body">
-          ${(typeof SKILL_TUTORIALS!=="undefined"&&SKILL_TUTORIALS[w.skill])?`<div class="notice" style="margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eff6ff;border-color:#bfdbfe;color:var(--ink)"><span>📘 New to <b>${w.skill}</b>? Read a quick explanation before you practise.</span><button class="btn sm" style="white-space:nowrap" onclick="showTutorial('${w.skill.replace(/'/g,"\\'")}')">📘 Learn this skill</button></div>`:""}
+          ${(typeof SKILL_TUTORIALS!=="undefined"&&SKILL_TUTORIALS[w.skill])?`<div class="notice" style="margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eff6ff;border-color:#bfdbfe;color:var(--ink)"><span>📘 <b>Learn ${w.skill} first</b> — a step-by-step explanation with examples, in English &amp; Arabic.</span><button class="btn sm" style="white-space:nowrap" onclick="showTutorial('${w.skill.replace(/'/g,"\\'")}')">📘 Learn this skill</button></div>`:""}
           ${w.tasks.map((tk,i)=>{const key=`${t}-${w.week}-${i}`;const ck=!!S.taskDone[key];
             return `<div class="task"><input type="checkbox" ${ck?"checked":""} onchange="toggleTask('${key}','${id}')">
             <div style="flex:1"><div class="tt" style="${ck?'text-decoration:line-through;color:#8a94a3':''}">${tk}</div>
