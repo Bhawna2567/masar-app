@@ -91,3 +91,65 @@ if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
    {s:RS,l:"F",sub:"Acids and bases",a:0,en:{q:"Blue litmus paper turns red in a(n):",o:["acid","base","neutral solution","salt solution"]},ar:{q:"يتحوّل ورق تباع الشمس الأزرق إلى الأحمر في:",o:["حمض","قاعدة","محلول متعادل","محلول ملحي"]}}
   ]);
 })();
+
+/* ================= EXPANSION PACK (adds ~12 more bilingual questions per grade set) =================
+   Appended so each Chemistry pool holds ~32 questions; the diagnostic picks 20 for real variety. */
+(function(){
+  var MAS="Matter & Atomic Structure", BC="Bonding & Compounds", RS="Reactions & Stoichiometry", SSO="States, Solutions & Organic";
+  function addC(grades, items){
+    var EN=items.map(function(it){ return {skill:it.s, level:it.l, sub:it.sub, q:it.en.q, options:it.en.o, answer:it.a}; });
+    var AR=items.map(function(it){ return {skill:it.s, level:it.l, sub:it.sub, q:it.ar.q, options:it.ar.o, answer:it.a}; });
+    grades.forEach(function(g){
+      QUESTION_POOL[g]=QUESTION_POOL[g]||{}; QUESTION_POOL[g]["Chemistry"]=(QUESTION_POOL[g]["Chemistry"]||[]).concat(EN);
+      QUESTION_BANK_AR[g]=QUESTION_BANK_AR[g]||{}; QUESTION_BANK_AR[g]["Chemistry"]=(QUESTION_BANK_AR[g]["Chemistry"]||[]).concat(AR);
+    });
+  }
+
+  /* ---------- GRADE 9 chemistry (diagnoses a Grade 10 class) ---------- */
+  addC(["9A","9G"],[
+   {s:MAS,l:"F",sub:"Subatomic particles",a:0,en:{q:"Which particle has no electric charge?",o:["Neutron","Proton","Electron","Ion"]},ar:{q:"أيّ جسيم ليس له شحنة كهربائية؟",o:["النيوترون","البروتون","الإلكترون","الأيون"]}},
+   {s:MAS,l:"C",sub:"Periodic table",a:0,en:{q:"The vertical columns of the periodic table are called:",o:["groups","periods","shells","bonds"]},ar:{q:"الأعمدة الرأسية في الجدول الدوري تُسمى:",o:["مجموعات","دورات","أغلفة","روابط"]}},
+   {s:MAS,l:"C",sub:"Periodic table",a:0,en:{q:"Elements on the left side of the periodic table are mostly:",o:["metals","nonmetals","noble gases","liquids"]},ar:{q:"العناصر في الجانب الأيسر من الجدول الدوري معظمها:",o:["فلزات","لافلزات","غازات نبيلة","سوائل"]}},
+   {s:MAS,l:"H",sub:"Isotopes",a:0,en:{q:"Isotopes of an element have the same number of protons but different numbers of:",o:["neutrons","electrons","atoms","molecules"]},ar:{q:"نظائر العنصر لها العدد نفسه من البروتونات لكن أعداد مختلفة من:",o:["النيوترونات","الإلكترونات","الذرات","الجزيئات"]}},
+   {s:BC,l:"F",sub:"Compounds",a:0,en:{q:"Water (H₂O) is an example of a:",o:["compound","element","metal","mixture"]},ar:{q:"الماء (H₂O) مثال على:",o:["مركّب","عنصر","فلز","خليط"]}},
+   {s:BC,l:"C",sub:"Ions",a:0,en:{q:"An atom that has lost an electron becomes a:",o:["positive ion","negative ion","neutron","molecule"]},ar:{q:"الذرة التي تفقد إلكترونًا تصبح:",o:["أيونًا موجبًا","أيونًا سالبًا","نيوترونًا","جزيئًا"]}},
+   {s:RS,l:"F",sub:"Physical vs chemical change",a:0,en:{q:"Which is a chemical change?",o:["Iron rusting","Ice melting","Salt dissolving","Cutting paper"]},ar:{q:"أيٌّ تغيّر كيميائي؟",o:["صدأ الحديد","انصهار الثلج","ذوبان الملح","قص الورق"]}},
+   {s:RS,l:"C",sub:"Chemical reactions",a:0,en:{q:"In a chemical reaction, the starting substances are called the:",o:["reactants","products","catalysts","mixtures"]},ar:{q:"في التفاعل الكيميائي، المواد الابتدائية تُسمى:",o:["المتفاعلات","النواتج","العوامل الحفازة","المخاليط"]}},
+   {s:RS,l:"H",sub:"Conservation of mass",a:0,en:{q:"In a closed chemical reaction, the total mass of the products equals the total mass of the:",o:["reactants","water","air","container"]},ar:{q:"في تفاعل كيميائي مغلق، تساوي الكتلة الكلية للنواتج الكتلة الكلية لـ:",o:["المتفاعلات","الماء","الهواء","الوعاء"]}},
+   {s:SSO,l:"F",sub:"States of matter",a:0,en:{q:"Which state of matter has a fixed volume but takes the shape of its container?",o:["Liquid","Solid","Gas","Plasma"]},ar:{q:"أيّ حالة للمادة لها حجم ثابت لكنها تأخذ شكل الوعاء؟",o:["السائل","الصلب","الغاز","البلازما"]}},
+   {s:SSO,l:"C",sub:"Solutions",a:0,en:{q:"In a solution of sugar in water, water is the:",o:["solvent","solute","precipitate","gas"]},ar:{q:"في محلول السكر في الماء، الماء هو:",o:["المذيب","المُذاب","الراسب","الغاز"]}},
+   {s:SSO,l:"C",sub:"Mixtures",a:0,en:{q:"A mixture that looks the same throughout is called:",o:["homogeneous","heterogeneous","an element","a compound"]},ar:{q:"الخليط الذي يبدو متجانسًا في كل أجزائه يُسمى:",o:["متجانسًا","غير متجانس","عنصرًا","مركّبًا"]}}
+  ]);
+
+  /* ---------- GRADE 10 chemistry (diagnoses a Grade 11 class) ---------- */
+  addC(["10A","10G"],[
+   {s:MAS,l:"C",sub:"Electron configuration",a:0,en:{q:"The maximum number of electrons in the first energy level (shell) is:",o:["2","8","18","1"]},ar:{q:"أقصى عدد للإلكترونات في مستوى الطاقة الأول (الغلاف) هو:",o:["2","8","18","1"]}},
+   {s:MAS,l:"H",sub:"Periodic trends",a:0,en:{q:"Moving left to right across a period, atomic radius generally:",o:["decreases","increases","stays the same","doubles"]},ar:{q:"عند الانتقال من اليسار إلى اليمين عبر الدورة، نصف القطر الذري عمومًا:",o:["يقل","يزداد","يبقى ثابتًا","يتضاعف"]}},
+   {s:MAS,l:"C",sub:"Valence electrons",a:0,en:{q:"The electrons in the outermost shell of an atom are called:",o:["valence electrons","core electrons","protons","neutrons"]},ar:{q:"الإلكترونات في الغلاف الخارجي للذرة تُسمى:",o:["إلكترونات التكافؤ","الإلكترونات الداخلية","البروتونات","النيوترونات"]}},
+   {s:BC,l:"C",sub:"Ionic bonding",a:0,en:{q:"An ionic bond usually forms between a metal and a:",o:["nonmetal","noble gas","different metal","liquid"]},ar:{q:"تتكوّن الرابطة الأيونية عادةً بين فلز و:",o:["لافلز","غاز نبيل","فلز آخر","سائل"]}},
+   {s:BC,l:"H",sub:"Molecular shapes",a:0,en:{q:"The shape of a molecule is determined mainly by the arrangement of its:",o:["electron pairs","neutrons","protons","isotopes"]},ar:{q:"يتحدد شكل الجزيء أساسًا بترتيب:",o:["أزواج الإلكترونات","النيوترونات","البروتونات","النظائر"]}},
+   {s:BC,l:"C",sub:"Naming compounds",a:0,en:{q:"The compound NaCl is named:",o:["sodium chloride","sodium chlorine","salt oxide","chlorine sodide"]},ar:{q:"المركّب NaCl يُسمّى:",o:["كلوريد الصوديوم","صوديوم كلورين","أكسيد الملح","صوديد الكلور"]}},
+   {s:RS,l:"C",sub:"Balancing equations",a:0,en:{q:"Balancing a chemical equation makes the number of each atom equal on:",o:["both sides","the left only","the right only","neither side"]},ar:{q:"موازنة المعادلة الكيميائية تجعل عدد كل ذرة متساويًا على:",o:["الطرفين","اليسار فقط","اليمين فقط","لا طرف"]}},
+   {s:RS,l:"H",sub:"The mole",a:0,en:{q:"One mole of any substance contains about 6.02 × 10²³:",o:["particles","grams","litres","atoms of carbon only"]},ar:{q:"مول واحد من أيّ مادة يحتوي على نحو 6.02 × 10²³:",o:["جسيمًا","غرامًا","لترًا","ذرة كربون فقط"]}},
+   {s:RS,l:"C",sub:"Types of reactions",a:0,en:{q:"A reaction in which a compound breaks into simpler substances is:",o:["decomposition","synthesis","neutralization","filtration"]},ar:{q:"التفاعل الذي يتفكك فيه مركّب إلى مواد أبسط هو:",o:["تفكك","اتحاد (بناء)","تعادل","ترشيح"]}},
+   {s:SSO,l:"C",sub:"Gas laws",a:0,en:{q:"At constant temperature, increasing the pressure on a gas will ___ its volume.",o:["decrease","increase","not change","double"]},ar:{q:"عند ثبوت درجة الحرارة، زيادة الضغط على غاز ___ حجمه.",o:["تقلّل","تزيد","لا تغيّر","تضاعف"]}},
+   {s:SSO,l:"F",sub:"Phase changes",a:0,en:{q:"The change from a liquid directly to a gas is called:",o:["evaporation","condensation","freezing","melting"]},ar:{q:"التحوّل من السائل مباشرة إلى غاز يُسمى:",o:["التبخّر","التكاثف","التجمّد","الانصهار"]}},
+   {s:SSO,l:"H",sub:"Concentration",a:0,en:{q:"Molarity is defined as moles of solute per:",o:["litre of solution","gram of solvent","kilogram of solute","mole of gas"]},ar:{q:"المولارية تُعرّف بأنها عدد مولات المُذاب لكل:",o:["لتر من المحلول","غرام من المذيب","كيلوغرام من المُذاب","مول من الغاز"]}}
+  ]);
+
+  /* ---------- GRADE 11 chemistry (diagnoses a Grade 12 class) ---------- */
+  addC(["11A","11G"],[
+   {s:RS,l:"C",sub:"Thermochemistry",a:0,en:{q:"A reaction that releases heat to the surroundings is described as:",o:["exothermic","endothermic","neutral","reversible only"]},ar:{q:"التفاعل الذي يطلق حرارة إلى المحيط يوصف بأنه:",o:["طارد للحرارة","ماص للحرارة","متعادل","انعكاسي فقط"]}},
+   {s:RS,l:"H",sub:"Enthalpy",a:0,en:{q:"The heat change of a reaction at constant pressure is called the change in:",o:["enthalpy","volume","mass","colour"]},ar:{q:"التغيّر الحراري للتفاعل عند ثبوت الضغط يُسمى التغيّر في:",o:["المحتوى الحراري (الإنثالبي)","الحجم","الكتلة","اللون"]}},
+   {s:RS,l:"C",sub:"Reaction rates",a:0,en:{q:"A substance that speeds up a reaction without being used up is a:",o:["catalyst","reactant","product","solvent"]},ar:{q:"المادة التي تسرّع التفاعل دون أن تُستهلك هي:",o:["عامل حفّاز","متفاعل","ناتج","مذيب"]}},
+   {s:RS,l:"C",sub:"Reaction rates",a:0,en:{q:"Raising the temperature usually makes a reaction rate:",o:["increase","decrease","stop","reverse"]},ar:{q:"رفع درجة الحرارة عادةً يجعل سرعة التفاعل:",o:["تزداد","تقل","تتوقف","تنعكس"]}},
+   {s:RS,l:"H",sub:"Equilibrium",a:0,en:{q:"At chemical equilibrium, the rates of the forward and reverse reactions are:",o:["equal","zero","always increasing","unrelated"]},ar:{q:"عند الاتزان الكيميائي، تكون سرعتا التفاعل الأمامي والعكسي:",o:["متساويتين","صفرًا","في ازدياد دائم","غير مرتبطتين"]}},
+   {s:RS,l:"F",sub:"Acids and bases",a:0,en:{q:"Which of these everyday substances is an acid?",o:["Lemon juice","Soap","Baking soda","Table salt"]},ar:{q:"أيٌّ من هذه المواد اليومية حمض؟",o:["عصير الليمون","الصابون","صودا الخبز","ملح الطعام"]}},
+   {s:RS,l:"C",sub:"Acids and bases",a:0,en:{q:"An acid is a substance that produces which ion in water?",o:["Hydrogen ion (H⁺)","Hydroxide ion (OH⁻)","Sodium ion","Chloride ion"]},ar:{q:"الحمض مادة تنتج أيّ أيون في الماء؟",o:["أيون الهيدروجين (H⁺)","أيون الهيدروكسيد (OH⁻)","أيون الصوديوم","أيون الكلوريد"]}},
+   {s:RS,l:"C",sub:"pH",a:0,en:{q:"A solution with a pH of 10 is:",o:["basic","acidic","neutral","a pure metal"]},ar:{q:"محلول رقمه الهيدروجيني (pH) يساوي 10 يكون:",o:["قاعديًا","حمضيًا","متعادلًا","فلزًا نقيًا"]}},
+   {s:RS,l:"H",sub:"Neutralization",a:0,en:{q:"An acid reacting with a base produces water and a:",o:["salt","metal","gas only","fuel"]},ar:{q:"تفاعل الحمض مع القاعدة ينتج الماء و:",o:["ملحًا","فلزًا","غازًا فقط","وقودًا"]}},
+   {s:MAS,l:"C",sub:"Electron configuration",a:0,en:{q:"Which element has the electron arrangement 2,8,1?",o:["Sodium","Neon","Helium","Chlorine"]},ar:{q:"أيّ عنصر له التوزيع الإلكتروني 2،8،1؟",o:["الصوديوم","النيون","الهيليوم","الكلور"]}},
+   {s:BC,l:"C",sub:"Bond polarity",a:0,en:{q:"A bond in which electrons are shared unequally is:",o:["polar covalent","pure ionic","metallic","nonpolar always"]},ar:{q:"الرابطة التي تُشارَك فيها الإلكترونات بشكل غير متساوٍ هي:",o:["تساهمية قطبية","أيونية بحتة","فلزية","غير قطبية دائمًا"]}},
+   {s:SSO,l:"C",sub:"Organic chemistry",a:0,en:{q:"A hydrocarbon with a carbon–carbon double bond is an:",o:["alkene","alkane","alcohol","acid"]},ar:{q:"الهيدروكربون الذي يحتوي على رابطة مزدوجة بين ذرتي كربون هو:",o:["ألكين","ألكان","كحول","حمض"]}}
+  ]);
+})();

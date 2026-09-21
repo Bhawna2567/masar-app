@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-21g";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-21h";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -334,21 +334,19 @@ function genMathParametric(gradeId,seedStr,count){
   var rank={F:0,C:1,H:2}; out.sort(function(a,b){return rank[a.level]-rank[b.level];});
   return out.slice(0,count);
 }
-function assembleDiagnostic(grade,subj,seedStr){
-  // English is fully generated (grammar + vocabulary) so every paper is different and never repeats.
-  // Reading questions and the writing prompt are added by the callers (readingCompRot / writingPromptRot).
-  if(subj==="English" && typeof ENG_GEN!=="undefined" && ENG_GEN.items){ return ENG_GEN.items(grade,seedStr,7); }
-  // A curriculum-aligned pool (if present) overrides everything. For Maths grades without a pool,
-  // fall back to the parametric generator (fresh numbers, never repeats).
-  var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
-  if(subj==="Math" && !(pool&&pool.length)){ return genMathParametric(grade,seedStr,20); }
+// Seeded assembly of a difficulty-mixed 20-question test from a pool array (F/C/H levels).
+// Used for BOTH the English-medium pool and the Arabic-medium bank, so both vary by seed and
+// never show the same fixed 20 twice when the pool is larger than 20.
+function assembleFromPool(pool, seedStr){
   if(!pool||!pool.length) return null;
+  // De-duplicate defensively (blended pools may overlap).
+  var seenq={}, clean=[]; pool.forEach(function(q){ var k=String(q.q).trim().toLowerCase(); if(seenq[k])return; seenq[k]=1; clean.push(q); }); pool=clean;
   var rand=_seedRand(seedStr);
   var byL={F:[],C:[],H:[]};
   pool.forEach(function(q){ (byL[q.level]||(byL[q.level]=[])).push(q); });
   var T=Math.min(pool.length,20);
-  // Lean easier: ~55% Foundational, ~30% Core, ~15% Challenge — still a full spread so the
-  // test separates low/medium/high, but most questions are accessible.
+  // Lean easier: ~55% Foundational, ~30% Core, ~15% Challenge — a full spread that separates
+  // low/medium/high while keeping most items accessible.
   var want={F:Math.round(T*0.55), C:Math.round(T*0.30)}; want.H=Math.max(1,T-want.F-want.C);
   var chosen=[], order=["F","C","H"];
   order.forEach(function(lv){ chosen=chosen.concat(_shuffleSeeded(byL[lv]||[],rand).slice(0,want[lv])); });
@@ -359,6 +357,22 @@ function assembleDiagnostic(grade,subj,seedStr){
   var rank={F:0,C:1,H:2};
   chosen.sort(function(a,b){ return (rank[a.level]||0)-(rank[b.level]||0); });
   return chosen;
+}
+function assembleDiagnostic(grade,subj,seedStr){
+  // English is fully generated (grammar + vocabulary) so every paper is different and never repeats.
+  // Reading questions and the writing prompt are added by the callers (readingCompRot / writingPromptRot).
+  if(subj==="English" && typeof ENG_GEN!=="undefined" && ENG_GEN.items){ return ENG_GEN.items(grade,seedStr,7); }
+  // A curriculum-aligned pool (if present) is the base. For Maths we ALSO blend in freshly generated
+  // parametric items so every diagnostic differs (curated curriculum questions still appear, the rest
+  // vary by seed); grades with no pool fall back to the parametric generator entirely.
+  var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
+  if(subj==="Math"){
+    var para=genMathParametric(grade,seedStr,20);
+    if(pool&&pool.length){ pool=pool.concat(para); }   // blended; assembleFromPool de-dupes & selects
+    else { return para; }
+  }
+  if(!pool||!pool.length) return null;
+  return assembleFromPool(pool, seedStr);
 }
 // Weighted achiever classification: harder items count more, so the tier reflects the
 // difficulty ceiling a student reaches, not just a raw percentage.
@@ -2673,7 +2687,7 @@ function getQuestions(){
   const g=S.student.prevGrade, subj=S.student.subject;
   if(diagnosticIsArabic()){
     var arBank=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null;
-    if(arBank) return arBank;
+    if(arBank) return assembleFromPool(arBank, diagSeed(AUTH&&AUTH.email,g,subj,S.curTerm,studentNonce())) || arBank;
   }
   // Preferred: assemble a difficulty-mixed test (Maths is fresh each time; English uses the pool). The
   // generation nonce makes each new diagnostic different so questions never repeat.
@@ -2806,7 +2820,7 @@ function rebuildQuestionsForAssignment(a){
   var subj=a.subject||(a.snapshot&&a.snapshot.student&&a.snapshot.student.subject);
   var lang=a.language||(a.snapshot&&a.snapshot.student&&a.snapshot.student.language)||"English";
   if(!g||!subj) return null;
-  if(isArabic(lang)&&(subj==="Math"||subj==="Science"||subj==="Chemistry")){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
+  if(isArabic(lang)&&(subj==="Math"||subj==="Science"||subj==="Chemistry")){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return assembleFromPool(ar, diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0)) || ar; }
   // Reproduce the same assembled pool test (deterministic from the student + grade + subject + term).
   var assembled=assembleDiagnostic(g,subj,diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0));
   if(subj==="English"){
@@ -3371,6 +3385,18 @@ function weakSubsFor(skill){
     res.qsnapshot.forEach(function(q,i){ if(q.skill===skill && res.answers[i]!==q.answer && q.sub) w[q.sub]=true; }); }
   return w;
 }
+// Questions the student already saw in THEIR diagnostic (so weekly practice doesn't repeat them).
+function _diagnosticStems(){
+  var set={}; try{ var snap=S&&S.result&&S.result.qsnapshot; if(snap&&snap.length){ snap.forEach(function(q){ if(q&&q.q) set[String(q.q).trim().toLowerCase()]=1; }); } }catch(e){}
+  return set;
+}
+// Drop items whose stem the student already met in the diagnostic — but only while enough remain,
+// so a small skill bank still yields practice rather than an empty folder.
+function excludeDiagnostic(items,minKeep){
+  var seen=_diagnosticStems(); if(!items||!items.length) return items;
+  var kept=items.filter(function(it){ return !seen[String(it.q).trim().toLowerCase()]; });
+  return kept.length>=(minKeep||5) ? kept : items;
+}
 // Put questions that match the student's weak sub-skills first, then the rest (lightly shuffled).
 function orderByWeak(items,skill){
   var w=weakSubsFor(skill);
@@ -3425,7 +3451,7 @@ function buildExercise(skill,taskText,seed){
   // off-topic maths question). Weak sub-skills first, then a seeded set so each week differs.
   var sciSubj = (PHYS_SKILLS.indexOf(skill)>=0)?"Physics":(SCI_SKILLS.indexOf(skill)>=0)?"Science":(CHEM_SKILLS.indexOf(skill)>=0)?"Chemistry":null;
   if(sciSubj){
-    var pitems=orderByWeak(collectPoolItems(sciSubj,skill),skill);
+    var pitems=orderByWeak(excludeDiagnostic(collectPoolItems(sciSubj,skill),6),skill);
     if(pitems.length){ pitems=_seedShuffle(pitems,seed).slice(0,10).map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);});
       return {type:"mcq",instr:instr,items:pitems}; }
     // No question bank authored for this subject/skill yet — show a clear message instead of maths.

@@ -162,3 +162,135 @@ if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
    {s:EARTH,l:"H",sub:"Absolute-age dating",a:0,en:{q:"Radioactive dating is used to find the ___ age of rocks.",o:["absolute (actual)","relative only","coloured","market"]},ar:{q:"يُستخدم التأريخ الإشعاعي لإيجاد العمر ___ للصخور.",o:["المطلق (الفعلي)","النسبي فقط","اللوني","السوقي"]}}
   ]);
 })();
+
+/* ================= EXPANSION PACK (adds ~14 more bilingual questions per grade) =================
+   Appended so each Science pool holds ~34 questions; the diagnostic picks 20, giving real variety
+   across generations and retakes. Same skills/format; still aligned to the embedded MOE scope. */
+(function(){
+  var LIFE="Life Science", PHYS="Physical Science", EARTH="Earth & Space Science", INQ="Scientific Inquiry & Technology";
+  function moreS(grade, items){
+    var EN=items.map(function(it){ return {skill:it.s, level:it.l, sub:it.sub, q:it.en.q, options:it.en.o, answer:it.a}; });
+    var AR=items.map(function(it){ return {skill:it.s, level:it.l, sub:it.sub, q:it.ar.q, options:it.ar.o, answer:it.a}; });
+    QUESTION_POOL[grade]=QUESTION_POOL[grade]||{}; QUESTION_POOL[grade]["Science"]=(QUESTION_POOL[grade]["Science"]||[]).concat(EN);
+    QUESTION_BANK_AR[grade]=QUESTION_BANK_AR[grade]||{}; QUESTION_BANK_AR[grade]["Science"]=(QUESTION_BANK_AR[grade]["Science"]||[]).concat(AR);
+  }
+
+  /* ---------- GRADE 3 ---------- */
+  moreS("3",[
+   {s:LIFE,l:"F",sub:"Animal parts",a:0,en:{q:"Which body part do fish use to breathe under water?",o:["Gills","Lungs","Wings","Fins"]},ar:{q:"أيّ عضو تستخدمه الأسماك للتنفس تحت الماء؟",o:["الخياشيم","الرئتان","الأجنحة","الزعانف"]}},
+   {s:LIFE,l:"C",sub:"Plants",a:0,en:{q:"Green plants make their own food using sunlight in their:",o:["leaves","roots","flowers","seeds"]},ar:{q:"تصنع النباتات الخضراء غذاءها بضوء الشمس في:",o:["الأوراق","الجذور","الأزهار","البذور"]}},
+   {s:LIFE,l:"F",sub:"Living vs non-living",a:0,en:{q:"Which one is NOT a living thing?",o:["A stone","A cat","A tree","A bird"]},ar:{q:"أيٌّ مما يلي ليس كائنًا حيًا؟",o:["الحجر","القط","الشجرة","الطائر"]}},
+   {s:PHYS,l:"C",sub:"Properties of matter",a:0,en:{q:"Which tool would you use to measure how long a pencil is?",o:["A ruler","A thermometer","A clock","A magnet"]},ar:{q:"أيّ أداة تستخدم لقياس طول القلم؟",o:["المسطرة","ميزان الحرارة","الساعة","المغناطيس"]}},
+   {s:PHYS,l:"H",sub:"Changes of state",a:0,en:{q:"Leaving a puddle of water in the hot Sun makes it:",o:["evaporate into the air","freeze into ice","turn into a rock","become heavier"]},ar:{q:"ترك بركة ماء في الشمس الحارة يجعلها:",o:["تتبخر في الهواء","تتجمد ثلجًا","تتحول إلى صخر","تصبح أثقل"]}},
+   {s:PHYS,l:"F",sub:"Motion",a:0,en:{q:"A ball rolling down a hill is an example of:",o:["motion","sound","colour","smell"]},ar:{q:"كرة تتدحرج على منحدر مثال على:",o:["الحركة","الصوت","اللون","الرائحة"]}},
+   {s:PHYS,l:"C",sub:"Heat",a:0,en:{q:"Which object would feel the warmest on a sunny day?",o:["A dark metal car","A white cloth","A glass of ice","A shady wall"]},ar:{q:"أيّ جسم يكون أدفأ في يوم مشمس؟",o:["سيارة معدنية داكنة","قماش أبيض","كوب ثلج","جدار في الظل"]}},
+   {s:EARTH,l:"F",sub:"Earth's features",a:0,en:{q:"Which of these is a landform?",o:["A mountain","A cloud","A rainbow","A shadow"]},ar:{q:"أيٌّ مما يلي تضاريس أرضية؟",o:["الجبل","السحابة","قوس قزح","الظل"]}},
+   {s:EARTH,l:"C",sub:"Weathering and erosion",a:0,en:{q:"Wind slowly carrying away sand and soil is called:",o:["erosion","freezing","melting","growing"]},ar:{q:"حمل الرياح للرمل والتربة ببطء يُسمى:",o:["التعرية","التجمد","الانصهار","النمو"]}},
+   {s:EARTH,l:"F",sub:"Weather",a:0,en:{q:"On a cloudy, wet day we might see:",o:["rain","stars","a rainbow only","snow in the desert"]},ar:{q:"في يوم غائم وممطر قد نرى:",o:["المطر","النجوم","قوس قزح فقط","الثلج في الصحراء"]}},
+   {s:INQ,l:"F",sub:"Observing",a:0,en:{q:"Using your eyes to watch something closely is called:",o:["observing","cooking","sleeping","running"]},ar:{q:"استخدام عينيك لمراقبة شيء عن قرب يُسمى:",o:["الملاحظة","الطبخ","النوم","الجري"]}},
+   {s:INQ,l:"C",sub:"Recording data",a:0,en:{q:"After doing an experiment, a good scientist should:",o:["record the results","forget them","hide them","change them"]},ar:{q:"بعد إجراء تجربة، يجب على العالِم الجيد أن:",o:["يسجّل النتائج","ينساها","يخفيها","يغيّرها"]}},
+   {s:LIFE,l:"H",sub:"Food webs",a:0,en:{q:"If all the plants in a food web died, the animals that eat them would:",o:["have no food","get bigger","become plants","glow"]},ar:{q:"إذا ماتت كل النباتات في شبكة غذائية، فإن الحيوانات التي تأكلها:",o:["لن تجد غذاءً","تكبر","تتحول إلى نباتات","تتوهج"]}},
+   {s:PHYS,l:"F",sub:"Simple machines",a:0,en:{q:"Scissors are an example of a simple machine that helps us:",o:["cut","fly","melt ice","make light"]},ar:{q:"المقص مثال على آلة بسيطة تساعدنا على:",o:["القص","الطيران","إذابة الثلج","صنع الضوء"]}}
+  ]);
+
+  /* ---------- GRADE 4 ---------- */
+  moreS("4",[
+   {s:LIFE,l:"F",sub:"Kingdoms of life",a:0,en:{q:"Living things are sorted into large groups called:",o:["kingdoms","cities","teams","colours"]},ar:{q:"تُصنّف الكائنات الحية في مجموعات كبيرة تُسمى:",o:["ممالك","مدن","فرق","ألوان"]}},
+   {s:LIFE,l:"C",sub:"Animal systems",a:0,en:{q:"Which body system carries oxygen to all parts of the body?",o:["Circulatory system","Digestive system","Skeletal system","Nervous system"]},ar:{q:"أيّ جهاز في الجسم ينقل الأكسجين إلى جميع أجزاء الجسم؟",o:["الجهاز الدوري","الجهاز الهضمي","الجهاز الهيكلي","الجهاز العصبي"]}},
+   {s:LIFE,l:"H",sub:"Ecosystems",a:0,en:{q:"If a new animal enters an ecosystem and eats all the rabbits, the number of rabbits will:",o:["fall","rise","stay the same","turn into plants"]},ar:{q:"إذا دخل حيوان جديد نظامًا بيئيًا وأكل كل الأرانب، فإن عدد الأرانب:",o:["ينخفض","يرتفع","يبقى ثابتًا","يتحول إلى نباتات"]}},
+   {s:LIFE,l:"F",sub:"Health",a:0,en:{q:"Which of these is a healthy food choice?",o:["Fresh fruit","Sugary sweets","Fried chips","Fizzy drinks"]},ar:{q:"أيٌّ مما يلي خيار غذائي صحي؟",o:["الفاكهة الطازجة","الحلويات السكرية","البطاطس المقلية","المشروبات الغازية"]}},
+   {s:PHYS,l:"C",sub:"Properties of water",a:0,en:{q:"Water is unusual because its solid form (ice):",o:["floats on liquid water","sinks quickly","is heavier than gold","cannot melt"]},ar:{q:"الماء غير اعتيادي لأن حالته الصلبة (الثلج):",o:["تطفو على الماء السائل","تغرق بسرعة","أثقل من الذهب","لا يمكن أن تنصهر"]}},
+   {s:PHYS,l:"F",sub:"Heat transfer",a:0,en:{q:"Heat always moves from a warmer object to a:",o:["cooler object","brighter object","louder object","heavier object"]},ar:{q:"تنتقل الحرارة دائمًا من الجسم الأدفأ إلى الجسم:",o:["الأبرد","الألمع","الأعلى صوتًا","الأثقل"]}},
+   {s:PHYS,l:"C",sub:"Light",a:0,en:{q:"A shadow forms when an object blocks:",o:["light","sound","air","water"]},ar:{q:"يتكوّن الظل عندما يحجب جسمٌ:",o:["الضوء","الصوت","الهواء","الماء"]}},
+   {s:PHYS,l:"H",sub:"Magnetism and electricity",a:0,en:{q:"An electromagnet can be turned off by:",o:["stopping the electric current","painting it","cooling the room","adding water"]},ar:{q:"يمكن إيقاف المغناطيس الكهربائي عن طريق:",o:["قطع التيار الكهربائي","طلائه","تبريد الغرفة","إضافة الماء"]}},
+   {s:PHYS,l:"C",sub:"Forces and transport",a:0,en:{q:"A force that slows down a moving bicycle is:",o:["friction","light","sound","colour"]},ar:{q:"القوة التي تُبطئ دراجة متحركة هي:",o:["الاحتكاك","الضوء","الصوت","اللون"]}},
+   {s:EARTH,l:"F",sub:"Climate",a:0,en:{q:"The usual weather of a place over many years is its:",o:["climate","shadow","echo","gravity"]},ar:{q:"الطقس المعتاد لمكان ما عبر سنوات كثيرة يُسمى:",o:["المناخ","الظل","الصدى","الجاذبية"]}},
+   {s:EARTH,l:"C",sub:"Earth and Moon",a:0,en:{q:"The Moon appears to change shape during the month because of its:",o:["phases","temperature","colour","sound"]},ar:{q:"يبدو القمر يغيّر شكله خلال الشهر بسبب:",o:["أطواره","درجة حرارته","لونه","صوته"]}},
+   {s:EARTH,l:"H",sub:"Solar system",a:0,en:{q:"Planets stay in orbit around the Sun because of:",o:["gravity","wind","magnetism of the air","sound waves"]},ar:{q:"تبقى الكواكب في مدارها حول الشمس بسبب:",o:["الجاذبية","الرياح","مغناطيسية الهواء","الموجات الصوتية"]}},
+   {s:INQ,l:"C",sub:"Scientific method",a:0,en:{q:"A scientist's careful, testable guess before an experiment is a:",o:["hypothesis","conclusion","holiday","mistake"]},ar:{q:"تخمين العالِم الدقيق القابل للاختبار قبل التجربة يُسمى:",o:["فرضية","استنتاجًا","عطلة","خطأ"]}},
+   {s:LIFE,l:"C",sub:"Adaptation",a:0,en:{q:"A duck's webbed feet are an adaptation that helps it:",o:["swim","fly higher","dig tunnels","climb trees"]},ar:{q:"أقدام البط المكفّفة تكيّف يساعده على:",o:["السباحة","الطيران أعلى","حفر الأنفاق","تسلق الأشجار"]}}
+  ]);
+
+  /* ---------- GRADE 5 ---------- */
+  moreS("5",[
+   {s:LIFE,l:"C",sub:"Photosynthesis",a:0,en:{q:"During photosynthesis, plants take in carbon dioxide and give out:",o:["oxygen","salt","plastic","sand"]},ar:{q:"أثناء البناء الضوئي تأخذ النباتات ثاني أكسيد الكربون وتُطلق:",o:["الأكسجين","الملح","البلاستيك","الرمل"]}},
+   {s:LIFE,l:"F",sub:"Reproduction",a:0,en:{q:"A new plant often begins to grow from a:",o:["seed","stone","cloud","flame"]},ar:{q:"غالبًا ما يبدأ نبات جديد بالنمو من:",o:["بذرة","حجر","سحابة","لهب"]}},
+   {s:LIFE,l:"H",sub:"Ecosystem relationships",a:0,en:{q:"A bee getting food from a flower while helping it make seeds is an example of:",o:["both living things benefiting","only the bee being harmed","only the flower dying","no relationship"]},ar:{q:"حصول النحلة على غذاء من الزهرة مع مساعدتها على تكوين البذور مثال على:",o:["استفادة الكائنين معًا","تضرّر النحلة فقط","موت الزهرة فقط","عدم وجود علاقة"]}},
+   {s:PHYS,l:"F",sub:"Elements",a:0,en:{q:"The simplest pure substances that make up all matter are called:",o:["elements","mixtures","shadows","forces"]},ar:{q:"أبسط المواد النقية التي تتكوّن منها كل المواد تُسمى:",o:["العناصر","المخاليط","الظلال","القوى"]}},
+   {s:PHYS,l:"C",sub:"Metals and nonmetals",a:0,en:{q:"Which is a typical property of most metals?",o:["They conduct electricity","They break like glass","They are always gases","They never shine"]},ar:{q:"أيٌّ صفة نموذجية لمعظم المعادن؟",o:["توصّل الكهرباء","تنكسر مثل الزجاج","غازات دائمًا","لا تلمع أبدًا"]}},
+   {s:PHYS,l:"C",sub:"Acids and bases",a:0,en:{q:"Lemon juice tastes sour because it is a weak:",o:["acid","base","metal","gas"]},ar:{q:"عصير الليمون طعمه حامض لأنه حمض:",o:["ضعيف","قاعدة","معدن","غاز"]}},
+   {s:PHYS,l:"H",sub:"Physical vs chemical change",a:0,en:{q:"Which of these is a chemical change?",o:["Wood burning to ash","Ice melting","Tearing paper","Bending a wire"]},ar:{q:"أيٌّ مما يلي تغيّر كيميائي؟",o:["احتراق الخشب إلى رماد","انصهار الثلج","تمزيق الورق","ثني السلك"]}},
+   {s:PHYS,l:"F",sub:"Work and energy",a:0,en:{q:"In science, work is done when a force moves an object over a:",o:["distance","colour","sound","smell"]},ar:{q:"في العلوم، يُبذل الشغل عندما تحرّك قوةٌ جسمًا عبر:",o:["مسافة","لون","صوت","رائحة"]}},
+   {s:PHYS,l:"C",sub:"Sound",a:0,en:{q:"Sound travels fastest through a:",o:["solid","gas","vacuum","shadow"]},ar:{q:"ينتقل الصوت أسرع خلال:",o:["مادة صلبة","غاز","فراغ","ظل"]}},
+   {s:EARTH,l:"F",sub:"Natural resources",a:0,en:{q:"Which of these is a renewable resource?",o:["Sunlight","Coal","Oil","Natural gas"]},ar:{q:"أيٌّ مما يلي مورد متجدد؟",o:["ضوء الشمس","الفحم","النفط","الغاز الطبيعي"]}},
+   {s:EARTH,l:"C",sub:"Minerals and rocks",a:0,en:{q:"Rocks are made of one or more natural solids called:",o:["minerals","gases","liquids","plastics"]},ar:{q:"تتكوّن الصخور من مادة صلبة طبيعية واحدة أو أكثر تُسمى:",o:["المعادن","الغازات","السوائل","اللدائن"]}},
+   {s:EARTH,l:"C",sub:"Soil",a:0,en:{q:"Good soil for growing plants usually contains:",o:["water, air and nutrients","only plastic","only salt","only metal"]},ar:{q:"التربة الجيدة لنمو النبات تحتوي عادةً على:",o:["ماء وهواء ومغذيات","بلاستيك فقط","ملح فقط","معدن فقط"]}},
+   {s:INQ,l:"H",sub:"Design process",a:0,en:{q:"After building a model, the design process says an engineer should:",o:["test it and improve it","throw it away","hide it","never change it"]},ar:{q:"بعد بناء نموذج، تقول عملية التصميم إن على المهندس أن:",o:["يختبره ويحسّنه","يرميه","يخفيه","لا يغيّره أبدًا"]}},
+   {s:LIFE,l:"C",sub:"Life cycles",a:0,en:{q:"Which animal changes body form completely through metamorphosis?",o:["A butterfly","A dog","A horse","A human"]},ar:{q:"أيّ حيوان يغيّر شكل جسمه تمامًا عبر التحوّل؟",o:["الفراشة","الكلب","الحصان","الإنسان"]}}
+  ]);
+})();
+
+/* ================= EXPANSION PACK 2 (grades 6-8) ================= */
+(function(){
+  var LIFE="Life Science", PHYS="Physical Science", EARTH="Earth & Space Science", INQ="Scientific Inquiry & Technology";
+  function moreS(grade, items){
+    var EN=items.map(function(it){ return {skill:it.s, level:it.l, sub:it.sub, q:it.en.q, options:it.en.o, answer:it.a}; });
+    var AR=items.map(function(it){ return {skill:it.s, level:it.l, sub:it.sub, q:it.ar.q, options:it.ar.o, answer:it.a}; });
+    QUESTION_POOL[grade]=QUESTION_POOL[grade]||{}; QUESTION_POOL[grade]["Science"]=(QUESTION_POOL[grade]["Science"]||[]).concat(EN);
+    QUESTION_BANK_AR[grade]=QUESTION_BANK_AR[grade]||{}; QUESTION_BANK_AR[grade]["Science"]=(QUESTION_BANK_AR[grade]["Science"]||[]).concat(AR);
+  }
+
+  /* ---------- GRADE 6 ---------- */
+  moreS("6",[
+   {s:PHYS,l:"F",sub:"Atomic structure",a:0,en:{q:"The tiny particles that make up all matter are called:",o:["atoms","cells","planets","waves"]},ar:{q:"الجسيمات الصغيرة جدًا التي تتكوّن منها كل المواد تُسمى:",o:["الذرات","الخلايا","الكواكب","الأمواج"]}},
+   {s:PHYS,l:"C",sub:"Mixtures",a:0,en:{q:"Which is a mixture that can be separated by filtering?",o:["Sand in water","Pure water","A single atom","Oxygen gas"]},ar:{q:"أيٌّ خليط يمكن فصله بالترشيح؟",o:["رمل في ماء","ماء نقي","ذرة مفردة","غاز الأكسجين"]}},
+   {s:PHYS,l:"C",sub:"Solutions",a:0,en:{q:"In salty water, the salt is the ___ and the water is the solvent.",o:["solute","gas","metal","mineral"]},ar:{q:"في الماء المالح، الملح هو ___ والماء هو المذيب.",o:["المُذاب","الغاز","المعدن","المعدن الطبيعي"]}},
+   {s:PHYS,l:"H",sub:"Acids and bases",a:0,en:{q:"On the pH scale, a value of exactly 7 means a solution is:",o:["neutral","strongly acidic","strongly basic","a metal"]},ar:{q:"على مقياس الأس الهيدروجيني، القيمة 7 بالضبط تعني أن المحلول:",o:["متعادل","حمضي قوي","قاعدي قوي","معدن"]}},
+   {s:PHYS,l:"C",sub:"Energy transformations",a:0,en:{q:"A moving car changes chemical energy from fuel mostly into:",o:["motion (kinetic) energy","sound only","light only","magnetism"]},ar:{q:"تحوّل السيارة المتحركة الطاقة الكيميائية من الوقود غالبًا إلى:",o:["طاقة حركية","صوت فقط","ضوء فقط","مغناطيسية"]}},
+   {s:PHYS,l:"F",sub:"Simple machines",a:0,en:{q:"A seesaw is an example of which simple machine?",o:["A lever","A pulley","A screw","A wedge"]},ar:{q:"الأرجوحة (السيسو) مثال على أيّ آلة بسيطة؟",o:["الرافعة","البكرة","اللولب","الإسفين"]}},
+   {s:LIFE,l:"C",sub:"Cell structure",a:0,en:{q:"In a plant cell, which structure captures sunlight to make food?",o:["Chloroplast","Nucleus","Vacuole","Cell membrane"]},ar:{q:"في الخلية النباتية، أيّ تركيب يلتقط ضوء الشمس لصنع الغذاء؟",o:["البلاستيدة الخضراء","النواة","الفجوة","الغشاء الخلوي"]}},
+   {s:LIFE,l:"H",sub:"Cell transport",a:0,en:{q:"Water moving across a cell membrane from high to low concentration is:",o:["osmosis","burning","melting","gravity"]},ar:{q:"انتقال الماء عبر الغشاء الخلوي من تركيز عالٍ إلى منخفض هو:",o:["الخاصية الأسموزية","الاحتراق","الانصهار","الجاذبية"]}},
+   {s:LIFE,l:"F",sub:"Classifying living things",a:0,en:{q:"All living things are made of one or more:",o:["cells","metals","rocks","clouds"]},ar:{q:"تتكوّن جميع الكائنات الحية من خلية واحدة أو أكثر من:",o:["الخلايا","المعادن","الصخور","الغيوم"]}},
+   {s:EARTH,l:"C",sub:"Earth's systems",a:0,en:{q:"The layer of gases surrounding the Earth is the:",o:["atmosphere","geosphere","lithosphere","crust only"]},ar:{q:"طبقة الغازات المحيطة بالأرض تُسمى:",o:["الغلاف الجوي","الغلاف الصخري","اليابسة","القشرة فقط"]}},
+   {s:EARTH,l:"F",sub:"Space",a:0,en:{q:"The Sun is a:",o:["star","planet","moon","comet"]},ar:{q:"الشمس هي:",o:["نجم","كوكب","قمر","مذنّب"]}},
+   {s:EARTH,l:"H",sub:"Environmental impacts",a:0,en:{q:"Burning large amounts of fossil fuels adds which gas that warms the planet?",o:["Carbon dioxide","Oxygen","Helium","Nitrogen only"]},ar:{q:"يضيف حرق كميات كبيرة من الوقود الأحفوري أيّ غاز يسبب احترار الكوكب؟",o:["ثاني أكسيد الكربون","الأكسجين","الهيليوم","النيتروجين فقط"]}},
+   {s:INQ,l:"C",sub:"Design process",a:0,en:{q:"The first step when engineers design a solution is to:",o:["define the problem","sell the product","paint it","celebrate"]},ar:{q:"الخطوة الأولى عند تصميم المهندسين لحلٍّ هي:",o:["تحديد المشكلة","بيع المنتج","طلاؤه","الاحتفال"]}},
+   {s:PHYS,l:"C",sub:"Matter and its changes",a:0,en:{q:"Which change is a physical change?",o:["Cutting paper","Baking a cake","Iron rusting","Milk turning sour"]},ar:{q:"أيّ تغيّر هو تغيّر فيزيائي؟",o:["قص الورق","خبز الكعك","صدأ الحديد","تعفّن الحليب"]}}
+  ]);
+
+  /* ---------- GRADE 7 ---------- */
+  moreS("7",[
+   {s:PHYS,l:"F",sub:"Classifying matter",a:0,en:{q:"A substance made of only one kind of atom is a(n):",o:["element","mixture","solution","alloy"]},ar:{q:"المادة المكوّنة من نوع واحد فقط من الذرات هي:",o:["عنصر","خليط","محلول","سبيكة"]}},
+   {s:PHYS,l:"C",sub:"Parts of the atom",a:0,en:{q:"Which particle in an atom has a negative charge?",o:["Electron","Proton","Neutron","Nucleus"]},ar:{q:"أيّ جسيم في الذرة يحمل شحنة سالبة؟",o:["الإلكترون","البروتون","النيوترون","النواة"]}},
+   {s:PHYS,l:"C",sub:"Periodic table",a:0,en:{q:"On the periodic table, elements in the same column (group) have similar:",o:["chemical properties","colours","temperatures","masses exactly"]},ar:{q:"في الجدول الدوري، العناصر في العمود نفسه (المجموعة) لها خصائص:",o:["كيميائية متشابهة","ألوان متشابهة","درجات حرارة متشابهة","كتل متطابقة تمامًا"]}},
+   {s:PHYS,l:"H",sub:"Newton's laws",a:0,en:{q:"Newton's first law says an object at rest stays at rest unless acted on by a(n):",o:["unbalanced force","colour","sound","smell"]},ar:{q:"ينص قانون نيوتن الأول على أن الجسم الساكن يبقى ساكنًا ما لم تؤثر عليه:",o:["قوة غير متزنة","ألوان","أصوات","روائح"]}},
+   {s:PHYS,l:"C",sub:"Describing motion",a:0,en:{q:"Speed is calculated by dividing distance by:",o:["time","mass","colour","temperature"]},ar:{q:"تُحسب السرعة بقسمة المسافة على:",o:["الزمن","الكتلة","اللون","درجة الحرارة"]}},
+   {s:PHYS,l:"F",sub:"Waves",a:0,en:{q:"Sound is a type of wave that needs a ___ to travel through.",o:["material (medium)","vacuum","shadow","magnet"]},ar:{q:"الصوت نوع من الموجات يحتاج إلى ___ لينتقل خلاله.",o:["وسط مادي","فراغ","ظل","مغناطيس"]}},
+   {s:PHYS,l:"C",sub:"Light",a:0,en:{q:"White light passing through a prism splits into:",o:["many colours","one colour","sound","heat only"]},ar:{q:"الضوء الأبيض المار خلال منشور ينقسم إلى:",o:["ألوان كثيرة","لون واحد","صوت","حرارة فقط"]}},
+   {s:LIFE,l:"F",sub:"Invertebrates",a:0,en:{q:"Which animal is an invertebrate (has no backbone)?",o:["An insect","A fish","A cat","A bird"]},ar:{q:"أيّ حيوان لافقاري (بلا عمود فقري)؟",o:["الحشرة","السمكة","القط","الطائر"]}},
+   {s:LIFE,l:"C",sub:"Plant processes",a:0,en:{q:"Plants lose water vapour to the air through tiny openings in their leaves during:",o:["transpiration","digestion","erosion","gravity"]},ar:{q:"تفقد النباتات بخار الماء إلى الهواء عبر فتحات صغيرة في أوراقها أثناء:",o:["النتح","الهضم","التعرية","الجاذبية"]}},
+   {s:LIFE,l:"H",sub:"Animal behaviour",a:0,en:{q:"A behaviour an animal is born knowing how to do is called:",o:["instinct","homework","a habit learned at school","a machine"]},ar:{q:"السلوك الذي يولد الحيوان وهو يعرف كيفية أدائه يُسمى:",o:["غريزة","واجبًا","عادة تُتعلّم في المدرسة","آلة"]}},
+   {s:EARTH,l:"C",sub:"Plate tectonics",a:0,en:{q:"Earthquakes most often happen where Earth's tectonic plates:",o:["meet and move","are painted","are heated by the Sun only","are covered by clouds"]},ar:{q:"تحدث الزلازل غالبًا حيث الصفائح التكتونية للأرض:",o:["تلتقي وتتحرك","تُطلى","تُسخّن بالشمس فقط","تغطيها الغيوم"]}},
+   {s:EARTH,l:"F",sub:"The atmosphere",a:0,en:{q:"The most common gas in Earth's atmosphere is:",o:["nitrogen","oxygen","carbon dioxide","helium"]},ar:{q:"أكثر الغازات شيوعًا في الغلاف الجوي للأرض هو:",o:["النيتروجين","الأكسجين","ثاني أكسيد الكربون","الهيليوم"]}},
+   {s:EARTH,l:"H",sub:"Climate change",a:0,en:{q:"Rising average global temperatures over many decades is called:",o:["global warming","a single storm","an eclipse","an earthquake"]},ar:{q:"ارتفاع متوسط درجات الحرارة العالمية عبر عقود كثيرة يُسمى:",o:["الاحترار العالمي","عاصفة واحدة","كسوفًا","زلزالًا"]}},
+   {s:INQ,l:"C",sub:"Measurement",a:0,en:{q:"The SI (metric) unit for measuring mass is the:",o:["kilogram","metre","second","litre"]},ar:{q:"وحدة النظام الدولي (المتري) لقياس الكتلة هي:",o:["الكيلوغرام","المتر","الثانية","اللتر"]}}
+  ]);
+
+  /* ---------- GRADE 8 ---------- */
+  moreS("8",[
+   {s:PHYS,l:"C",sub:"Thermal energy",a:0,en:{q:"Heat transfer through direct contact between materials is:",o:["conduction","radiation","evaporation","reflection"]},ar:{q:"انتقال الحرارة عبر التلامس المباشر بين المواد هو:",o:["التوصيل","الإشعاع","التبخر","الانعكاس"]}},
+   {s:PHYS,l:"H",sub:"Heat transfer",a:0,en:{q:"The Sun's heat reaches the Earth through empty space by:",o:["radiation","conduction","convection","friction"]},ar:{q:"تصل حرارة الشمس إلى الأرض عبر الفضاء الفارغ بواسطة:",o:["الإشعاع","التوصيل","الحمل","الاحتكاك"]}},
+   {s:PHYS,l:"C",sub:"Chemical bonds",a:0,en:{q:"An ionic bond forms when one atom ___ electrons to another.",o:["transfers","hides","paints","cools"]},ar:{q:"تتكوّن الرابطة الأيونية عندما تنقل ذرةٌ الإلكترونات إلى أخرى، أي عندما ___ الإلكترونات.",o:["تنقل","تخفي","تطلي","تبرّد"]}},
+   {s:PHYS,l:"C",sub:"Covalent bonds",a:0,en:{q:"In a covalent bond, atoms:",o:["share electrons","give away protons","melt","glow"]},ar:{q:"في الرابطة التساهمية، تقوم الذرات بـ:",o:["مشاركة الإلكترونات","التخلي عن البروتونات","الانصهار","التوهّج"]}},
+   {s:PHYS,l:"H",sub:"Chemical equations",a:0,en:{q:"Balancing a chemical equation shows that atoms are:",o:["conserved (not created or destroyed)","made from nothing","destroyed","turned into energy only"]},ar:{q:"موازنة المعادلة الكيميائية تبيّن أن الذرات:",o:["محفوظة (لا تُخلق ولا تفنى)","تُصنع من العدم","تُدمّر","تتحول إلى طاقة فقط"]}},
+   {s:PHYS,l:"F",sub:"Types of reactions",a:0,en:{q:"When two or more substances combine to form one new substance, the reaction is a:",o:["synthesis (combination)","decomposition","single change of state","filtration"]},ar:{q:"عندما تتحد مادتان أو أكثر لتكوين مادة جديدة واحدة، يكون التفاعل:",o:["اتحادًا (بناءً)","تفككًا","تغيّر حالة فقط","ترشيحًا"]}},
+   {s:PHYS,l:"C",sub:"Electric charges",a:0,en:{q:"Two objects with the same type of electric charge will:",o:["repel each other","stick together forever","turn into magnets","disappear"]},ar:{q:"جسمان لهما النوع نفسه من الشحنة الكهربائية:",o:["يتنافران","يلتصقان للأبد","يتحوّلان إلى مغناطيسات","يختفيان"]}},
+   {s:PHYS,l:"C",sub:"Optics",a:0,en:{q:"A concave (curved-in) mirror can be used to:",o:["focus light to a point","only make sound","cool a room","measure mass"]},ar:{q:"يمكن استخدام المرآة المقعّرة لـ:",o:["تجميع الضوء في نقطة","إصدار الصوت فقط","تبريد الغرفة","قياس الكتلة"]}},
+   {s:LIFE,l:"F",sub:"Digestion",a:0,en:{q:"Digestion begins in the:",o:["mouth","lungs","kidneys","heart"]},ar:{q:"يبدأ الهضم في:",o:["الفم","الرئتين","الكليتين","القلب"]}},
+   {s:LIFE,l:"C",sub:"Respiratory system",a:0,en:{q:"The tiny air sacs in the lungs where gases are exchanged are the:",o:["alveoli","neurons","nephrons","villi"]},ar:{q:"الأكياس الهوائية الصغيرة في الرئتين حيث يتم تبادل الغازات تُسمى:",o:["الحويصلات الهوائية","الخلايا العصبية","الوحدات الكلوية","الزغابات"]}},
+   {s:LIFE,l:"H",sub:"Heredity",a:0,en:{q:"A section of DNA that carries the instructions for a trait is a:",o:["gene","bone","muscle","vitamin"]},ar:{q:"جزء من الحمض النووي (DNA) يحمل تعليمات صفة ما يُسمى:",o:["جينًا","عظمًا","عضلة","فيتامينًا"]}},
+   {s:LIFE,l:"C",sub:"Adaptations",a:0,en:{q:"Over many generations, helpful traits become more common in a species through:",o:["natural selection","a single meal","one hot day","painting"]},ar:{q:"عبر أجيال كثيرة تصبح الصفات المفيدة أكثر شيوعًا في النوع عن طريق:",o:["الانتخاب الطبيعي","وجبة واحدة","يوم حار واحد","الطلاء"]}},
+   {s:EARTH,l:"C",sub:"Volcanoes",a:0,en:{q:"Melted rock below the Earth's surface is called:",o:["magma","fossil","mineral vein","glacier"]},ar:{q:"الصخر المنصهر تحت سطح الأرض يُسمى:",o:["الصهارة (ماغما)","الأحفورة","العرق المعدني","النهر الجليدي"]}},
+   {s:EARTH,l:"H",sub:"Geologic time",a:0,en:{q:"The era known as the 'Age of Dinosaurs' is the:",o:["Mesozoic","Paleozoic","Cenozoic","Precambrian only"]},ar:{q:"العصر المعروف بـ'عصر الديناصورات' هو:",o:["الحقب الوسطى (الميزوزوي)","الحقب القديمة (الباليوزوي)","الحقب الحديثة (السينوزوي)","ما قبل الكامبري فقط"]}}
+  ]);
+})();
