@@ -151,6 +151,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -208,7 +209,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-20a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-21c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -597,13 +598,19 @@ function isArabic(lang){ return String(lang||"").toLowerCase().indexOf("ar")===0
 try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.warn("Firebase init:",e); }
 try{ if(typeof APPCHECK_SITE_KEY!=="undefined" && APPCHECK_SITE_KEY && APPCHECK_SITE_KEY.indexOf("PASTE_")<0 && firebase.appCheck){ firebase.appCheck().activate(APPCHECK_SITE_KEY, true); } }catch(e){ console.warn("App Check:",e); }
 const fbAuth=firebase.auth(), db=firebase.firestore();
+var fbFunctions=null; try{ if(firebase.functions) fbFunctions=firebase.functions(); }catch(e){ console.warn("Functions:",e); }
 let AUTH=null, CACHE={assignments:[],classes:[],tests:[]}, _unsub=[];
 let VIEWING=null, READONLY=false;
 function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
 function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
-function assignments(){return CACHE.assignments;}
-function classesList(){return CACHE.classes||[];}
-function teacherTests(){return CACHE.tests||[];}
+// ADMIN_AS: when an admin is viewing a teacher's dashboard, these getters return THAT teacher's data
+// (from the admin-wide caches) so every teacher view works exactly as it does for the teacher.
+var ADMIN_AS=null;
+function assignments(){ if(ADMIN_AS) return (CACHE.allAssign||[]).filter(function(a){return a.teacherUid===ADMIN_AS.uid;}); return CACHE.assignments; }
+function classesList(){ if(ADMIN_AS) return (CACHE.allClasses||[]).filter(function(c){return c.teacherUid===ADMIN_AS.uid;}); return CACHE.classes||[]; }
+function teacherTests(){ if(ADMIN_AS) return []; return CACHE.tests||[]; }
+function adminOpenTeacher(uid){ if(!isAdmin())return; var u=(adminUsers()||[]).filter(function(x){return x.uid===uid;})[0]||{uid:uid}; ADMIN_AS={uid:uid,name:u.name,email:u.email}; S.adminSection=null; S.adminTeacher=null; S.openClassId=null; S.teacherView=null; render(); }
+function adminExitTeacher(){ ADMIN_AS=null; S.openClassId=null; S.teacherView=null; S.adminSection="activity"; render(); }
 function freshState(){return {student:null,answers:{},result:null,plan:null,taskDone:{},writeResponse:"",activeTab:"home",authMode:"login"};}
 function stateKey(){return "masar_cloud_state_"+(AUTH?AUTH.uid:"guest");}
 let S=freshState();
@@ -696,17 +703,23 @@ var _lastViewKey=null;
 function _viewKey(){
   if(!AUTH) return "auth:"+(S.authMode||"login");
   if(AUTH.blocked && !isAdmin()) return "blocked";
+  if(isAdmin() && ADMIN_AS) return "asT:"+ADMIN_AS.uid+":"+(S.teacherView||"")+":"+(S.openClassId||"")+":"+(S.classTerm||"");
   if(isAdmin() && S.adminSection) return "admin:"+S.adminSection;
   if(AUTH.role==="teacher" && !VIEWING) return "t:"+(S.teacherView||"")+":"+(S.openClassId||"")+":"+(S.classTerm||"");
   return "s:"+(VIEWING?("v"+(VIEWING.email||VIEWING.studentName||"")):"me")+":"+(S.activeTab||"");
 }
-function _scrollTopIfViewChanged(){ var k=_viewKey(); if(k!==_lastViewKey){ _lastViewKey=k; try{ _scrollTopIfViewChanged(); }catch(_){} } }
+function _scrollTopIfViewChanged(){ var k=_viewKey(); if(k!==_lastViewKey){ _lastViewKey=k; try{ window.scrollTo(0,0); }catch(_){} } }
 function render(){
   const chip=document.getElementById("userChip");
   if(chip){ chip.innerHTML = AUTH?(`<span class="pill ${AUTH.role==='teacher'?'amber':'green'}">${AUTH.role==='teacher'?'Teacher':'Student'}</span><span style="color:#fff;font-size:13px;font-weight:600">${(AUTH.name||'').split(' ')[0]}</span>`+(isAdmin()?`<button class="btn ghost sm" onclick="setAdmin('reports')">··· Admin ▾</button>`:``)+`<button class="btn gold sm" onclick="openUserGuide()">📖 User Guide</button><button class="btn ghost sm" onclick="logout()">Log out</button><span class="muted" style="font-size:10px;margin-left:6px" title="App build">build ${APP_BUILD}</span>`):""; }
   const tabsEl=document.getElementById("tabs"); const v=document.getElementById("view");
   if(!AUTH){ tabsEl.innerHTML=""; v.innerHTML=viewAuth(); _scrollTopIfViewChanged(); return; }
   if(AUTH.blocked && !isAdmin()){ tabsEl.innerHTML=""; v.innerHTML=blockedView(); _scrollTopIfViewChanged(); return; }
+  // Admin impersonation: view any teacher's FULL dashboard (their classes, students, tools).
+  if(isAdmin() && ADMIN_AS && !VIEWING){ tabsEl.innerHTML="";
+    var asBanner='<div class="notice" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fef3c7;border-color:#fde68a;color:var(--ink)">🛡️ Admin view — <b>'+esc(ADMIN_AS.name||ADMIN_AS.email||"Teacher")+'</b>’s dashboard <button class="btn ghost sm" onclick="adminExitTeacher()">← Back to admin</button></div>';
+    var tnav2=teacherNav(); var tbody2=(S.teacherView==="analysis")?viewAnalysis():(S.teacherView==="bank")?viewQuestionBank():(S.openClassId?viewClass(S.openClassId):viewTeacher());
+    v.innerHTML=asBanner+tnav2+tbody2; _scrollTopIfViewChanged(); return; }
   if(isAdmin() && S.adminSection){ tabsEl.innerHTML=""; v.innerHTML=viewAdmin(); _scrollTopIfViewChanged(); return; }
   if(AUTH.role==="teacher" && !VIEWING){ tabsEl.innerHTML=""; var tnav=teacherNav(); var tbody=(S.teacherView==="analysis")?viewAnalysis():(S.teacherView==="bank")?viewQuestionBank():(S.openClassId?viewClass(S.openClassId):viewTeacher()); v.innerHTML=verifyBanner()+tnav+tbody; _scrollTopIfViewChanged(); return; }
   renderTabs();
@@ -739,6 +752,7 @@ function viewAuth(){
     <label>School email</label><input id="a_email" type="email" placeholder="name@school.ae"><div style="height:10px"></div>
     <label>Password</label><input id="a_pass" type="password" placeholder="at least 8 characters" onkeydown="if(event.key==='Enter'){${mode==='register'?'doRegister':'doLogin'}()}">
     <div id="authMsg" style="font-size:12px;color:var(--red);margin-top:8px"></div>
+    ${mode==='login'?`<div style="text-align:right;margin-top:6px"><a href="#" onclick="doForgotPassword();return false;" style="font-size:12px;color:var(--green);text-decoration:none">Forgot your password?</a></div>`:""}
     <div style="margin-top:14px"><button class="btn" style="width:100%" onclick="${mode==='register'?'doRegister':'doLogin'}()">${mode==='register'?'Create account':'Log in'}</button></div>
     <p class="muted" style="font-size:11px;margin-top:12px">Accounts are stored securely in the cloud — teachers and students can log in from any device.</p>
   </div>`;
@@ -756,6 +770,48 @@ function doRegister(){
   fbAuth.createUserWithEmailAndPassword(email,pass)
     .then(cred=>{ try{ cred.user.sendEmailVerification(); }catch(e){} var doc={role:role,name:name,email:email,students:[]}; if(role==="student"&&studentId)doc.studentId=studentId; return db.collection("users").doc(cred.user.uid).set(doc); })
     .catch(e=>{const m=document.getElementById("authMsg"); if(m)m.textContent=fbErr(e);});
+}
+// Passwords are stored by Firebase as one-way hashes and can NEVER be read back by anyone — the safe
+// way to help someone who forgot theirs is to email them a reset link so they choose a new one.
+function doForgotPassword(){
+  var el=document.getElementById("a_email"); var email=(el&&el.value||"").trim().toLowerCase();
+  var msg=document.getElementById("authMsg");
+  if(!email){ if(msg){ msg.style.color="var(--red)"; msg.textContent="Type your email above first, then tap ‘Forgot your password?’."; } return; }
+  if(msg){ msg.style.color="var(--muted)"; msg.textContent="Sending reset link…"; }
+  fbAuth.sendPasswordResetEmail(email)
+    .then(function(){ if(msg){ msg.style.color="var(--ok)"; msg.textContent="✓ A reset link has been sent to "+email+". Check the inbox (and spam) to set a new password."; } })
+    .catch(function(e){ if(msg){ msg.style.color="var(--red)"; msg.textContent=fbErr(e); } });
+}
+// Admin: email a password-reset link to any user (teacher or student). We cannot show or set their
+// actual password — Firebase only allows a secure self-reset by email.
+function adminResetPassword(email){
+  if(!_isStaff())return; email=(email||"").trim().toLowerCase(); if(!email){ alert("This account has no email on file."); return; }
+  if(!confirm("Email a password-reset link to:\n\n"+email+"\n\nThey will use it to choose a new password. (Passwords cannot be viewed — only reset.)")) return;
+  fbAuth.sendPasswordResetEmail(email)
+    .then(function(){ alert("✓ Reset link sent to "+email+"."); })
+    .catch(function(e){ alert(fbErr(e)); });
+}
+// Admin: set a student's password DIRECTLY via the secure Cloud Function (Admin SDK on the server).
+// The browser never has permission to do this itself — the function checks the caller is an admin.
+function _isStaff(){ return !!(isAdmin() || (AUTH && AUTH.role==="teacher")); }
+function adminSetPassword(email){
+  if(!_isStaff())return; email=(email||"").trim().toLowerCase(); if(!email){ alert("This account has no email on file."); return; }
+  if(!fbFunctions){ alert("The password service isn't available. Make sure the Cloud Function is deployed and the app is redeployed."); return; }
+  var np=prompt("Set a NEW password for:\n\n"+email+"\n\nType the new password (at least 8 characters). Write it down so you can give it to the student:");
+  if(np==null) return; np=(""+np).trim();
+  if(np.length<8){ alert("Password must be at least 8 characters."); return; }
+  var btnNote="Setting password…"; try{ console.log(btnNote); }catch(e){}
+  fbFunctions.httpsCallable("setUserPassword")({email:email,password:np})
+    .then(function(){ alert("✓ Password updated for "+email+".\n\nNew password: "+np+"\n\nGive this to the student. They can change it later from their account."); })
+    .catch(function(e){ alert("Couldn't set the password: "+((e&&e.message)||e)+"\n\n(If this says the function was not found, the Cloud Function still needs to be deployed.)"); });
+}
+// Admin: get a password-reset LINK to hand to the student (no email needed).
+function adminResetLink(email){
+  if(!_isStaff())return; email=(email||"").trim().toLowerCase(); if(!email){ alert("This account has no email on file."); return; }
+  if(!fbFunctions){ alert("The password service isn't available. Deploy the Cloud Function first."); return; }
+  fbFunctions.httpsCallable("getResetLink")({email:email})
+    .then(function(r){ var link=(r&&r.data&&r.data.link)||""; window.prompt("Copy this reset link and give it to the student (it opens a page where they set a new password — no email needed):", link); })
+    .catch(function(e){ alert("Couldn't get the link: "+((e&&e.message)||e)); });
 }
 function saveStudentId(){
   var v=((document.getElementById("my_sid")||{}).value||"").trim();
@@ -1649,7 +1705,7 @@ function isAdmin(){ return !!(AUTH && (AUTH.admin===true || (typeof ADMIN_EMAILS
 function adminUsers(){ return CACHE.users||[]; }
 function adminAssign(){ return CACHE.allAssign||[]; }
 function adminClasses(){ return CACHE.allClasses||[]; }
-function setAdmin(sec){ S.adminSection = (sec==="_close")?null:sec; render(); }
+function setAdmin(sec){ ADMIN_AS=null; S.adminSection = (sec==="_close")?null:sec; render(); }
 function ensureAdminListeners(){
   if(CACHE._adminOn || !isAdmin()) return; CACHE._adminOn=true;
   _unsub.push(db.collection("users").onSnapshot(function(s){ CACHE.users=s.docs.map(function(d){return Object.assign({uid:d.id},d.data());}); render(); }, function(e){console.warn(e);}));
@@ -1685,9 +1741,13 @@ function adminManage(){
     var roleBtn=me?'':(u.role==="teacher"
       ? '<button class="btn ghost sm" onclick="setRole(\''+u.uid+'\',\'student\')">→ Make student</button>'
       : (u.role==="student" ? '<button class="btn ghost sm" onclick="setRole(\''+u.uid+'\',\'teacher\')">→ Make teacher</button>' : ''));
-    return '<tr><td><b>'+((u.name||"—")+"").replace(/</g,"&lt;")+'</b><div class="muted" style="font-size:11px">'+((u.email||"")+"").replace(/</g,"&lt;")+'</div></td><td>'+uRole(u)+'</td><td>'+uStatus(u)+'</td><td style="white-space:nowrap">'+roleBtn+' '+blockBtn+'</td></tr>';
+    var em=((u.email||"").replace(/'/g,"\\'"));
+    var resetBtn=(u.email?'<button class="btn ghost sm" onclick="adminResetPassword(\''+em+'\')">✉ Email reset</button>':'');
+    var setPwBtn=(u.email?'<button class="btn sm" onclick="adminSetPassword(\''+em+'\')">🔑 Set password</button>':'');
+    var linkBtn=(u.email?'<button class="btn ghost sm" onclick="adminResetLink(\''+em+'\')">🔗 Reset link</button>':'');
+    return '<tr><td><b>'+((u.name||"—")+"").replace(/</g,"&lt;")+'</b><div class="muted" style="font-size:11px">'+((u.email||"")+"").replace(/</g,"&lt;")+'</div></td><td>'+uRole(u)+'</td><td>'+uStatus(u)+'</td><td style="white-space:nowrap">'+roleBtn+' '+blockBtn+' '+setPwBtn+' '+linkBtn+' '+resetBtn+'</td></tr>';
   }).join("");
-  return '<div class="card"><h2>Manage users</h2><p class="sub">Change a user’s role or block/unblock them. If a student registered as a teacher by mistake, use <b>→ Make student</b> — it switches the role and unblocks the account, so they log in with the <b>same email and password</b> and join their class. (Emails can’t be re-used to register twice, so fixing the existing account is the way.)</p><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="muted">No users.</td></tr>')+'</tbody></table></div>';
+  return '<div class="card"><h2>Manage users</h2><p class="sub">Change a user’s role, block/unblock them, or email them a password-reset link. If a student registered as a teacher by mistake, use <b>→ Make student</b> — it switches the role and unblocks the account, so they log in with the <b>same email and password</b> and join their class.</p><div class="notice" style="background:#eff6ff;border-color:#bfdbfe;color:var(--ink);font-size:12px">🔒 Existing passwords can never be <i>viewed</i> (they are stored scrambled). But when a student forgets theirs you can fix it three ways: <b>🔑 Set password</b> sets a brand-new one you type and can hand to the student; <b>🔗 Reset link</b> gives you a link to pass on (no email needed); <b>✉ Email reset</b> sends them a reset email. The first two need the Cloud Function deployed (see the deployment note).</div><table style="margin-top:10px"><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="muted">No users.</td></tr>')+'</tbody></table></div>';
 }
 function setBlocked(uid,val){ if(!isAdmin())return; if(!confirm(val?"Block this user? They will not be able to use Adeptly until you unblock them.":"Unblock this user?"))return; db.collection("users").doc(uid).update({blocked:val}).catch(function(e){alert(fbErr(e));}); }
 function setRole(uid,role){ if(!isAdmin())return;
@@ -1721,15 +1781,15 @@ function adminActivity(){
       var stu={}; ta.forEach(function(a){ if(a.studentEmail) stu[a.studentEmail]=1; });
       var avg=done.length?Math.round(done.reduce(function(s,a){return s+(a.score||0);},0)/done.length):null;
       var last=done.reduce(function(m,a){return Math.max(m,a.completedAt||0);},0);
-      return '<tr style="cursor:pointer" onclick="setAdminTeacher(\''+t.uid+'\')"><td><b>'+esc(t.name||"—")+'</b><div class="muted" style="font-size:11px">'+esc(t.email||"")+'</div></td><td>'+tc.length+'</td><td>'+Object.keys(stu).length+'</td><td>'+done.length+'</td><td>'+(avg!=null?avg+'%':"—")+'</td><td class="muted" style="font-size:12px">'+(last?fmtDay(last):"—")+'</td><td style="color:var(--muted)">›</td></tr>';
+      return '<tr style="cursor:pointer" onclick="setAdminTeacher(\''+t.uid+'\')"><td><b>'+esc(t.name||"—")+'</b><div class="muted" style="font-size:11px">'+esc(t.email||"")+'</div></td><td>'+tc.length+'</td><td>'+Object.keys(stu).length+'</td><td>'+done.length+'</td><td>'+(avg!=null?avg+'%':"—")+'</td><td class="muted" style="font-size:12px">'+(last?fmtDay(last):"—")+'</td><td><button class="btn sm" onclick="event.stopPropagation();adminOpenTeacher(\''+t.uid+'\')">Open dashboard →</button></td></tr>';
     }).join("");
-    return '<div class="card"><h2>Teachers &amp; students</h2><p class="sub">Every teacher’s classes, students and how they’re progressing. Tap a teacher to open their full activity.</p>'
+    return '<div class="card"><h2>Teachers &amp; students</h2><p class="sub">Every teacher’s classes, students and how they’re progressing. <b>Open dashboard</b> gives you their full teacher view (download marked tests, allow retakes, open student plans). Tap a row for a quick progress summary.</p>'
      +'<table><thead><tr><th>Teacher</th><th>Classes</th><th>Students</th><th>Diagnostics</th><th>Avg</th><th>Last activity</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" class="muted">No teachers registered yet.</td></tr>')+'</tbody></table></div>';
   }
   var t=us.filter(function(u){return u.uid===S.adminTeacher;})[0]||{};
   var tc=cls.filter(function(c){return c.teacherUid===t.uid;});
   var ta=as.filter(function(a){return a.teacherUid===t.uid;});
-  var head='<div class="card"><div class="flex-between"><div><h2 style="margin:0">'+esc(t.name||"Teacher")+'</h2><p class="sub" style="margin:2px 0 0">'+esc(t.email||"")+' · '+tc.length+' class'+(tc.length===1?"":"es")+'</p></div><button class="btn ghost sm" onclick="setAdminTeacher(\'_all\')">← All teachers</button></div></div>';
+  var head='<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.name||"Teacher")+'</h2><p class="sub" style="margin:2px 0 0">'+esc(t.email||"")+' · '+tc.length+' class'+(tc.length===1?"":"es")+'</p></div><div style="display:flex;gap:6px"><button class="btn sm" onclick="adminOpenTeacher(\''+t.uid+'\')">Open full dashboard →</button><button class="btn ghost sm" onclick="setAdminTeacher(\'_all\')">← All teachers</button></div></div></div>';
   var body=tc.slice().sort(function(a,b){return (""+(a.name||"")).localeCompare(b.name||"");}).map(function(c){
     var ca=ta.filter(function(a){return a.classId===c.id;});
     var byStu={}; ca.forEach(function(a){ var k=a.studentEmail||a.studentName||"?"; (byStu[k]=byStu[k]||[]).push(a); });
@@ -2290,7 +2350,9 @@ function viewClass(id){
     // Allow retake appears for any completed attempt AND for any kicked-out student (even if the
     // force-submit couldn't record a full result), so the teacher can always reopen the test.
     const retakeBtn=(a.status==="completed"||a.kicked)?`<button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
-    const btn=a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> ${retakeBtn}`:retakeBtn;
+    // Password help for a forgetful student (teachers may reset only their own students).
+    const pwBtn=a.studentEmail?` <button class="btn ghost sm" onclick="adminSetPassword('${(a.studentEmail||'').replace(/'/g,"\\'")}')">🔑 Password</button>`:"";
+    const btn=(a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> ${retakeBtn}`:retakeBtn)+pwBtn;
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
     return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
@@ -3348,6 +3410,17 @@ function buildExercise(skill,taskText,seed){
   }
   if(skill==="Grammar")    return _bankExercise(typeof GRAMMAR_BANK!=="undefined"?GRAMMAR_BANK:null, typeof GRAMMAR_ACT!=="undefined"?GRAMMAR_ACT:null, taskText, "Grammar", GRAMMAR_POOL, seed);
   if(skill==="Vocabulary") return _bankExercise(typeof VOCAB_BANK!=="undefined"?VOCAB_BANK:null, typeof VOCAB_ACT!=="undefined"?VOCAB_ACT:null, taskText, "Vocabulary", VOCAB_POOL, seed);
+  // Physics / Science / Chemistry practice: pull real MCQs of THIS skill from that subject's question
+  // pool (previously these fell through to the maths generator, which is why Physics showed a single
+  // off-topic maths question). Weak sub-skills first, then a seeded set so each week differs.
+  var sciSubj = (PHYS_SKILLS.indexOf(skill)>=0)?"Physics":(SCI_SKILLS.indexOf(skill)>=0)?"Science":(CHEM_SKILLS.indexOf(skill)>=0)?"Chemistry":null;
+  if(sciSubj){
+    var pitems=orderByWeak(collectPoolItems(sciSubj,skill),skill);
+    if(pitems.length){ pitems=_seedShuffle(pitems,seed).slice(0,10).map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);});
+      return {type:"mcq",instr:instr,items:pitems}; }
+    // No question bank authored for this subject/skill yet — show a clear message instead of maths.
+    return {type:"mcq",instr:instr,intro:'<div class="notice" style="margin:0;background:#fef3c7;border-color:#fde68a">A practice question bank for <b>'+skill+'</b> ('+sciSubj+') hasn’t been added yet. Your teacher can add one soon.</div>',items:[]};
+  }
   return {type:"mathinput",instr:instr,items:genMath(skill,10)};
 }
 // Recover the exact activity text the student tapped, from its folder key (term-week-index).
