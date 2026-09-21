@@ -145,6 +145,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="pool-math-hs.js"></script>
 <script src="pool-english.js"></script>
 <script src="pool-physics.js"></script>
+<script src="pool-science.js"></script>
 <script src="english-gen.js"></script>
 <script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
@@ -209,7 +210,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-21c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-21f";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2661,10 +2662,10 @@ function writingPromptRot(grade,term,nonce){
   var base=(typeof WRITING_PROMPTS!=="undefined"&&WRITING_PROMPTS[grade])?[WRITING_PROMPTS[grade]]:[]; var list=base.concat(EXTRA_WRITING[engBand(grade)]||[]); if(!list.length) return null; return list[rotIdx(term,nonce,list.length)];
 }
 function studentNonce(){ return (S.student&&S.student.genNonce)||0; }
-// The diagnostic is delivered in Arabic (RTL, Arabic bank) only when the class language
-// is Arabic AND the subject is Mathematics (the Arabic bank covers Maths).
-function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && S.student.subject==="Math"); }
-var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد"};
+// The diagnostic is delivered in Arabic (RTL, Arabic bank) when the class language is Arabic AND
+// the subject has an Arabic bank — Mathematics and Science (lower grades) are Arabic-medium.
+function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && (S.student.subject==="Math" || S.student.subject==="Science")); }
+var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية"};
 function skillLabel(s,ar){ return ar?(AR_SKILL[s]||s):s; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
@@ -2804,7 +2805,7 @@ function rebuildQuestionsForAssignment(a){
   var subj=a.subject||(a.snapshot&&a.snapshot.student&&a.snapshot.student.subject);
   var lang=a.language||(a.snapshot&&a.snapshot.student&&a.snapshot.student.language)||"English";
   if(!g||!subj) return null;
-  if(isArabic(lang)&&subj==="Math"){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
+  if(isArabic(lang)&&(subj==="Math"||subj==="Science")){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
   // Reproduce the same assembled pool test (deterministic from the student + grade + subject + term).
   var assembled=assembleDiagnostic(g,subj,diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0));
   if(subj==="English"){
@@ -3251,9 +3252,14 @@ function viewCurriculum(){
   const c=curState();
   const gopts=GRADES.map(g=>`<option value="${g.id}" ${c.grade===g.id?"selected":""}>${g.label}</option>`).join("");
   const arCurr=(c.subject==="Math" && (c.grade==="3"||c.grade==="4"));
+  // Chemistry is embedded per academic year (the school gave two years' Scope & Sequence).
+  const chemYearOn = (c.subject==="Chemistry" && typeof CHEM_BY_YEAR!=="undefined");
+  const chemYear = c.chemYear || (typeof CHEM_YEARS!=="undefined" && CHEM_YEARS[0]) || "2026-2027";
   let loadedTerms=0, body="";
   ["1","2","3"].forEach(t=>{
-    const data=(CURRICULUM[c.grade]&&CURRICULUM[c.grade][t]&&CURRICULUM[c.grade][t][c.subject])||{};
+    const data= chemYearOn
+      ? ((CHEM_BY_YEAR[chemYear]&&CHEM_BY_YEAR[chemYear][c.grade]&&CHEM_BY_YEAR[chemYear][c.grade][t])||{})
+      : ((CURRICULUM[c.grade]&&CURRICULUM[c.grade][t]&&CURRICULUM[c.grade][t][c.subject])||{});
     const strands=Object.keys(data);
     const anyReal=strands.some(st=>(data[st]||[]).some(x=>x&&!x.startsWith("(")));
     if(anyReal) loadedTerms++;
@@ -3265,12 +3271,15 @@ function viewCurriculum(){
     }).join("");
     body+=`<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${strands.length} ${c.subject==="Math"?"unit(s)/strand(s)":"skill(s)"}</span></div>${inner||'<p class="muted" style="font-size:13px">No data yet.</p>'}</div>`;
   });
+  const yrSel = chemYearOn ? `<div class="col"><label>Academic year</label><select onchange="setCur('chemYear',this.value)">${(CHEM_YEARS||["2026-2027","2025-2026"]).map(y=>`<option value="${y}" ${chemYear===y?"selected":""}>${y}</option>`).join("")}</select></div>` : "";
   return `<div class="card"><h2>Curriculum Browser</h2>
-    <p class="sub">Official MOE outcomes embedded in the app — ${loadedTerms} of 3 terms loaded for ${gLabel(c.grade)} ${subjLabelLong(c.subject)}.</p>
+    <p class="sub">Official MOE outcomes embedded in the app — ${loadedTerms} of 3 terms loaded for ${gLabel(c.grade)} ${subjLabelLong(c.subject)}${chemYearOn?(" · "+chemYear):""}.</p>
     <div class="row">
       <div class="col"><label>Grade</label><select onchange="setCur('grade',this.value)">${gopts}</select></div>
       <div class="col"><label>Subject</label><select onchange="setCur('subject',this.value)"><option value="English" ${c.subject==='English'?'selected':''}>English</option><option value="Math" ${c.subject==='Math'?'selected':''}>Mathematics</option><option value="Physics" ${c.subject==='Physics'?'selected':''}>Physics</option><option value="Science" ${c.subject==='Science'?'selected':''}>Science</option><option value="Chemistry" ${c.subject==='Chemistry'?'selected':''}>Chemistry</option></select></div>
+      ${yrSel}
     </div>
+    ${chemYearOn?`<p class="muted" style="font-size:12px;margin-top:8px">Chemistry is embedded for two academic years. <b>2026-2027:</b> G10 Advanced, G11 Advanced, G11 General, G12 General (Scenario 1). <b>2025-2026:</b> G10 Advanced, G11 Advanced (Scenario 1), G11 General (Scenario 2). Pick a year above; other grades show “No data yet”.</p>`:""}
     <p class="muted" style="font-size:12px;margin-top:12px">English: Reading, Writing, Vocabulary, Grammar (Terms 1–3). Mathematics: Grades 9–12 organised by unit; Grades 6–8 translated from the official Arabic guides and grouped by domain (Terms 1–3).</p>
   </div>${body}`;
 }
