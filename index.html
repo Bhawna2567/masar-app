@@ -146,6 +146,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="pool-english.js"></script>
 <script src="pool-physics.js"></script>
 <script src="pool-science.js"></script>
+<script src="pool-chemistry.js"></script>
 <script src="english-gen.js"></script>
 <script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
@@ -210,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-21f";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-21g";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2664,8 +2665,8 @@ function writingPromptRot(grade,term,nonce){
 function studentNonce(){ return (S.student&&S.student.genNonce)||0; }
 // The diagnostic is delivered in Arabic (RTL, Arabic bank) when the class language is Arabic AND
 // the subject has an Arabic bank — Mathematics and Science (lower grades) are Arabic-medium.
-function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && (S.student.subject==="Math" || S.student.subject==="Science")); }
-var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية"};
+function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && (S.student.subject==="Math" || S.student.subject==="Science" || S.student.subject==="Chemistry")); }
+var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية","Matter & Atomic Structure":"المادة وتركيب الذرة","Bonding & Compounds":"الترابط والمركبات","Reactions & Stoichiometry":"التفاعلات والحسابات الكيميائية","States, Solutions & Organic":"الحالات والمحاليل والكيمياء العضوية"};
 function skillLabel(s,ar){ return ar?(AR_SKILL[s]||s):s; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
@@ -2805,7 +2806,7 @@ function rebuildQuestionsForAssignment(a){
   var subj=a.subject||(a.snapshot&&a.snapshot.student&&a.snapshot.student.subject);
   var lang=a.language||(a.snapshot&&a.snapshot.student&&a.snapshot.student.language)||"English";
   if(!g||!subj) return null;
-  if(isArabic(lang)&&(subj==="Math"||subj==="Science")){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
+  if(isArabic(lang)&&(subj==="Math"||subj==="Science"||subj==="Chemistry")){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return ar; }
   // Reproduce the same assembled pool test (deterministic from the student + grade + subject + term).
   var assembled=assembleDiagnostic(g,subj,diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0));
   if(subj==="English"){
