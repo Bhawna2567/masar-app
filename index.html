@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-21h";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-23a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -623,6 +623,20 @@ function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
 // (from the admin-wide caches) so every teacher view works exactly as it does for the teacher.
 var ADMIN_AS=null;
 function assignments(){ if(ADMIN_AS) return (CACHE.allAssign||[]).filter(function(a){return a.teacherUid===ADMIN_AS.uid;}); return CACHE.assignments; }
+// Assignments the teacher has just reopened for THIS student (retake unlocked). Covers both a normal
+// completion and a lockdown removal, so the unlock is always visible no matter which tab they're on.
+function retakeUnlockedForStudent(){
+  if(!(AUTH&&AUTH.role==="student")||VIEWING) return [];
+  return (CACHE.assignments||[]).filter(function(a){
+    if(!a || a.retakeAllowed!==true || !(a.status==="completed"||a.kicked)) return false;
+    // Don't nag with a "start retake" prompt for the attempt the student is ALREADY retaking
+    // (they've reopened it and haven't resubmitted yet — S.result is cleared for it).
+    if(a.id===S.activeAssignment && !S.result && S.student) return false;
+    return true;
+  });
+}
+// One-tap retake: clears the local "already submitted" state and reopens the paper for this student.
+function startRetake(id){ try{ lockdownEnd(); }catch(e){} openAssignment(id,false); }
 function classesList(){ if(ADMIN_AS) return (CACHE.allClasses||[]).filter(function(c){return c.teacherUid===ADMIN_AS.uid;}); return CACHE.classes||[]; }
 function teacherTests(){ if(ADMIN_AS) return []; return CACHE.tests||[]; }
 function adminOpenTeacher(uid){ if(!isAdmin())return; var u=(adminUsers()||[]).filter(function(x){return x.uid===uid;})[0]||{uid:uid}; ADMIN_AS={uid:uid,name:u.name,email:u.email}; S.adminSection=null; S.adminTeacher=null; S.openClassId=null; S.teacherView=null; render(); }
@@ -742,6 +756,21 @@ function render(){
   const map={home:viewHome,setup:viewSetup,diagnostic:viewDiagnostic,results:viewResults,gaps:viewGaps,report:viewReport,goals:viewGoals,plan:viewPlan,folders:viewFolders,tracker:viewTracker,graphs:viewProgressGraphs,curriculum:viewCurriculum};
   if(!tabEnabled(TABS.find(t=>t.id===S.activeTab))){S.activeTab=VIEWING?"results":"home";}
   let inner=(map[S.activeTab]||viewHome)();
+  // If the teacher just unlocked a retake, show a prominent banner on EVERY student tab (not only the
+  // Home list) so the student can't miss it. This is what makes "Allow retake" actually reach them.
+  if(AUTH.role==="student" && !VIEWING){
+    var _ru=retakeUnlockedForStudent();
+    if(_ru.length){
+      var _rows=_ru.map(function(a){
+        return '<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff">'
+          +'<div><b>'+subjChip(a.subject)+'</b> <span class="muted" style="font-size:12px">'+(a.className?esc(a.className)+' · ':'')+'Term '+aTerm(a)+' · based on '+gLabel(a.prevGrade)+'</span></div>'
+          +'<button class="btn gold sm" onclick="startRetake(\''+a.id+'\')">▶ Start retake</button></div>';
+      }).join("");
+      inner='<div class="card" style="border:2px solid var(--green);background:#f0fdf4"><h2 style="margin:0 0 4px">✅ Retake unlocked</h2>'
+        +'<p class="sub">Your teacher has reopened '+(_ru.length>1?'these diagnostics':'this diagnostic')+' for you. Tap <b>Start retake</b> to begin — you can take it once.</p>'
+        +_rows+'</div>'+inner;
+    }
+  }
   if(VIEWING) inner=`<div class="notice" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">👁 Viewing <b>${VIEWING.studentName}</b>'s dashboard (read-only) <button class="btn ghost sm" onclick="teacherCloseStudent()">← Back to my dashboard</button></div>`+inner;
   v.innerHTML=verifyBanner()+inner;
   try{
@@ -2708,7 +2737,15 @@ function getQuestions(){
   return bank;
 }
 function viewDiagnostic(){
-  if(S.result){return `<div class="card"><h2>Diagnostic submitted ✓</h2>
+  if(S.result){
+    // If the teacher has reopened this test, offer the retake right here instead of a dead end.
+    var _aa=(CACHE.assignments||[]).find(function(x){return x.id===S.activeAssignment && x.retakeAllowed===true;})
+          || retakeUnlockedForStudent()[0];
+    if(_aa){ return `<div class="card"><h2>Retake unlocked ✅</h2>
+      <div class="empty"><div class="big">🔓</div>
+      Your teacher has reopened this diagnostic for you. You can take it once.<br><br>
+      <button class="btn gold" onclick="startRetake('${_aa.id}')">▶ Start your retake</button></div></div>`; }
+    return `<div class="card"><h2>Diagnostic submitted ✓</h2>
     <div class="empty"><div class="big">✅</div>
     You've already completed this diagnostic. Your results are in <b>3 · Level &amp; Results</b>.<br>
     The test can't be retaken unless your teacher unlocks it.</div></div>`;}
