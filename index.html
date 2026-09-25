@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-25c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-25d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -366,6 +366,9 @@ function assembleDiagnostic(grade,subj,seedStr){
   // parametric items so every diagnostic differs (curated curriculum questions still appear, the rest
   // vary by seed); grades with no pool fall back to the parametric generator entirely.
   var pool=(QUESTION_POOL[grade]&&QUESTION_POOL[grade][subj])?QUESTION_POOL[grade][subj]:null;
+  // General-stream grade with no bank of its own (e.g. Physics 9G/10G/11G) → use the same grade's
+  // Advanced bank rather than showing "no questions".
+  if(!(pool&&pool.length) && /G$/.test(String(grade))){ var _alt=String(grade).replace(/G$/,"A"); if(QUESTION_POOL[_alt]&&QUESTION_POOL[_alt][subj]) pool=QUESTION_POOL[_alt][subj]; }
   if(subj==="Math"){
     var para=genMathParametric(grade,seedStr,20);
     if(pool&&pool.length){ pool=pool.concat(para); }   // blended; assembleFromPool de-dupes & selects
@@ -677,7 +680,7 @@ function startListeners(){
     _unsub.push(db.collection("assignments").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
     _unsub.push(db.collection("classes").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.classes=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
     _unsub.push(db.collection("tests").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.tests=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
-    _unsub.push(db.collection("users").doc(AUTH.uid).onSnapshot(d=>{ if(d.exists){ AUTH=Object.assign({},AUTH,d.data(),{uid:AUTH.uid}); ensureAdminListeners(); render(); } }, e=>console.warn(e)));
+    _unsub.push(db.collection("users").doc(AUTH.uid).onSnapshot(d=>{ if(d.exists){ var cu=fbAuth.currentUser; AUTH=Object.assign({},AUTH,d.data(),{uid:(cu&&cu.uid)||AUTH.uid,email:((cu&&cu.email)||AUTH.email||"").toLowerCase()}); ensureAdminListeners(); render(); } }, e=>console.warn(e)));
   } else {
     _unsub.push(db.collection("assignments").where("studentEmail","==",AUTH.email).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
   }
@@ -984,7 +987,7 @@ function saveEditedTest(){
   var qs=(S.editQs||[]); if(!qs.length){ alert("Add at least one question."); return; }
   var subj=S.bankSubj||"English", grade=S.bankGrade||"6";
   var questions=qs.map(function(q){ return {q:q.q,options:q.options,answer:q.answer,skill:q.skill||"",sub:q.sub||"",level:q.level||"C"}; });
-  db.collection("tests").add({teacherUid:AUTH.uid,title:title,subject:subj,grade:grade,questions:questions,source:"edited",createdAt:Date.now()})
+  db.collection("tests").add({teacherUid:myUid(),title:title,subject:subj,grade:grade,questions:questions,source:"edited",createdAt:Date.now()})
     .then(function(){ S.bankMode="view"; S.editQs=null; render(); alert("Saved “"+title+"”. Assign it to a class from a class's page (Diagnostic test selector), or to a single student in My classes → Assign."); })
     .catch(function(e){ alert(fbErr(e)); });
 }
@@ -1600,7 +1603,7 @@ function assignDiagnostic(){
   const s=(AUTH.students||[]).find(x=>x.email===studentEmail);
   const testId=(document.getElementById("as_test")||{}).value||"";
   const ct=testId?teacherTests().find(x=>x.id===testId):null;
-  const payload={teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
+  const payload={teacherUid:myUid(),teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
   if(ct){ payload.customQuestions=ct.questions||[]; payload.customTitle=ct.title||"Custom test"; }
   db.collection("assignments").add(payload)
     .then(()=>{const m=document.getElementById("amsg"); if(m)m.textContent=ct?("Assigned “"+ct.title+"” — it's on the student's dashboard."):"Assigned! It is now on the student's dashboard.";})
@@ -2068,6 +2071,24 @@ function sanitizeQuestions(qs){
   });
   return out;
 }
+// The signed-in user's REAL Firebase ID (what the database rules check). Never trust a copied value.
+function myUid(){ var cu=(typeof fbAuth!=="undefined")&&fbAuth.currentUser; return (cu&&cu.uid)||(AUTH&&AUTH.uid)||null; }
+// One-click health check, run in the teacher's own signed-in session: identity, App Check, and a real
+// test write + delete to "tests". Tells us definitively why saving/generating fails, if it does.
+function runConnectionCheck(){
+  var lines=[], cu=fbAuth.currentUser;
+  function add(ok,txt){ lines.push((ok?"✅ ":"❌ ")+txt); impBox("<b>🩺 Connection check</b><br>"+lines.join("<br>"), lines.some(function(l){return l.indexOf("❌")===0;})?"red":"muted"); }
+  add(!!cu, "Firebase login: "+(cu?("signed in as "+esc(cu.email||"")):"NOT signed in"));
+  if(!cu) return;
+  add(AUTH&&AUTH.uid===cu.uid, "App identity matches login"+(AUTH&&AUTH.uid!==cu.uid?(" — MISMATCH (app had "+esc(String(AUTH&&AUTH.uid))+")"):""));
+  var tokP=(firebase.appCheck?firebase.appCheck().getToken(false):Promise.resolve({token:"(App Check not enabled)"}));
+  tokP.then(function(t){ add(!!(t&&t.token), "App Check token issued"); }, function(e){ add(false, "App Check failed: "+esc((e&&(e.code||e.message))||String(e))); })
+  .then(function(){
+    return db.collection("tests").add({teacherUid:cu.uid,title:"__connection_check__",subject:"English",grade:"",questions:[],source:"check",createdAt:Date.now()})
+      .then(function(ref){ add(true,"Database test write succeeded"); return ref.delete().then(function(){ add(true,"Cleanup done — you can save tests. ✔"); }, function(){ add(true,"(cleanup skipped)"); }); },
+            function(e){ add(false,"Database test write FAILED — code: <b>"+esc((e&&e.code)||"")+"</b> · "+esc((e&&e.message)||"")); });
+  });
+}
 // Show a big, PERSISTENT status box right in the import panel (so an error can't be missed or
 // dismissed). cls: "ok" | "red" | "muted".
 function impBox(html,cls){
@@ -2093,11 +2114,11 @@ function saveImportedTest(){
       say("No questions detected yet.","red");
       impBox("<b>No questions are loaded yet.</b><br>Upload your file (or paste the text into the box and click <b>📋 Read pasted text</b>) so questions appear here, then click <b>Save test</b>.","red"); return;
     }
-    if(!AUTH || !AUTH.uid){ say("Not signed in.","red"); impBox("You appear to be signed out. Log out and back in, then try again.","red"); return; }
+    if(!myUid()){ say("Not signed in.","red"); impBox("You appear to be signed out. Log out and back in, then try again.","red"); return; }
     var questions=sanitizeQuestions(IMPORTED.questions);
     if(!questions.length){ say("Couldn’t prepare questions.","red"); impBox("The detected items couldn’t be prepared — each question needs at least 2 options.","red"); return; }
     say("Saving…","muted"); impBox("Saving “"+String(title).replace(/</g,"&lt;")+"” — "+questions.length+" question(s)…","muted");
-    var payload={teacherUid:AUTH.uid, title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
+    var payload={teacherUid:myUid(), title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
     db.collection("tests").add(payload)
       .then(function(ref){
         say("Saved ✓","ok");
@@ -2217,6 +2238,7 @@ function importCard(){
     + '<textarea id="imp_paste" dir="auto" placeholder="مثال:\n١) ما وحدة قياس القوة؟\nأ) نيوتن\nب) جول\nج) واط\nد) أمبير\nالإجابة: أ" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit"></textarea>'
     + '<div style="margin-top:6px"><button class="btn ghost" onclick="importFromPaste()">📋 Read pasted text</button></div></div>'
     + '<div style="margin-top:10px"><button class="btn" onclick="saveImportedTest()">Save test</button> <span id="imp_msg" style="font-size:12px;color:var(--ok)"></span></div>'
+    + '<div style="margin-top:6px"><button class="btn ghost sm" onclick="runConnectionCheck()">🩺 Check my connection</button></div>'
     + '<p class="muted" style="font-size:11px;margin:6px 0 0">Diagnostics: build '+APP_BUILD+' · '+(AUTH&&AUTH.uid?('signed in as '+esc(AUTH.email||"")):'<b style="color:var(--red)">NOT signed in</b>')+'</p>'
     + '<div id="imp_preview" style="margin-top:12px"></div>'
     + '</div>';
@@ -2399,8 +2421,13 @@ function generateTerm(classId,term){
   db.collection("classes").doc(classId).update({genNonce:freshNonce}).catch(function(){});
   Promise.all(pending.map(m=>{
     const prior=priorSummaryFor(m.email,classId,t);
-    return db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:freshNonce,status:"pending",createdAt:Date.now()}).catch(()=>{});
-  })).then(()=>{ S.classTerm=t; render(); });
+    return db.collection("assignments").add({teacherUid:myUid(),teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:freshNonce,status:"pending",createdAt:Date.now()}).then(function(){return null;},function(e){return e||{code:"unknown"};});
+  })).then(function(errs){
+    var bad=(errs||[]).filter(Boolean);
+    S.classTerm=t; render();
+    if(bad.length){ var e=bad[0]; alert("Could not generate the Term "+t+" diagnostic for "+bad.length+" of "+pending.length+" student(s).\n\nError code: "+((e&&e.code)||"")+"\n"+((e&&e.message)||"")+"\n\nOpen Import a test → 🩺 Check my connection, and send me a screenshot."); }
+    else { alert("✅ Term "+t+" diagnostic generated for "+pending.length+" student(s)."); }
+  });
 }
 function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function fmtDate(s){ if(!s)return ""; const dt=new Date(s+"T00:00:00"); return isNaN(dt)?s:dt.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}); }
@@ -2472,7 +2499,7 @@ function createClass(){
   if(!name||!grade){msg.style.color="var(--red)";msg.textContent="Choose a class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Creating…";
   const termDates={1:document.getElementById("c_t1").value||"",2:document.getElementById("c_t2").value||"",3:document.getElementById("c_t3").value||""};
-  db.collection("classes").add({teacherUid:AUTH.uid,teacherName:AUTH.name,name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
+  db.collection("classes").add({teacherUid:myUid(),teacherName:AUTH.name,name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
     .then(()=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--ok)";m.textContent="Class created — share its join code.";}})
     .catch(e=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
@@ -2487,7 +2514,7 @@ function addToClass(id){
   if(assignments().find(a=>a.classId===id&&a.studentEmail===email)){msg.style.color="var(--red)";msg.textContent="That student is already in this class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Adding…";
   const td=c.termDates||{};
-  db.collection("assignments").add({teacherUid:AUTH.uid,teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
+  db.collection("assignments").add({teacherUid:myUid(),teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
     .then(()=>db.collection("users").doc(AUTH.uid).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(()=>{}))
     .then(()=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--ok)";m.textContent="Added — their Term 1 diagnostic is on their dashboard. Generate later terms from the class view.";}})
     .catch(e=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
@@ -3788,7 +3815,10 @@ fbAuth.onAuthStateChanged(function(user){
   _unsub.forEach(u=>{try{u()}catch(e){}}); _unsub=[];
   if(!user){ AUTH=null; CACHE={assignments:[],classes:[],tests:[]}; S=freshState(); render(); return; }
   db.collection("users").doc(user.uid).get().then(doc=>{
-    AUTH=Object.assign({uid:user.uid,email:(user.email||"").toLowerCase()}, doc.exists?doc.data():{role:"student",name:user.email});
+    // Merge the profile FIRST, then force uid/email from the real Firebase login. A profile document
+    // that happens to contain its own "uid"/"email" field must never override the signed-in identity —
+    // otherwise every write is stamped with the wrong teacher ID and the database refuses it.
+    AUTH=Object.assign({}, doc.exists?doc.data():{role:"student",name:user.email}, {uid:user.uid,email:(user.email||"").toLowerCase()});
     CACHE={assignments:[],classes:[],tests:[]};
     startListeners();
     if(AUTH.role==="student") loadStateForUser();
