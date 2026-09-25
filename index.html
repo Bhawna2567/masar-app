@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-25b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-25c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2068,6 +2068,13 @@ function sanitizeQuestions(qs){
   });
   return out;
 }
+// Show a big, PERSISTENT status box right in the import panel (so an error can't be missed or
+// dismissed). cls: "ok" | "red" | "muted".
+function impBox(html,cls){
+  var el=document.getElementById("imp_preview");
+  var bg=cls==="ok"?"#ecfdf5":(cls==="red"?"#fef2f2":"#f8fafc"), bd=cls==="ok"?"#a7f3d0":(cls==="red"?"#fecaca":"#e5e7eb");
+  if(el) el.innerHTML='<div style="border:1px solid '+bd+';background:'+bg+';border-radius:10px;padding:12px 14px;font-size:13px">'+html+'</div>';
+}
 function saveImportedTest(){
   var msg=document.getElementById("imp_msg");
   function say(txt,cls){ if(msg){ msg.style.color="var(--"+(cls||"muted")+")"; msg.textContent=txt; } }
@@ -2075,24 +2082,39 @@ function saveImportedTest(){
     var title=(document.getElementById("imp_title")||{}).value; title=(title||"").trim();
     var subj=(document.getElementById("imp_subject")||{}).value||"English";
     var grade=(document.getElementById("imp_grade")||{}).value||"";
-    if(!title){ say("Give your test a name.","red"); return; }
-    if(!IMPORTED || !IMPORTED.questions || !IMPORTED.questions.length){ say("No questions detected yet — upload a file or paste the text above first.","red"); return; }
-    if(!AUTH || !AUTH.uid){ say("You’re not signed in — please log out and back in, then try again.","red"); return; }
+    // If nothing has been parsed yet but there's pasted text, read it now — so clicking Save alone
+    // (without first clicking "Read pasted text") still works.
+    if((!IMPORTED || !IMPORTED.questions || !IMPORTED.questions.length)){
+      var ta0=document.getElementById("imp_paste");
+      if(ta0 && ta0.value && ta0.value.trim()){ IMPORTED=parseImport(ta0.value, skillsFor(subj)); IMPORTED.raw=ta0.value; IMPORTED.rawLen=normImport(ta0.value).replace(/\s/g,"").length; }
+    }
+    if(!title){ say("Give your test a name.","red"); impBox("Please type a <b>Test name</b> at the top, then click Save again.","red"); return; }
+    if(!IMPORTED || !IMPORTED.questions || !IMPORTED.questions.length){
+      say("No questions detected yet.","red");
+      impBox("<b>No questions are loaded yet.</b><br>Upload your file (or paste the text into the box and click <b>📋 Read pasted text</b>) so questions appear here, then click <b>Save test</b>.","red"); return;
+    }
+    if(!AUTH || !AUTH.uid){ say("Not signed in.","red"); impBox("You appear to be signed out. Log out and back in, then try again.","red"); return; }
     var questions=sanitizeQuestions(IMPORTED.questions);
-    if(!questions.length){ say("The detected questions couldn’t be prepared for saving — check they each have at least 2 options.","red"); return; }
-    say("Saving…","muted");
-    db.collection("tests").add({teacherUid:AUTH.uid, title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()})
-      .then(function(){ say("Saved “"+title+"” ("+questions.length+" questions). Assign it under “Assign & share”.","ok"); IMPORTED=null; var ta=document.getElementById("imp_paste"); if(ta)ta.value=""; })
+    if(!questions.length){ say("Couldn’t prepare questions.","red"); impBox("The detected items couldn’t be prepared — each question needs at least 2 options.","red"); return; }
+    say("Saving…","muted"); impBox("Saving “"+String(title).replace(/</g,"&lt;")+"” — "+questions.length+" question(s)…","muted");
+    var payload={teacherUid:AUTH.uid, title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
+    db.collection("tests").add(payload)
+      .then(function(ref){
+        say("Saved ✓","ok");
+        impBox("✅ <b>Saved “"+String(title).replace(/</g,"&lt;")+"”</b> — "+questions.length+" question(s).<br>It’s now in <b>your imported tests</b> above. Assign it to a class under <b>Assign &amp; share</b>.",("ok"));
+        IMPORTED=null; var ta=document.getElementById("imp_paste"); if(ta)ta.value="";
+        // Optimistically show it in the list immediately (don't wait for the live listener).
+        try{ CACHE.tests=(CACHE.tests||[]).concat([Object.assign({id:ref&&ref.id||("local-"+Date.now())},payload)]); }catch(_){}
+        try{ render(); }catch(_){}
+      })
       .catch(function(e){ try{console.error("Save imported test failed:",e);}catch(_){}
-        var m=(e&&(e.code||e.message))||"";
-        say("Couldn’t save: "+fbErr(e),"red");
-        // Permission errors mean the database rules block writing tests — tell the teacher plainly.
-        if(String(m).indexOf("permission")>=0){ alert("Adeptly couldn’t save this test because the database is blocking it (permission denied).\n\nThis is a one-time Firebase Firestore Rules setting for the \"tests\" collection — your other data saves fine, but \"tests\" needs a matching rule. Send this message to whoever set up Firebase, or ask me to give you the exact rule to paste."); }
-        else { alert("Couldn’t save this test: "+fbErr(e)); }
+        var code=(e&&e.code)||"", m=(e&&e.message)||String(e);
+        say("Couldn’t save.","red");
+        impBox("❌ <b>Couldn’t save this test.</b><br>Error code: <b>"+String(code||"(none)").replace(/</g,"&lt;")+"</b><br>Message: "+String(m).replace(/</g,"&lt;")+"<br><br><span class=\"muted\">Please screenshot this box and send it — it tells us exactly what to fix.</span>","red");
       });
   }catch(err){ try{console.error(err);}catch(_){}
-    say("Couldn’t save: "+((err&&err.message)||err),"red");
-    alert("Couldn’t save this test: "+((err&&err.message)||err));
+    say("Couldn’t save.","red");
+    impBox("❌ <b>Something went wrong before saving.</b><br>"+String((err&&err.message)||err).replace(/</g,"&lt;")+"<br><br><span class=\"muted\">Please screenshot this box and send it.</span>","red");
   }
 }
 function deleteTest(id){ if(!confirm("Delete this imported test? Diagnostics already assigned with it are not affected."))return; db.collection("tests").doc(id).delete().catch(function(e){alert(fbErr(e));}); }
@@ -2195,6 +2217,7 @@ function importCard(){
     + '<textarea id="imp_paste" dir="auto" placeholder="مثال:\n١) ما وحدة قياس القوة؟\nأ) نيوتن\nب) جول\nج) واط\nد) أمبير\nالإجابة: أ" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit"></textarea>'
     + '<div style="margin-top:6px"><button class="btn ghost" onclick="importFromPaste()">📋 Read pasted text</button></div></div>'
     + '<div style="margin-top:10px"><button class="btn" onclick="saveImportedTest()">Save test</button> <span id="imp_msg" style="font-size:12px;color:var(--ok)"></span></div>'
+    + '<p class="muted" style="font-size:11px;margin:6px 0 0">Diagnostics: build '+APP_BUILD+' · '+(AUTH&&AUTH.uid?('signed in as '+esc(AUTH.email||"")):'<b style="color:var(--red)">NOT signed in</b>')+'</p>'
     + '<div id="imp_preview" style="margin-top:12px"></div>'
     + '</div>';
 }
