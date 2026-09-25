@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-25a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-25b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2056,16 +2056,44 @@ function renderImportPreview(){
   if(res.warnings.length) html+='<div class="notice" style="margin-top:8px">⚠ '+res.warnings.length+' note(s):<br>'+res.warnings.map(function(w){return "• "+w.replace(/</g,"&lt;");}).join("<br>")+'</div>';
   el.innerHTML=html;
 }
+// Turn parsed questions into plain, Firestore-safe records (no undefined values, answer in range).
+function sanitizeQuestions(qs){
+  var out=[];
+  (qs||[]).forEach(function(q){
+    if(!q) return;
+    var opts=(q.options||[]).map(function(o){ return (o==null?"":String(o)); }).filter(function(o){ return o.length; });
+    if(opts.length<2) return;
+    var ans=(typeof q.answer==="number" && q.answer>=0 && q.answer<opts.length)?q.answer:0;
+    out.push({ q:String(q.q||""), options:opts, answer:ans, skill:String(q.skill||"") });
+  });
+  return out;
+}
 function saveImportedTest(){
-  var title=document.getElementById("imp_title").value.trim();
-  var subj=document.getElementById("imp_subject").value, grade=document.getElementById("imp_grade").value;
   var msg=document.getElementById("imp_msg");
-  if(!title){ msg.style.color="var(--red)"; msg.textContent="Give your test a name."; return; }
-  if(!IMPORTED || !IMPORTED.questions.length){ msg.style.color="var(--red)"; msg.textContent="Upload a PDF or Word file first — no questions detected yet."; return; }
-  msg.style.color="var(--muted)"; msg.textContent="Saving…";
-  db.collection("tests").add({teacherUid:AUTH.uid, title:title, subject:subj, grade:grade, questions:IMPORTED.questions, createdAt:Date.now()})
-    .then(function(){ var m=document.getElementById("imp_msg"); if(m){ m.style.color="var(--ok)"; m.textContent="Saved “"+title+"” ("+IMPORTED.questions.length+" questions). Assign it under “Assign & share”."; } IMPORTED=null; })
-    .catch(function(e){ var m=document.getElementById("imp_msg"); if(m){ m.style.color="var(--red)"; m.textContent=fbErr(e); } });
+  function say(txt,cls){ if(msg){ msg.style.color="var(--"+(cls||"muted")+")"; msg.textContent=txt; } }
+  try{
+    var title=(document.getElementById("imp_title")||{}).value; title=(title||"").trim();
+    var subj=(document.getElementById("imp_subject")||{}).value||"English";
+    var grade=(document.getElementById("imp_grade")||{}).value||"";
+    if(!title){ say("Give your test a name.","red"); return; }
+    if(!IMPORTED || !IMPORTED.questions || !IMPORTED.questions.length){ say("No questions detected yet — upload a file or paste the text above first.","red"); return; }
+    if(!AUTH || !AUTH.uid){ say("You’re not signed in — please log out and back in, then try again.","red"); return; }
+    var questions=sanitizeQuestions(IMPORTED.questions);
+    if(!questions.length){ say("The detected questions couldn’t be prepared for saving — check they each have at least 2 options.","red"); return; }
+    say("Saving…","muted");
+    db.collection("tests").add({teacherUid:AUTH.uid, title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()})
+      .then(function(){ say("Saved “"+title+"” ("+questions.length+" questions). Assign it under “Assign & share”.","ok"); IMPORTED=null; var ta=document.getElementById("imp_paste"); if(ta)ta.value=""; })
+      .catch(function(e){ try{console.error("Save imported test failed:",e);}catch(_){}
+        var m=(e&&(e.code||e.message))||"";
+        say("Couldn’t save: "+fbErr(e),"red");
+        // Permission errors mean the database rules block writing tests — tell the teacher plainly.
+        if(String(m).indexOf("permission")>=0){ alert("Adeptly couldn’t save this test because the database is blocking it (permission denied).\n\nThis is a one-time Firebase Firestore Rules setting for the \"tests\" collection — your other data saves fine, but \"tests\" needs a matching rule. Send this message to whoever set up Firebase, or ask me to give you the exact rule to paste."); }
+        else { alert("Couldn’t save this test: "+fbErr(e)); }
+      });
+  }catch(err){ try{console.error(err);}catch(_){}
+    say("Couldn’t save: "+((err&&err.message)||err),"red");
+    alert("Couldn’t save this test: "+((err&&err.message)||err));
+  }
 }
 function deleteTest(id){ if(!confirm("Delete this imported test? Diagnostics already assigned with it are not affected."))return; db.collection("tests").doc(id).delete().catch(function(e){alert(fbErr(e));}); }
 // Rolling nonce for the teacher's preview/PDF so every time they generate a preview they get a
