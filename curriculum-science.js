@@ -84,3 +84,115 @@ if (typeof CURRICULUM === "undefined") { var CURRICULUM = {}; }
             "The Periodic Table — development of the modern periodic table; classification of the elements; periodic trends."] }
   });
 })();
+
+
+/* ================= Grade 9 General — Integrated Science (Physics bridge) =================
+   Embedded in full from "G09 GEN_ SCOPE AND SEQUENCE_BRIDGE_2025-2026.xlsx" (all 3 terms, every
+   lesson, with the Required / Enrichment notes). Filed under BOTH Science and Physics so a Grade 9
+   General class shows it whichever subject it uses. Replaces the earlier short summary. */
+(function(){
+  var PHYS={
+ "1": {
+  "Measurement & Units": [
+   "A Physics Toolkit (Chapter 1) — Methods of Science",
+   "A Physics Toolkit (Chapter 1) — Mathematics and Physics",
+   "A Physics Toolkit (Chapter 1) — Measurement",
+   "A Physics Toolkit (Chapter 1) — Graphing Data · For enrichment: Non-linear relationships p: 21-22"
+  ],
+  "Motion & Forces": [
+   "Representing Motion (Chapter 2) — Picturing Motion",
+   "Representing Motion (Chapter 2) — Where and When?",
+   "Representing Motion (Chapter 2) — Position-Time Graphs",
+   "Representing Motion (Chapter 2) — How Fast?",
+   "Accelerated Motion (Chapter 3) — Acceleration",
+   "Accelerated Motion (Chapter 3) — Motion with Constant Acceleration · Required: \"Velocity with Average Acceleration\" p: 69 For enrichment: remaining content of the lesson",
+   "Accelerated Motion (Chapter 3) — Free-Fall · Required: “Galileo’s Discovery” p: 75 – “Free-Fall Acceleration” p: 76 (conceptual understanding for the case when an object is dropped and when it is thrown upward) For enrichment: remaining content of the lesson"
+  ]
+ },
+ "2": {
+  "Motion & Forces": [
+   "Forces in One Dimension (Chapter 4) — Force and Motion",
+   "Forces in One Dimension (Chapter 4) — Weight and Drag Force · For enrichment:\"Drag force\" p: 104-105",
+   "Forces in One Dimension (Chapter 4) — Newton's Third Law",
+   "Displacement and Force in Two Dimensions (Chapter 5) — Vectors · For enrichment",
+   "Displacement and Force in Two Dimensions (Chapter 5) — Friction",
+   "Displacement and Force in Two Dimensions (Chapter 5) — Forces in Two Dimensions · For enrichment"
+  ]
+ },
+ "3": {
+  "Motion & Forces": [
+   "Work, Energy, and Machines (Chapter 6) — Work and Energy · Stick to one dimension only - don’t involve trigonometry and vector projection - Calculation of work is required only for the cases when force is in the same direction of motion, opposite to the direction of motion, or perpendicular to the direction of motion.",
+   "Work, Energy, and Machines (Chapter 6) — Machines · For enrichment"
+  ],
+  "Waves & Sound": [
+   "Vibrations and Waves (Chapter 7) — Periodic Motion · Required: Definitions of periodic motion, period, and amplitude only - p:234. For enrichment: remaining content of the lesson.",
+   "Vibrations and Waves (Chapter 7) — Wave Properties",
+   "Vibrations and Waves (Chapter 7) — Wave Behavior · For enrichment"
+  ],
+  "Matter & Thermal Energy": [
+   "Solids, Liquids, and Gases (Chapter 8) — Matter and Thermal Energy",
+   "Solids, Liquids, and Gases (Chapter 8) — Properties of Fluids",
+   "Solids, Liquids, and Gases (Chapter 8) — Behavior of Gases",
+   "Matter - Properties and change (Chapter 9) — Properties of Matter",
+   "Matter - Properties and change (Chapter 9) — Changes in Matter",
+   "Matter - Properties and change (Chapter 9) — Elements and compounds · Required: - Law of Definite Proportion with calculation. - Law of Multiple Proportion just conceptual (without calculation and without comparing the ratio of Mass between the different compounds).",
+   "Matter - Properties and change (Chapter 9) — Mixture and Matter · For enrichment: Separating Mixtures"
+  ]
+ }
+}, SCI={
+ "1": {
+  "Scientific Inquiry & Technology": [
+   "A Physics Toolkit (Chapter 1) — Methods of Science",
+   "A Physics Toolkit (Chapter 1) — Mathematics and Physics",
+   "A Physics Toolkit (Chapter 1) — Measurement",
+   "A Physics Toolkit (Chapter 1) — Graphing Data · For enrichment: Non-linear relationships p: 21-22"
+  ],
+  "Physical Science": [
+   "Representing Motion (Chapter 2) — Picturing Motion",
+   "Representing Motion (Chapter 2) — Where and When?",
+   "Representing Motion (Chapter 2) — Position-Time Graphs",
+   "Representing Motion (Chapter 2) — How Fast?",
+   "Accelerated Motion (Chapter 3) — Acceleration",
+   "Accelerated Motion (Chapter 3) — Motion with Constant Acceleration · Required: \"Velocity with Average Acceleration\" p: 69 For enrichment: remaining content of the lesson",
+   "Accelerated Motion (Chapter 3) — Free-Fall · Required: “Galileo’s Discovery” p: 75 – “Free-Fall Acceleration” p: 76 (conceptual understanding for the case when an object is dropped and when it is thrown upward) For enrichment: remaining content of the lesson"
+  ]
+ },
+ "2": {
+  "Physical Science": [
+   "Forces in One Dimension (Chapter 4) — Force and Motion",
+   "Forces in One Dimension (Chapter 4) — Weight and Drag Force · For enrichment:\"Drag force\" p: 104-105",
+   "Forces in One Dimension (Chapter 4) — Newton's Third Law",
+   "Displacement and Force in Two Dimensions (Chapter 5) — Vectors · For enrichment",
+   "Displacement and Force in Two Dimensions (Chapter 5) — Friction",
+   "Displacement and Force in Two Dimensions (Chapter 5) — Forces in Two Dimensions · For enrichment"
+  ]
+ },
+ "3": {
+  "Physical Science": [
+   "Work, Energy, and Machines (Chapter 6) — Work and Energy · Stick to one dimension only - don’t involve trigonometry and vector projection - Calculation of work is required only for the cases when force is in the same direction of motion, opposite to the direction of motion, or perpendicular to the direction of motion.",
+   "Work, Energy, and Machines (Chapter 6) — Machines · For enrichment",
+   "Vibrations and Waves (Chapter 7) — Periodic Motion · Required: Definitions of periodic motion, period, and amplitude only - p:234. For enrichment: remaining content of the lesson.",
+   "Vibrations and Waves (Chapter 7) — Wave Properties",
+   "Vibrations and Waves (Chapter 7) — Wave Behavior · For enrichment",
+   "Solids, Liquids, and Gases (Chapter 8) — Matter and Thermal Energy",
+   "Solids, Liquids, and Gases (Chapter 8) — Properties of Fluids",
+   "Solids, Liquids, and Gases (Chapter 8) — Behavior of Gases",
+   "Matter - Properties and change (Chapter 9) — Properties of Matter",
+   "Matter - Properties and change (Chapter 9) — Changes in Matter",
+   "Matter - Properties and change (Chapter 9) — Elements and compounds · Required: - Law of Definite Proportion with calculation. - Law of Multiple Proportion just conceptual (without calculation and without comparing the ratio of Mass between the different compounds).",
+   "Matter - Properties and change (Chapter 9) — Mixture and Matter · For enrichment: Separating Mixtures"
+  ]
+ }
+};
+  var PSTR=["Measurement & Units","Motion & Forces","Waves & Sound","Light & Optics","Matter & Thermal Energy"];
+  var SSTR=["Life Science","Physical Science","Earth & Space Science","Scientific Inquiry & Technology"];
+  CURRICULUM["9G"]=CURRICULUM["9G"]||{};
+  ["1","2","3"].forEach(function(t){
+    CURRICULUM["9G"][t]=CURRICULUM["9G"][t]||{};
+    var p={}, s={};
+    PSTR.forEach(function(k){ if(PHYS[t][k]||k!=="Matter & Thermal Energy") p[k]=PHYS[t][k]||[]; });
+    SSTR.forEach(function(k){ s[k]=SCI[t][k]||[]; });
+    CURRICULUM["9G"][t]["Physics"]=p;
+    CURRICULUM["9G"][t]["Science"]=s;
+  });
+})();

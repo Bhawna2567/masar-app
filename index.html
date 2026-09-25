@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-26a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-26b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -369,6 +369,13 @@ function assembleDiagnostic(grade,subj,seedStr){
   // General-stream grade with no bank of its own (e.g. Physics 9G/10G/11G) → use the same grade's
   // Advanced bank rather than showing "no questions".
   if(!(pool&&pool.length) && /G$/.test(String(grade))){ var _alt=String(grade).replace(/G$/,"A"); if(QUESTION_POOL[_alt]&&QUESTION_POOL[_alt][subj]) pool=QUESTION_POOL[_alt][subj]; }
+  // Grade 9 General "Integrated Science" IS the physics course (Physics Toolkit, Motion, Forces…), so a
+  // Science class that has no 9G Science bank uses the Grade 9 physics questions, relabelled into the
+  // Science skill areas so scoring and gap analysis still line up.
+  if(!(pool&&pool.length) && subj==="Science"){
+    var _pp=(QUESTION_POOL[grade]&&QUESTION_POOL[grade].Physics)||(QUESTION_POOL[String(grade).replace(/G$/,"A")]&&QUESTION_POOL[String(grade).replace(/G$/,"A")].Physics);
+    if(_pp&&_pp.length){ var _map={"Measurement & Units":"Scientific Inquiry & Technology"}; pool=_pp.map(function(q){ return Object.assign({},q,{skill:_map[q.skill]||"Physical Science"}); }); }
+  }
   if(subj==="Math"){
     var para=genMathParametric(grade,seedStr,20);
     if(pool&&pool.length){ pool=pool.concat(para); }   // blended; assembleFromPool de-dupes & selects
