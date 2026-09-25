@@ -147,6 +147,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="pool-physics.js"></script>
 <script src="pool-science.js"></script>
 <script src="pool-chemistry.js"></script>
+<script src="pool-physics-ar.js"></script>
+<script src="practice-ar.js"></script>
 <script src="english-gen.js"></script>
 <script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
@@ -211,7 +213,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-26b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-26d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -337,6 +339,23 @@ function genMathParametric(gradeId,seedStr,count){
 // Seeded assembly of a difficulty-mixed 20-question test from a pool array (F/C/H levels).
 // Used for BOTH the English-medium pool and the Arabic-medium bank, so both vary by seed and
 // never show the same fixed 20 twice when the pool is larger than 20.
+// Resolve the question bank for a grade+subject in English (ar=false) or Arabic (ar=true).
+// Order: the grade's own bank → the same grade's Advanced bank (General-stream grades) → for
+// Science with no bank of its own, the matching Chemistry/Physics bank relabelled into Science skills.
+function bankFor(grade,subj,ar){
+  var SRC=ar?QUESTION_BANK_AR:QUESTION_POOL, g=String(grade), gA=g.replace(/G$/,"A");
+  function get(gg,ss){ return (SRC[gg]&&SRC[gg][ss]&&SRC[gg][ss].length)?SRC[gg][ss]:null; }
+  var b=get(g,subj)||(g!==gA?get(gA,subj):null);
+  if(b) return b;
+  if(subj==="Science"){
+    var alt=get(g,"Chemistry")||get(gA,"Chemistry")||get(g,"Physics")||get(gA,"Physics");
+    if(alt){ var M={"Measurement & Units":"Scientific Inquiry & Technology"};
+      return alt.map(function(q){ return Object.assign({},q,{skill:M[q.skill]||"Physical Science"}); }); }
+  }
+  return null;
+}
+// Which subjects have Arabic-medium diagnostics.
+var AR_SUBJECTS=["Math","Science","Chemistry","Physics"];
 function assembleFromPool(pool, seedStr){
   if(!pool||!pool.length) return null;
   // De-duplicate defensively (blended pools may overlap).
@@ -369,13 +388,7 @@ function assembleDiagnostic(grade,subj,seedStr){
   // General-stream grade with no bank of its own (e.g. Physics 9G/10G/11G) → use the same grade's
   // Advanced bank rather than showing "no questions".
   if(!(pool&&pool.length) && /G$/.test(String(grade))){ var _alt=String(grade).replace(/G$/,"A"); if(QUESTION_POOL[_alt]&&QUESTION_POOL[_alt][subj]) pool=QUESTION_POOL[_alt][subj]; }
-  // Grade 9 General "Integrated Science" IS the physics course (Physics Toolkit, Motion, Forces…), so a
-  // Science class that has no 9G Science bank uses the Grade 9 physics questions, relabelled into the
-  // Science skill areas so scoring and gap analysis still line up.
-  if(!(pool&&pool.length) && subj==="Science"){
-    var _pp=(QUESTION_POOL[grade]&&QUESTION_POOL[grade].Physics)||(QUESTION_POOL[String(grade).replace(/G$/,"A")]&&QUESTION_POOL[String(grade).replace(/G$/,"A")].Physics);
-    if(_pp&&_pp.length){ var _map={"Measurement & Units":"Scientific Inquiry & Technology"}; pool=_pp.map(function(q){ return Object.assign({},q,{skill:_map[q.skill]||"Physical Science"}); }); }
-  }
+  if(!(pool&&pool.length)) pool=bankFor(grade,subj,false);
   if(subj==="Math"){
     var para=genMathParametric(grade,seedStr,20);
     if(pool&&pool.length){ pool=pool.concat(para); }   // blended; assembleFromPool de-dupes & selects
@@ -1568,6 +1581,7 @@ function viewTeacher(){
   const studentsBody=`<div class="card"><h2>👁 Preview a diagnostic</h2><p class="sub">See exactly what students will get — including the reading passage — before you assign it.</p>
     <div class="row"><div class="col"><label>Subject</label><select id="pv_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option></select></div>
       <div class="col"><label>Class</label><select id="pv_grade">${CLASS_PRESETS.map(p=>`<option value="${p.grade}|${p.label}">${p.label}</option>`).join("")}</select></div>
+      <div class="col"><label>Language</label><select id="pv_lang"><option value="English">English</option><option value="Arabic">العربية · Arabic</option></select></div>
       <div class="col"><label>Test</label><select id="pv_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
     <p class="muted" style="font-size:11px;margin:2px 0 0">Preview shows the exact test that class's students receive — the previous grade's content (e.g. Grade 7 class → Grade 6 test).</p>
     <div style="margin-top:10px"><button class="btn" onclick="previewDiagnostic()">🔄 Generate preview</button> <button class="btn gold" onclick="downloadDiagnosticPDF()">⬇ Download as PDF</button></div>
@@ -1781,7 +1795,7 @@ function adminMenu(){
   var sec=S.adminSection||"reports";
   return '<div class="card"><div class="flex-between"><h2 style="margin:0">Admin</h2><button class="btn ghost sm" onclick="setAdmin(\'_close\')">← Back to my dashboard</button></div>'
    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">'
-   +[["reports","📊 Admin Reports"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
+   +[["reports","📊 Admin Reports"],["classes","🏫 All classes"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
    +' <button class="btn ghost sm" onclick="exportUsersCSV()">⬇ Export users CSV</button> <button class="btn ghost sm" onclick="exportStudentsByClass()">🏫 Export students by class</button>'
    +'</div></div>';
 }
@@ -1828,7 +1842,7 @@ function adminDisk(){
 function adminTwoFactor(){
   return '<div class="card"><h2>Two-factor authentication</h2><p class="sub">Extra login security for accounts.</p><p style="font-size:14px;line-height:1.7">Built-in SMS two-factor for teacher/student logins needs Firebase’s paid <b>Blaze</b> plan. On the current free plan, your accounts are already protected by:</p><ul style="font-size:14px;line-height:1.8"><li><b>App Check</b> is enforced — only the real app can reach your data.</li><li>Passwords must be at least <b>8 characters</b>.</li><li><b>Email verification</b> is requested at sign-up.</li><li>You can <b>block</b> any suspicious account from Manage users.</li></ul><p class="muted" style="font-size:12px">Also turn on <b>2FA for your GitHub account</b> — that protects the whole app. If you upgrade to Blaze later, SMS multi-factor for teachers can be switched on.</p></div>';
 }
-function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
+function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="classes"?adminAllClasses() : sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
 
 /* ===== ADMIN: drill into any teacher's classes and their students' progress ===== */
 function esc(s){ return (""+(s==null?"":s)).replace(/[&<>"]/g,function(m){return m==="&"?"&amp;":m==="<"?"&lt;":m===">"?"&gt;":"&quot;";}); }
@@ -2173,13 +2187,42 @@ function buildDiagnosticData(){
     // Use the SAME engine students get (tagged pool / parametric Maths), so the preview matches the real
     // test. The rolling preview nonce makes each generated preview a totally different paper.
     var pvN=pvNonce();
+    var wantAr=((document.getElementById("pv_lang")||{}).value==="Arabic") && AR_SUBJECTS.indexOf(subj)>=0;
+    var arBank=wantAr?bankFor(grade,subj,true):null;
+    if(arBank){
+      var arQs=assembleFromPool(arBank, diagSeed(AUTH&&AUTH.email,grade,subj,"1",pvN));
+      return {subj:subj,grade:grade,qs:arQs,passage:null,ar:true,
+              title:"اختبار تشخيصي — "+gLabel(grade)+" · "+(AR_SUBJ_NAME[subj]||subj)};
+    }
+    var arMissing=((document.getElementById("pv_lang")||{}).value==="Arabic");
     var assembled=assembleDiagnostic(grade,subj,diagSeed(AUTH&&AUTH.email,grade,subj,"1",pvN));
     if(subj==="English"){ var rc=readingCompRot(grade,"1",pvN); passage=rc; var cq=rc.qs.map(function(x){return {q:x.q,options:x.options,answer:x.answer,skill:x.skill||"Reading",level:x.level};}); qs=assembled?cq.concat(assembled):cq; }
     else { qs=assembled; }
     if(!qs||!qs.length){ var bank=(QUESTION_BANK[grade]&&QUESTION_BANK[grade][subj])?QUESTION_BANK[grade][subj]:null; if(bank) qs=bank; }  // legacy fallback
     title="Diagnostic — "+gLabel(grade)+" "+subjLabelLong(subj);
   }
-  return {subj:subj,grade:grade,qs:qs,passage:passage,title:title};
+  var hasAr=(qs||[]).some(function(q){ return /[\u0600-\u06FF]/.test((q&&q.q)||""); });
+  return {subj:subj,grade:grade,qs:qs,passage:passage,title:title,ar:hasAr,
+          note:(typeof arMissing!=="undefined"&&arMissing&&!hasAr)?(subj==="English"?"English tests are in English only.":"No Arabic version exists for this grade and subject yet, so this shows the English test."):""};
+}
+// Arabic PDF: the built-in PDF font has no Arabic letters, so open a right-to-left, print-ready page
+// (test + answer key). The teacher picks "Save as PDF" in the print dialog.
+function printArabicPaper(d){
+  var L=["أ","ب","ج","د","هـ","و"], e=function(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;"); };
+  var qs=d.qs.map(function(q,i){ return '<div class="q"><div class="st">'+(i+1)+'. '+e(q.q)+'</div>'+(q.options||[]).map(function(o,oi){ return '<div class="op">'+L[oi]+') '+e(o)+'</div>'; }).join("")+'</div>'; }).join("");
+  var key=d.qs.map(function(q,i){ return '<span>'+(i+1)+': '+(L[q.answer]||"?")+'</span>'; }).join("");
+  var html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+e(d.title)+'</title><style>'
+    +'body{font-family:"Geeza Pro","Arial","Tahoma",sans-serif;margin:36px;color:#111;line-height:1.7}h1{font-size:20px;margin:0 0 6px}'
+    +'.meta{font-size:13px;margin-bottom:14px;border-bottom:1px solid #ccc;padding-bottom:10px}.q{margin:0 0 14px;page-break-inside:avoid}'
+    +'.st{font-weight:700;font-size:15px}.op{font-size:14px;margin-right:18px}.key{page-break-before:always}.key span{display:inline-block;width:70px;font-size:14px}'
+    +'.hint{background:#fef3c7;border:1px solid #fde68a;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}@media print{.hint{display:none}}</style></head><body>'
+    +'<div class="hint">لحفظ الملف: اختر «حفظ بتنسيق PDF» (Save as PDF) في نافذة الطباعة.</div>'
+    +'<h1>'+e(d.title)+'</h1><div class="meta">الاسم: ____________________ &nbsp;&nbsp; الصف: __________ &nbsp;&nbsp; التاريخ: __________</div>'
+    +qs+'<div class="key"><h1>مفتاح الإجابة — نسخة المعلّم</h1>'+key+'</div>'
+    +'<script>setTimeout(function(){window.print();},400);<\/script></body></html>';
+  var w=window.open("","_blank");
+  if(!w){ alert("Please allow pop-ups for this site to download the Arabic PDF."); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 function downloadDiagnosticPDF(keepCurrent){
   try{
@@ -2188,6 +2231,7 @@ function downloadDiagnosticPDF(keepCurrent){
     if(!keepCurrent) pvBump();
     var d=buildDiagnosticData();
     if(!d.qs||!d.qs.length){ alert("No questions available for this selection yet."); return; }
+    if(d.ar){ printArabicPaper(d); return; }
     var JS=(window.jspdf&&window.jspdf.jsPDF); if(!JS){ alert("The PDF writer didn't load — check your internet and try again."); return; }
     var doc=new JS({unit:"pt",format:"a4"}); var W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
     var M=48, x=M, y=M, LW=W-2*M; var LET=["A","B","C","D","E","F"];
@@ -2222,12 +2266,14 @@ function downloadDiagnosticPDF(keepCurrent){
 function previewDiagnostic(){
   pvBump();  // each preview = a brand-new, totally different paper
   var d=buildDiagnosticData(); var subj=d.subj, grade=d.grade, qs=d.qs, passage=d.passage, title=d.title;
+  var AR=!!d.ar, DIR=AR?' dir="rtl" style="text-align:right"':'';
   var m=document.getElementById("exModal"); if(!m)return;
   if(!qs||!qs.length){ m.innerHTML='<div class="ovl"><div class="ex"><div class="flex-between"><h2 style="margin:0">Preview</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div><p class="muted" style="margin:0">No questions available for this selection yet.</p></div></div>'; m.style.display="block"; return; }
   var body="";
   // Two-pane layout (same as the student test): passage in a sticky panel beside the questions.
   if(passage){ body+='<div class="readtest"><aside class="rt-passage"><h3>📖 Reading passage — '+passage.title+'</h3><div class="rt-text">'+passage.passage.replace(/</g,"&lt;")+'</div></aside><div class="rt-questions">'; }
-  body+=qs.map(function(q,i){ return '<div class="q"><div class="meta">'+(q.skill||"")+'</div><div class="stem">Q'+(i+1)+'. '+((q.q||"")+"").replace(/</g,"&lt;")+'</div>'+(q.options||[]).map(function(o,oi){ return '<label class="opt '+(oi===q.answer?"exok":"")+'">'+(oi===q.answer?"✅ ":"")+(""+o).replace(/</g,"&lt;")+'</label>'; }).join("")+'</div>'; }).join("");
+  if(d.note) body+='<div class="notice" style="margin-bottom:10px">'+d.note+'</div>';
+  body+=qs.map(function(q,i){ return '<div class="q"'+DIR+'><div class="meta">'+(AR?(AR_SKILL[q.skill]||q.skill||""):(q.skill||""))+'</div><div class="stem">'+(AR?'س':'Q')+(i+1)+'. '+((q.q||"")+"").replace(/</g,"&lt;")+'</div>'+(q.options||[]).map(function(o,oi){ return '<label class="opt '+(oi===q.answer?"exok":"")+'">'+(oi===q.answer?"✅ ":"")+(""+o).replace(/</g,"&lt;")+'</label>'; }).join("")+'</div>'; }).join("");
   var _pvWp=(subj==="English" && passage)?writingPromptRot(grade,"1",pvNonce()):null;
   if(_pvWp){
     body+='<div class="q"><div class="meta">Writing · Written Response</div><div class="stem">✍️ Writing Task — students write a full response (not multiple choice):</div><p style="font-size:13px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0 0">'+(""+_pvWp).replace(/</g,"&lt;")+'</p></div>';
@@ -2536,16 +2582,17 @@ function addToClass(id){
 }
 function normCode(s){ return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
 function joinClass(){
-  const code=normCode(document.getElementById("joinCode").value);
+  const code=normCode((document.getElementById("joinCode")||{}).value);
   const parent=((document.getElementById("joinParent")||{}).value||"").replace(/[^0-9]/g,"");
   const msg=document.getElementById("joinMsg");
   if(!code){msg.style.color="var(--red)";msg.textContent="Enter a class code.";return;}
-  if(!parent||parent.length<8){msg.style.color="var(--red)";msg.textContent="Enter your parent's WhatsApp number with country code.";return;}
+  // Parent number is OPTIONAL — it must never stop a student from joining. Save it only if valid.
+  if(parent && parent.length<8){msg.style.color="var(--red)";msg.textContent="That WhatsApp number looks too short — include the country code (e.g. 9715XXXXXXXX), or leave it empty.";return;}
   msg.style.color="var(--muted)";msg.textContent="Looking up class…";
-  db.collection("users").doc(AUTH.uid).update({parentPhone:parent}).catch(()=>{}); AUTH.parentPhone=parent;
+  if(parent){ db.collection("users").doc(AUTH.uid).update({parentPhone:parent}).catch(()=>{}); AUTH.parentPhone=parent; }
   function enrol(c){
     const m=document.getElementById("joinMsg");
-    if(assignments().find(a=>a.classId===c.id)){if(m){m.style.color="var(--red)";m.textContent="You're already in "+c.name+".";}return;}
+    if(assignments().find(a=>a.classId===c.id)){if(m){m.style.color="var(--ok)";m.textContent="You're already in "+c.name+" — your diagnostic is in “My diagnostics” below.";}return;}
     const td=c.termDates||{};
     return db.collection("assignments").add({teacherUid:c.teacherUid,teacherName:c.teacherName,studentEmail:AUTH.email,studentName:AUTH.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,language:c.language||"English",classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
       .then(()=>{const m2=document.getElementById("joinMsg");if(m2){m2.style.color="var(--ok)";m2.textContent="Joined "+c.name+"! Your Term 1 diagnostic is in the list below.";}});
@@ -2561,11 +2608,32 @@ function joinClass(){
       if(!match){ if(m){m.style.color="var(--red)";m.textContent="No class found with that code. Check the code with your teacher.";} return; }
       return enrol(match);
     });
-  }).catch(e=>{const m=document.getElementById("joinMsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
+  }).catch(e=>{const m=document.getElementById("joinMsg");if(m){m.style.color="var(--red)";m.textContent="Couldn’t join: "+fbErr(e)+((e&&e.code)?" ("+e.code+")":"")+". Try logging out and back in; if it persists, show this message to your teacher.";}});
+}
+// Everyone who can own a class: any account that is NOT a student (teachers, admins, untagged staff).
+function staffUsers(){ return (CACHE.users||[]).filter(function(u){ return u && u.uid && u.role!=="student"; }); }
+// Admin: every class in the school with its real owner, join code and size — and a Move control per row,
+// so a class filed under the wrong account can be fixed in one click.
+function adminAllClasses(){
+  var cls=(CACHE.allClasses||[]).slice(), us=CACHE.users||[], as=CACHE.allAssign||[];
+  function uName(uid){ var u=us.filter(function(x){return x.uid===uid;})[0]; return u?(u.name||u.email):"(unknown account)"; }
+  var staff=staffUsers().slice().sort(function(a,b){return String(a.name||a.email).localeCompare(String(b.name||b.email));});
+  var mine=myUid();
+  cls.sort(function(a,b){ return String(uName(a.teacherUid)).localeCompare(String(uName(b.teacherUid)))||String(a.name).localeCompare(String(b.name)); });
+  var rows=cls.map(function(c){
+    var n={}; as.forEach(function(a){ if(a.classId===c.id&&a.studentEmail) n[a.studentEmail]=1; });
+    var opts=staff.map(function(u){ return '<option value="'+u.uid+'"'+(u.uid===c.teacherUid?' selected':'')+'>'+esc(u.name||u.email)+'</option>'; }).join("");
+    return '<tr><td><b>'+esc(c.name)+'</b><div class="muted" style="font-size:11px">'+esc(subjLabelLong(c.subject))+' · '+esc(c.language||"English")+'</div></td>'
+      +'<td>'+esc(uName(c.teacherUid))+(c.teacherUid===mine?' <span class="pill amber">you</span>':'')+'</td>'
+      +'<td><code style="font-size:14px;letter-spacing:2px">'+esc(c.joinCode||"—")+'</code></td><td>'+Object.keys(n).length+'</td>'
+      +'<td><select id="mv_'+c.id+'" style="width:auto;display:inline-block">'+opts+'</select> <button class="btn sm" onclick="transferClassTo(\''+c.id+'\',document.getElementById(\'mv_'+c.id+'\').value)">Move</button></td></tr>';
+  }).join("");
+  return '<div class="card"><h2 style="margin:0 0 4px">🏫 All classes</h2><p class="sub">Every class in the school and the account that owns it. A class shows on a teacher’s dashboard only if <b>they</b> are the owner — classes marked <span class="pill amber">you</span> are on your dashboard. Pick the right teacher and press <b>Move</b>; the class keeps its join code and every student’s diagnostics move with it.</p>'
+    +(cls.length?('<table><thead><tr><th>Class</th><th>Owner</th><th>Join code</th><th>Students</th><th>Move to</th></tr></thead><tbody>'+rows+'</tbody></table>'):'<p class="muted">No classes yet.</p>')+'</div>';
 }
 // ---- Admin: move a class (and all its students' diagnostics) to another teacher ----
 function transferClassBox(c){
-  var teachers=(CACHE.users||[]).filter(function(u){ return u.role==="teacher" && u.uid!==c.teacherUid; })
+  var teachers=staffUsers().filter(function(u){ return u.uid!==c.teacherUid; })
     .sort(function(a,b){ return String(a.name||a.email).localeCompare(String(b.name||b.email)); });
   var cur=(CACHE.users||[]).filter(function(u){return u.uid===c.teacherUid;})[0];
   var opts=teachers.map(function(u){ return '<option value="'+u.uid+'">'+esc(u.name||u.email)+' ('+esc(u.email||"")+')</option>'; }).join("");
@@ -2574,10 +2642,10 @@ function transferClassBox(c){
     +(teachers.length?('<div class="row"><div class="col"><select id="xfer_to">'+opts+'</select></div><div class="col" style="display:flex;align-items:flex-end"><button class="btn" onclick="transferClass(\''+c.id+'\')">Move class to this teacher</button> <span id="xfer_msg" style="font-size:12px;margin-left:8px"></span></div></div>'):'<p class="muted" style="font-size:12px">No other teacher accounts found.</p>')
     +'</div>';
 }
-function transferClass(classId){
-  if(!isAdmin()) return;
-  var sel=document.getElementById("xfer_to"); if(!sel||!sel.value) return;
-  var t=(CACHE.users||[]).filter(function(u){return u.uid===sel.value;})[0]; if(!t) return;
+function transferClass(classId){ var sel=document.getElementById("xfer_to"); if(sel&&sel.value) transferClassTo(classId, sel.value); }
+function transferClassTo(classId, toUid){
+  if(!isAdmin()||!toUid) return;
+  var t=(CACHE.users||[]).filter(function(u){return u.uid===toUid;})[0]; if(!t) return;
   var c=(CACHE.allClasses||[]).concat(CACHE.classes||[]).filter(function(x){return x.id===classId;})[0]; if(!c) return;
   if(!confirm("Move \""+(c.name||"this class")+"\" to "+(t.name||t.email)+"?\n\nThe class, its join code, and every student's diagnostics and results will move to their dashboard.")) return;
   var msg=document.getElementById("xfer_msg"); if(msg){ msg.style.color="var(--muted)"; msg.textContent="Moving…"; }
@@ -2591,8 +2659,8 @@ function transferClass(classId){
   if(sl.length) ops.push(db.collection("users").doc(t.uid).update({students:firebase.firestore.FieldValue.arrayUnion.apply(null,sl)}).catch(function(){}));
   Promise.all(ops).then(function(){
     alert("✅ \""+(c.name||"Class")+"\" now belongs to "+(t.name||t.email)+" ("+cas.length+" student diagnostic(s) moved). It will show on their dashboard.");
-    ADMIN_AS=null; S.openClassId=null; render();
-  }).catch(function(e){ if(msg){ msg.style.color="var(--red)"; msg.textContent="Couldn’t move: "+((e&&e.code)||"")+" "+((e&&e.message)||e); } });
+    S.openClassId=null; render();
+  }).catch(function(e){ var t2="Couldn’t move: "+((e&&e.code)||"")+" "+((e&&e.message)||e); if(msg){ msg.style.color="var(--red)"; msg.textContent=t2; } else alert(t2); });
 }
 function viewClass(id){
   const c=classesList().find(x=>x.id===id);
@@ -2719,7 +2787,7 @@ function viewHome(){
   ${probeBanner}
   <div class="card"><h2>Join a class</h2><p class="sub">Got a class code from your teacher? Enter it, and add your parent's WhatsApp number so your teacher can send them your reports.</p>
     <div class="row"><div class="col"><label>Class code</label><input id="joinCode" placeholder="e.g. K7P2QX" style="text-transform:uppercase;letter-spacing:2px"></div>
-    <div class="col"><label>Parent's WhatsApp number (with country code)</label><input id="joinParent" placeholder="e.g. 9715XXXXXXXX" value="${AUTH.parentPhone||''}"></div></div>
+    <div class="col"><label>Parent's WhatsApp number (optional, with country code)</label><input id="joinParent" placeholder="e.g. 9715XXXXXXXX" value="${AUTH.parentPhone||''}"></div></div>
     <div style="margin-top:10px"><button class="btn" onclick="joinClass()">Join class</button> <span id="joinMsg" style="font-size:12px"></span></div>
   </div>
   <div class="card"><div class="flex-between"><h2 style="margin:0">My diagnostics</h2>
@@ -2930,14 +2998,15 @@ function writingPromptRot(grade,term,nonce){
 function studentNonce(){ return (S.student&&S.student.genNonce)||0; }
 // The diagnostic is delivered in Arabic (RTL, Arabic bank) when the class language is Arabic AND
 // the subject has an Arabic bank — Mathematics and Science (lower grades) are Arabic-medium.
-function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && (S.student.subject==="Math" || S.student.subject==="Science" || S.student.subject==="Chemistry")); }
-var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية","Matter & Atomic Structure":"المادة وتركيب الذرة","Bonding & Compounds":"الترابط والمركبات","Reactions & Stoichiometry":"التفاعلات والحسابات الكيميائية","States, Solutions & Organic":"الحالات والمحاليل والكيمياء العضوية"};
+function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && AR_SUBJECTS.indexOf(S.student.subject)>=0 && bankFor(S.student.prevGrade,S.student.subject,true)); }
+var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية","Matter & Atomic Structure":"المادة وتركيب الذرة","Bonding & Compounds":"الترابط والمركبات","Reactions & Stoichiometry":"التفاعلات والحسابات الكيميائية","States, Solutions & Organic":"الحالات والمحاليل والكيمياء العضوية","Measurement & Units":"القياس والوحدات","Motion & Forces":"الحركة والقوى","Waves & Sound":"الموجات والصوت","Light & Optics":"الضوء والبصريات"};
+var AR_SUBJ_NAME={"Math":"الرياضيات","Science":"العلوم","Chemistry":"الكيمياء","Physics":"الفيزياء","English":"اللغة الإنجليزية"};
 function skillLabel(s,ar){ return ar?(AR_SKILL[s]||s):s; }
 function getQuestions(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
   const g=S.student.prevGrade, subj=S.student.subject;
   if(diagnosticIsArabic()){
-    var arBank=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null;
+    var arBank=bankFor(g,subj,true);
     if(arBank) return assembleFromPool(arBank, diagSeed(AUTH&&AUTH.email,g,subj,S.curTerm,studentNonce())) || arBank;
   }
   // Preferred: assemble a difficulty-mixed test (Maths is fresh each time; English uses the pool). The
@@ -2979,7 +3048,7 @@ function viewDiagnostic(){
     To try the full demo now, set <b>previous = Grade 6</b> and <b>current = Grade 7</b>.</div></div>`;}
   const AR=diagnosticIsArabic();
   let html=AR
-    ? `<div class="card" style="text-align:right"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("اختبار تشخيصي — بناءً على "+gLabel(S.student.prevGrade)+" · الرياضيات")}</h2>
+    ? `<div class="card" style="text-align:right"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("اختبار تشخيصي — بناءً على "+gLabel(S.student.prevGrade)+" · "+(AR_SUBJ_NAME[S.student.subject]||S.student.subject))}</h2>
     <p class="sub">${S.student.name} ينتقل إلى ${gLabel(S.student.curGrade)}. يقيس هذا الاختبار إتقان الصف السابق قبل قياس الاستعداد للصف الجديد.</p>
     ${S.prior?`<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">هذا اختبار <b>الفصل ${S.curTerm||""}</b> — ويُبنى على نتائج <b>الفصل ${S.prior.term}</b> (المجموع ${S.prior.score}%).</div>`:""}`
     : `<div class="card"><h2>${S.customTitle?S.customTitle.replace(/</g,"&lt;"):("Diagnostic Test — based on "+gLabel(S.student.prevGrade)+" "+S.student.subject)}</h2>
@@ -3079,7 +3148,7 @@ function rebuildQuestionsForAssignment(a){
   var subj=a.subject||(a.snapshot&&a.snapshot.student&&a.snapshot.student.subject);
   var lang=a.language||(a.snapshot&&a.snapshot.student&&a.snapshot.student.language)||"English";
   if(!g||!subj) return null;
-  if(isArabic(lang)&&(subj==="Math"||subj==="Science"||subj==="Chemistry")){ var ar=(QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj])?QUESTION_BANK_AR[g][subj]:null; if(ar) return assembleFromPool(ar, diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0)) || ar; }
+  if(isArabic(lang)&&AR_SUBJECTS.indexOf(subj)>=0){ var ar=bankFor(g,subj,true); if(ar) return assembleFromPool(ar, diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0)) || ar; }
   // Reproduce the same assembled pool test (deterministic from the student + grade + subject + term).
   var assembled=assembleDiagnostic(g,subj,diagSeed(a.studentEmail,g,subj,a.term,a.genNonce||0));
   if(subj==="English"){
@@ -3380,6 +3449,20 @@ const ACTIVITY_LIB={
   "Geometry":["Find the perimeter and area of 8 figures","Find the surface area or volume of 6 solids","Classify 10 shapes or angles by their properties","Measure and draw 5 shapes accurately","Solve 5 problems using the Pythagorean theorem or similarity","Plot and identify 8 points on the coordinate plane","Calculate missing angles in 6 figures","Find missing side lengths in 5 right triangles","Identify the transformation in 6 figures","Find the volume of 5 prisms or cylinders"],
   "Data & Probability":["Read and answer questions on 3 graphs","Find the mean, median, mode, and range of 4 data sets","Calculate the probability of 8 simple events","Build a bar graph or line plot from given data","Interpret a scatter plot and describe the trend","Compare two data sets and write 2 conclusions","Create a frequency table from raw data","Find the probability of 6 compound events","Calculate the mean of 5 larger data sets","Draw and interpret a box plot"]
 };
+// Science / Physics / Chemistry skills get their own activity libraries (they previously had none).
+if(typeof SCI_ACTIVITY_LIB!=="undefined"){ Object.keys(SCI_ACTIVITY_LIB).forEach(function(k){ if(!ACTIVITY_LIB[k]) ACTIVITY_LIB[k]=SCI_ACTIVITY_LIB[k].map(function(p){return p[0];}); }); }
+// Weekly practice follows the class language: Arabic-medium classes (Math/Science/Physics/Chemistry) see
+// their folders, activities, questions and practice screens in Arabic, right-to-left.
+function practiceIsArabic(){ return !!(S.student && isArabic(S.student.language) && AR_SUBJECTS.indexOf(S.student.subject)>=0); }
+function PR(k,en){ return practiceIsArabic() && typeof PR_AR!=="undefined" && PR_AR[k] ? PR_AR[k] : en; }
+function skillL(s){ return practiceIsArabic() ? (AR_SKILL[s]||s) : s; }
+// The English activity for a folder slot. Old plans stored the placeholder "Practice activity" for science
+// skills — show a real, skill-specific activity instead (deterministic, so it never changes between visits).
+function taskEnglish(t,week,i,tk,skill){
+  if(tk==="Practice activity"){ var lib=ACTIVITY_LIB[skill]; if(lib&&lib.length){ return lib[((((Number(t)||1)-1)*20+(week-1))*7+i)%lib.length]; } }
+  return tk;
+}
+function taskLabel(t,week,i,tk,skill){ var en=taskEnglish(t,week,i,tk,skill); return practiceIsArabic()&&typeof ACT_AR!=="undefined"&&ACT_AR[en] ? ACT_AR[en] : en; }
 function generatePlan(){
   const subj=S.student.subject, areas=skillsFor(subj);
   const gaps=areas.filter(a=>S.result.skillPct[a]<55);
@@ -3414,56 +3497,59 @@ function viewGoals(){
   const goals=(S.plan&&S.plan.goals)||[];
   if(!goals.length) return `<div class="card"><h2>My Goals</h2><div class="empty"><div class="big">🎯</div>No gap areas were flagged in your diagnostic — keep up the great work! Goals appear here automatically when there are skills to lift.</div></div>`;
   function skillPlanPct(sk){let d=0,tt=0;["1","2","3"].forEach(t=>S.plan.terms[t].weeks.forEach(w=>{if(w.skill===sk)w.tasks.forEach((_,i)=>{tt++;if(S.taskDone[t+"-"+w.week+"-"+i])d++;});}));return tt?Math.round(d/tt*100):0;}
+  const AR=practiceIsArabic(), DIR=AR?' dir="rtl" style="text-align:right"':'';
   const cards=goals.map(g=>{
     const eff=skillPlanPct(g.skill);
-    return `<div class="card"><div class="flex-between"><h2>🎯 ${g.skill}</h2><span class="pill ${eff>=60?'green':eff>0?'amber':'grey'}">${eff}% of activities done</span></div>
-      <p style="font-size:14px;margin:0 0 12px">${g.statement}</p>
-      <div class="kpi"><div class="box"><div class="n">${g.baseline}%</div><div class="l">Start now</div></div>
-        <div class="box"><div class="n">${g.t1}%</div><div class="l">Term 1 target</div></div>
-        <div class="box"><div class="n">${g.t2}%</div><div class="l">Term 2 target</div></div>
-        <div class="box"><div class="n">${g.t3}%</div><div class="l">Year target</div></div></div>
-      <p class="muted" style="font-size:12px;margin-top:10px">Your activities to reach this goal are in <b>Weekly Folders</b> — open the ${g.skill} weeks and tap <b>▶ Practice</b>.</p>
+    const stmt=AR?`حسّن مهارة ${skillL(g.skill)} من ${g.baseline}% إلى ${g.t3}% (مستوى الصف) بنهاية العام — أهداف الفصول: ${g.t1}% ← ${g.t2}% ← ${g.t3}%.`:g.statement;
+    return `<div class="card"${DIR}><div class="flex-between"><h2>🎯 ${skillL(g.skill)}</h2><span class="pill ${eff>=60?'green':eff>0?'amber':'grey'}">${eff}% ${AR?PR_AR.ofDone:"of activities done"}</span></div>
+      <p style="font-size:14px;margin:0 0 12px">${stmt}</p>
+      <div class="kpi"><div class="box"><div class="n">${g.baseline}%</div><div class="l">${AR?PR_AR.startNow:"Start now"}</div></div>
+        <div class="box"><div class="n">${g.t1}%</div><div class="l">${AR?PR_AR.t1:"Term 1 target"}</div></div>
+        <div class="box"><div class="n">${g.t2}%</div><div class="l">${AR?PR_AR.t2:"Term 2 target"}</div></div>
+        <div class="box"><div class="n">${g.t3}%</div><div class="l">${AR?PR_AR.yearT:"Year target"}</div></div></div>
+      <p class="muted" style="font-size:12px;margin-top:10px">${AR?`أنشطة تحقيق هذا الهدف موجودة في <b>المجلدات الأسبوعية</b> — افتح أسابيع ${skillL(g.skill)} واضغط <b>▶ تدرّب</b>.`:`Your activities to reach this goal are in <b>Weekly Folders</b> — open the ${g.skill} weeks and tap <b>▶ Practice</b>.`}</p>
     </div>`;
   }).join("");
-  return `<div class="card"><h2>My Goals</h2><p class="sub">Set automatically from your diagnostic. Reach each target by completing the matching activities in your weekly plan.</p></div>${cards}`;
+  return `<div class="card"${DIR}><h2>${AR?PR_AR.goalsTitle:"My Goals"}</h2><p class="sub">${AR?PR_AR.goalsSub:"Set automatically from your diagnostic. Reach each target by completing the matching activities in your weekly plan."}</p></div>${cards}`;
 }
 function viewPlan(){
-  const p=S.plan, subj=S.student.subject;
-  let terms=["1","2","3"].map(t=>{
+  const p=S.plan, subj=S.student.subject, AR=practiceIsArabic(), DIR=AR?' dir="rtl" style="text-align:right"':'';
+  let terms=["1","2","3"].map((t,ti)=>{
     const tm=p.terms[t];
-    return `<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${tm.weeks.length} weeks · ${(tm.weeks[0]&&tm.weeks[0].tasks.length)||0} folders/week</span></div>
-      <p class="sub">${tm.goal}</p>
-      <table><thead><tr><th>Week</th><th>Focus skill</th><th>Activities</th></tr></thead><tbody>
-      ${tm.weeks.map(w=>`<tr><td>W${w.week}</td><td><b>${w.skill}</b></td><td style="font-size:13px">${w.tasks.join("<br>")}</td></tr>`).join("")}
+    const goal=AR?`بنهاية الفصل ${t}: رفع مستوى ${p.focus.map(skillL).join("، ")} نحو إتقان مستوى الصف (الهدف ${60+ti*10}%+).`:tm.goal;
+    return `<div class="card"${DIR}><div class="flex-between"><h2>${AR?PR_AR.term:"Term"} ${t}</h2><span class="tag">${tm.weeks.length} ${AR?PR_AR.weeks:"weeks"} · ${(tm.weeks[0]&&tm.weeks[0].tasks.length)||0} ${AR?PR_AR.foldersPer:"folders/week"}</span></div>
+      <p class="sub">${goal}</p>
+      <table><thead><tr><th>${AR?PR_AR.week:"Week"}</th><th>${AR?PR_AR.focus:"Focus skill"}</th><th>${AR?PR_AR.activities:"Activities"}</th></tr></thead><tbody>
+      ${tm.weeks.map(w=>`<tr><td>${AR?"":"W"}${w.week}</td><td><b>${skillL(w.skill)}</b></td><td style="font-size:13px">${w.tasks.map((tk,i)=>taskLabel(t,w.week,i,tk,w.skill)).join("<br>")}</td></tr>`).join("")}
       </tbody></table></div>`;
   }).join("");
-  return `<div class="card"><h2>Skill Development Plan</h2>
-    <p class="sub">3 terms · targeting ${p.focus.length} focus ${p.focus.length===1?"skill":"skills"} for ${S.student.name} in ${subj}.</p>
-    <div class="kpi">${p.focus.map(f=>`<div class="box"><div class="n" style="font-size:14px">${f}</div><div class="l">${S.result.skillPct[f]}% → target</div></div>`).join("")}</div>
+  return `<div class="card"${DIR}><h2>${AR?PR_AR.planTitle:"Skill Development Plan"}</h2>
+    <p class="sub">${AR?`3 فصول · ${p.focus.length} ${p.focus.length===1?"مهارة تركيز":"مهارات تركيز"} لـ${S.student.name} في ${AR_SUBJ_NAME[subj]||subj}.`:`3 terms · targeting ${p.focus.length} focus ${p.focus.length===1?"skill":"skills"} for ${S.student.name} in ${subj}.`}</p>
+    <div class="kpi">${p.focus.map(f=>`<div class="box"><div class="n" style="font-size:14px">${skillL(f)}</div><div class="l">${S.result.skillPct[f]}% → target</div></div>`).join("")}</div>
     <p class="muted" style="font-size:12px;margin-top:14px">Focus skills are those below 55% on the diagnostic. The plan distributes practice across 3 terms, raising the target band each term. Open <b>Weekly Folders</b> to work through tasks and the <b>Tracker</b> to monitor pace.</p>
   </div>${terms}`;
 }
 
 function viewFolders(){
-  const p=S.plan;
-  let html=`<div class="card"><h2>Weekly Folders</h2><p class="sub">Each term holds weekly folders. Tick tasks as ${S.student.name.split(" ")[0]} completes them — progress feeds the tracker.</p></div>`;
+  const p=S.plan, AR=practiceIsArabic(), DIR=AR?' dir="rtl" style="text-align:right"':'';
+  let html=`<div class="card"${DIR}><h2>${PR("weeklyFolders","Weekly Folders")}</h2><p class="sub">${AR?PR_AR.weeklySub:`Each term holds weekly folders. Tick tasks as ${S.student.name.split(" ")[0]} completes them — progress feeds the tracker.`}</p></div>`;
   ["1","2","3"].forEach(t=>{
-    html+=`<div class="card"><h2 style="margin-bottom:12px">Term ${t}</h2>`;
+    html+=`<div class="card"${DIR}><h2 style="margin-bottom:12px">${PR("term","Term")} ${t}</h2>`;
     p.terms[t].weeks.forEach(w=>{
       const id=`f-${t}-${w.week}`;
       const done=w.tasks.filter((_,i)=>S.taskDone[`${t}-${w.week}-${i}`]).length;
       html+=`<div class="folder open" id="${id}">
         <div class="fh" onclick="document.getElementById('${id}').classList.toggle('open')">
-          <div class="ft">📁 Week ${w.week} — ${w.skill}</div>
-          <span class="pill ${done===w.tasks.length?"green":done>0?"amber":"grey"}">${done}/${w.tasks.length} done</span>
+          <div class="ft">📁 ${PR("week","Week")} ${w.week} — ${skillL(w.skill)}</div>
+          <span class="pill ${done===w.tasks.length?"green":done>0?"amber":"grey"}">${done}/${w.tasks.length} ${PR("done","done")}</span>
         </div>
         <div class="body">
-          ${(typeof SKILL_TUTORIALS!=="undefined"&&SKILL_TUTORIALS[w.skill])?`<div class="notice" style="margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eff6ff;border-color:#bfdbfe;color:var(--ink)"><span>📘 <b>Learn ${w.skill} first</b> — a step-by-step explanation with examples, in English &amp; Arabic.</span><button class="btn sm" style="white-space:nowrap" onclick="showTutorial('${w.skill.replace(/'/g,"\\'")}')">📘 Learn this skill</button></div>`:""}
+          ${(typeof SKILL_TUTORIALS!=="undefined"&&SKILL_TUTORIALS[w.skill])?`<div class="notice" style="margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eff6ff;border-color:#bfdbfe;color:var(--ink)"><span>📘 <b>${AR?(PR_AR.learnFirst+" "+skillL(w.skill)):("Learn "+w.skill+" first")}</b> — ${AR?"شرح خطوة بخطوة مع أمثلة بالعربية والإنجليزية.":"a step-by-step explanation with examples, in English &amp; Arabic."}</span><button class="btn sm" style="white-space:nowrap" onclick="showTutorial('${w.skill.replace(/'/g,"\\'")}')">📘 ${AR?PR_AR.openLesson:"Learn this skill"}</button></div>`:""}
           ${w.tasks.map((tk,i)=>{const key=`${t}-${w.week}-${i}`;const ck=!!S.taskDone[key];
             return `<div class="task"><input type="checkbox" ${ck?"checked":""} onchange="toggleTask('${key}','${id}')">
-            <div style="flex:1"><div class="tt" style="${ck?'text-decoration:line-through;color:#8a94a3':''}">${tk}</div>
-            <div class="ts">${w.skill} · Week ${w.week} activity</div></div>
-            <button class="btn sm ${ck?'green':'gold'}" style="white-space:nowrap" onclick="launchExercise('${key}','${w.skill}')">${ck?'✓ Done':'▶ Practice'}</button></div>`;}).join("")}
+            <div style="flex:1"><div class="tt" style="${ck?'text-decoration:line-through;color:#8a94a3':''}">${taskLabel(t,w.week,i,tk,w.skill)}</div>
+            <div class="ts">${skillL(w.skill)} · ${AR?(PR_AR.activityOf+" "+w.week):("Week "+w.week+" activity")}</div></div>
+            <button class="btn sm ${ck?'green':'gold'}" style="white-space:nowrap" onclick="launchExercise('${key}','${w.skill}')">${ck?PR("doneBtn","✓ Done"):PR("practice","▶ Practice")}</button></div>`;}).join("")}
         </div></div>`;
     });
     html+=`</div>`;
@@ -3608,33 +3694,33 @@ const WRITING_PRACTICE_PROMPTS=[
 ];
 function exRnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 function exPickN(arr,k){const c=arr.slice(),o=[];while(o.length<k&&c.length)o.push(c.splice(exRnd(0,c.length-1),1)[0]);return o;}
-function genMath(strand,count){
+function genMath(strand,count,ar){
   const items=[]; count=count||10;
   for(let i=0;i<count;i++){
     if(strand.indexOf("Number")>=0){
       const t=exRnd(0,3);
-      if(t===0){const a=exRnd(12,99),b=exRnd(12,99);items.push({q:`${a} + ${b} = ?`,answer:a+b});}
-      else if(t===1){const a=exRnd(50,99),b=exRnd(10,49);items.push({q:`${a} − ${b} = ?`,answer:a-b});}
-      else if(t===2){const a=exRnd(3,12),b=exRnd(3,12);items.push({q:`${a} × ${b} = ?`,answer:a*b});}
-      else {const b=exRnd(2,9),x=exRnd(2,12);items.push({q:`${b*x} ÷ ${b} = ?`,answer:x});}
+      if(t===0){const a=exRnd(12,99),b=exRnd(12,99);items.push({q:ar?`${a} + ${b} = ؟`:`${a} + ${b} = ?`,answer:a+b});}
+      else if(t===1){const a=exRnd(50,99),b=exRnd(10,49);items.push({q:ar?`${a} − ${b} = ؟`:`${a} − ${b} = ?`,answer:a-b});}
+      else if(t===2){const a=exRnd(3,12),b=exRnd(3,12);items.push({q:ar?`${a} × ${b} = ؟`:`${a} × ${b} = ?`,answer:a*b});}
+      else {const b=exRnd(2,9),x=exRnd(2,12);items.push({q:ar?`${b*x} ÷ ${b} = ؟`:`${b*x} ÷ ${b} = ?`,answer:x});}
     } else if(strand.indexOf("Algebra")>=0){
-      const a=exRnd(2,6),x=exRnd(1,9),b=exRnd(1,9);items.push({q:`Solve for x:  ${a}x + ${b} = ${a*x+b}`,answer:x});
+      const a=exRnd(2,6),x=exRnd(1,9),b=exRnd(1,9);items.push({q:ar?`أوجد قيمة x:  ${a}x + ${b} = ${a*x+b}`:`Solve for x:  ${a}x + ${b} = ${a*x+b}`,answer:x});
     } else if(strand.indexOf("Geometry")>=0){
       const t=exRnd(0,2);
-      if(t===0){const w=exRnd(3,12),hh=exRnd(3,12);items.push({q:`Area of a rectangle ${w} × ${hh} = ?`,answer:w*hh});}
-      else if(t===1){const w=exRnd(3,12),hh=exRnd(3,12);items.push({q:`Perimeter of a rectangle ${w} × ${hh} = ?`,answer:2*(w+hh)});}
-      else {const b=exRnd(4,12),hh=exRnd(2,10);items.push({q:`Area of a triangle with base ${b} and height ${hh} = ?`,answer:b*hh/2});}
+      if(t===0){const w=exRnd(3,12),hh=exRnd(3,12);items.push({q:ar?`مساحة مستطيل بُعداه ${w} × ${hh} = ؟`:`Area of a rectangle ${w} × ${hh} = ?`,answer:w*hh});}
+      else if(t===1){const w=exRnd(3,12),hh=exRnd(3,12);items.push({q:ar?`محيط مستطيل بُعداه ${w} × ${hh} = ؟`:`Perimeter of a rectangle ${w} × ${hh} = ?`,answer:2*(w+hh)});}
+      else {const b=exRnd(4,12),hh=exRnd(2,10);items.push({q:ar?`مساحة مثلث طول قاعدته ${b} وارتفاعه ${hh} = ؟`:`Area of a triangle with base ${b} and height ${hh} = ?`,answer:b*hh/2});}
     } else {
       const arr=Array.from({length:4},()=>exRnd(2,20));const sum=arr.reduce((a,b)=>a+b,0);
-      items.push({q:`Find the mean of ${arr.join(", ")}`,answer:Math.round(sum/4*100)/100});
+      items.push({q:ar?`أوجد المتوسط الحسابي للأعداد: ${arr.join("، ")}`:`Find the mean of ${arr.join(", ")}`,answer:Math.round(sum/4*100)/100});
     }
   }
   return items;
 }
 // Gather all MCQs of a given skill from the difficulty pool (across grades; plain-English, self-contained).
-function collectPoolItems(subject,skill){
-  var out=[],seen={};
-  for(var g in QUESTION_POOL){ var arr=QUESTION_POOL[g]&&QUESTION_POOL[g][subject]; if(!arr)continue;
+function collectPoolItems(subject,skill,ar){
+  var out=[],seen={}, SRC=ar?QUESTION_BANK_AR:QUESTION_POOL;
+  for(var g in SRC){ var arr=SRC[g]&&SRC[g][subject]; if(!arr)continue;
     arr.forEach(function(q){ if(q.skill===skill && !seen[q.q]){ seen[q.q]=1; out.push({q:q.q,options:q.options.slice(),answer:q.answer,sub:q.sub}); } }); }
   return out;
 }
@@ -3710,13 +3796,15 @@ function buildExercise(skill,taskText,seed){
   // off-topic maths question). Weak sub-skills first, then a seeded set so each week differs.
   var sciSubj = (PHYS_SKILLS.indexOf(skill)>=0)?"Physics":(SCI_SKILLS.indexOf(skill)>=0)?"Science":(CHEM_SKILLS.indexOf(skill)>=0)?"Chemistry":null;
   if(sciSubj){
-    var pitems=orderByWeak(excludeDiagnostic(collectPoolItems(sciSubj,skill),6),skill);
+    var _arP=practiceIsArabic(), _src=_arP?collectPoolItems(sciSubj,skill,true):[];
+    if(_src.length<4) _src=collectPoolItems(sciSubj,skill,false);
+    var pitems=orderByWeak(excludeDiagnostic(_src,6),skill);
     if(pitems.length){ pitems=_seedShuffle(pitems,seed).slice(0,10).map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);});
       return {type:"mcq",instr:instr,items:pitems}; }
     // No question bank authored for this subject/skill yet — show a clear message instead of maths.
-    return {type:"mcq",instr:instr,intro:'<div class="notice" style="margin:0;background:#fef3c7;border-color:#fde68a">A practice question bank for <b>'+skill+'</b> ('+sciSubj+') hasn’t been added yet. Your teacher can add one soon.</div>',items:[]};
+    return {type:"mcq",instr:instr,intro:'<div class="notice" style="margin:0;background:#fef3c7;border-color:#fde68a">'+(practiceIsArabic()?(PR_AR.noBank+' ('+skillL(skill)+')'):('A practice question bank for <b>'+skill+'</b> ('+sciSubj+') hasn’t been added yet. Your teacher can add one soon.'))+'</div>',items:[]};
   }
-  return {type:"mathinput",instr:instr,items:genMath(skill,10)};
+  return {type:"mathinput",instr:instr,items:genMath(skill,10,practiceIsArabic())};
 }
 // Recover the exact activity text the student tapped, from its folder key (term-week-index).
 function taskTextFromKey(key){ try{ var p=String(key).split("-"); var t=p[0], wk=parseInt(p[1],10), i=parseInt(p[2],10); var wkObj=S.plan&&S.plan.terms[t]&&S.plan.terms[t].weeks[wk-1]; return (wkObj&&wkObj.tasks[i])||""; }catch(e){ return ""; } }
@@ -3742,7 +3830,7 @@ function closeTutorial(){ var m=document.getElementById("exModal"); if(m){ m.sty
 function launchExercise(key,skill){
   // Practice opens for students AND for teachers previewing a student (read-only just means
   // ticking the box won't be saved). Any error is surfaced instead of failing silently.
-  try{ var taskText=taskTextFromKey(key); EX={key,skill,taskText:taskText,def:buildExercise(skill,taskText,seedFromKey(key)),resp:{},submitted:false,readonly:READONLY};
+  try{ var _kp=String(key).split("-"); var taskText=taskEnglish(_kp[0],parseInt(_kp[1],10),parseInt(_kp[2],10),taskTextFromKey(key),skill); EX={key,skill,taskText:taskText,def:buildExercise(skill,taskText,seedFromKey(key)),resp:{},submitted:false,readonly:READONLY};
     try{ lockdownStart("activity"); }catch(e){}   // secure mode for practice too (students only; skipped for teacher preview)
     renderExercise(); }
   catch(e){ alert("Couldn't open this practice activity: "+((e&&e.message)||e)); }
@@ -3761,21 +3849,22 @@ function finishExercise(){ if(EX){ S.taskDone[EX.key]=true; save(); } closeExerc
 function closeExercise(){ lockdownEnd(); EX=null; const m=document.getElementById("exModal"); if(m){ m.style.display="none"; m.innerHTML=""; } }
 function renderExercise(){
   const m=document.getElementById("exModal"); const d=EX.def; let body="";
+  const AR=practiceIsArabic() && d.type!=="writing";
   // A collapsible explanation of the skill, right at the top, so students can review it while they
   // work through the exercise (open by default before they submit).
   var _tut=(typeof SKILL_TUTORIALS!=="undefined")?SKILL_TUTORIALS[EX.skill]:null;
   if(_tut){ body+=`<details ${EX.submitted?"":"open"} style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:8px 12px;margin:0 0 12px">
-    <summary style="cursor:pointer;font-weight:700;font-size:14px">📘 Quick explanation — ${_tut.title}</summary>
+    <summary style="cursor:pointer;font-weight:700;font-size:14px">${AR?PR_AR.quickExpl:"📘 Quick explanation —"} ${_tut.title}</summary>
     <div style="font-size:13.5px;line-height:1.6;margin-top:8px">${_tut.html}</div></details>`; }
   if(d.type==="writing"){
     body+=(d.passageHtml||"")+`<p style="font-size:14px;background:#f3f4ff;border:1px solid var(--line);border-radius:8px;padding:12px">${d.prompt}</p>
       <textarea oninput="exWrite(this.value)" rows="8" placeholder="Write your response here…" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical">${(EX.resp.text||"").replace(/</g,"&lt;")}</textarea>`;
   } else {
-    if(d.instr) body+=`<div class="notice" style="margin:0 0 12px;background:#eef2ff;border-color:#c7d2fe"><b>Activity:</b> ${String(d.instr).replace(/</g,"&lt;")} <span class="muted">— practise this ${EX.skill} skill with the ${d.type==="mcq"?"questions":"problems"} below.</span></div>`;
+    if(d.instr) body+=`<div class="notice" style="margin:0 0 12px;background:#eef2ff;border-color:#c7d2fe"><b>${AR?PR_AR.activity:"Activity:"}</b> ${String(AR&&typeof ACT_AR!=="undefined"&&ACT_AR[d.instr]?ACT_AR[d.instr]:d.instr).replace(/</g,"&lt;")} <span class="muted">— ${AR?PR_AR.practiseWith:("practise this "+EX.skill+" skill with the "+(d.type==="mcq"?"questions":"problems")+" below.")}</span></div>`;
     if(d.intro) body+=`<div class="exq" style="background:#f9fbfc">${d.intro}</div>`;
     if(d.type==="mcq"){
       d.items.forEach((it,i)=>{
-        body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">Q${i+1}. ${it.q}</div>`;
+        body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">${AR?PR_AR.q:"Q"}${i+1}. ${it.q}</div>`;
         it.options.forEach((o,oi)=>{
           let cls="opt"; if(EX.resp[i]===oi)cls+=" sel";
           if(EX.submitted){ if(oi===it.answer)cls+=" exok"; else if(EX.resp[i]===oi)cls+=" exbad"; }
@@ -3787,24 +3876,25 @@ function renderExercise(){
       d.items.forEach((it,i)=>{
         let mark="";
         if(EX.submitted){ const v=parseFloat(String(EX.resp[i]==null?"":EX.resp[i]).replace(/[^0-9.\-]/g,"")); const ok=!isNaN(v)&&Math.abs(v-it.answer)<0.02; mark=` <span style="font-weight:700;color:${ok?'var(--ok)':'var(--red)'}">${ok?'✓':'✗ ('+it.answer+')'}</span>`; }
-        body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">Q${i+1}. ${it.q}</div>
-          <input ${EX.submitted?"disabled":""} value="${EX.resp[i]!=null?EX.resp[i]:""}" oninput="exInput(${i},this.value)" placeholder="Your answer" style="max-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">${mark}</div>`;
+        body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">${AR?PR_AR.q:"Q"}${i+1}. ${it.q}</div>
+          <input dir="ltr" ${EX.submitted?"disabled":""} value="${EX.resp[i]!=null?EX.resp[i]:""}" oninput="exInput(${i},this.value)" placeholder="${AR?PR_AR.yourAnswer:"Your answer"}" style="max-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">${mark}</div>`;
       });
     }
   }
   let footer="";
-  if(!EX.submitted){ footer=`<button class="btn gold" onclick="submitExercise()">Check answers</button><button class="btn ghost" onclick="closeExercise()">Cancel</button>`; }
+  if(!EX.submitted){ footer=`<button class="btn gold" onclick="submitExercise()">${AR?PR_AR.check:"Check answers"}</button><button class="btn ghost" onclick="closeExercise()">${AR?PR_AR.cancel:"Cancel"}</button>`; }
   else{
     const msg = d.type==="writing"
       ? `You wrote <b>${EX.words}</b> words — provisional score <b>${EX.score}%</b> (your teacher gives the final mark).`
-      : `You scored <b>${EX.correct}/${EX.total}</b> &nbsp;(<b>${EX.score}%</b>).`;
-    footer=`<div class="notice" style="margin:0;background:${EX.score>=60?'#ccfbf1':'#fef3c7'};border-color:#cbd5e1;flex:1 1 100%">${msg} ${EX.score>=60?'Great work! 🎉':'Keep practising — try again any time.'}</div>
-      <button class="btn" onclick="finishExercise()">✓ Finish &amp; mark complete</button>
-      <button class="btn ghost" onclick="closeExercise()">Close</button>`;
+      : (AR?`${PR_AR.scored}: <b>${EX.correct}/${EX.total}</b> &nbsp;(<b>${EX.score}%</b>).`:`You scored <b>${EX.correct}/${EX.total}</b> &nbsp;(<b>${EX.score}%</b>).`);
+    footer=`<div class="notice" style="margin:0;background:${EX.score>=60?'#ccfbf1':'#fef3c7'};border-color:#cbd5e1;flex:1 1 100%">${msg} ${EX.score>=60?(AR?PR_AR.great:'Great work! 🎉'):(AR?PR_AR.keep:'Keep practising — try again any time.')}</div>
+      <button class="btn" onclick="finishExercise()">${AR?PR_AR.finish:"✓ Finish &amp; mark complete"}</button>
+      <button class="btn ghost" onclick="closeExercise()">${AR?PR_AR.close:"Close"}</button>`;
   }
-  m.innerHTML=`<div class="ovl"><div class="ex">
-    <div class="flex-between"><h2 style="margin:0">Practice — ${EX.skill}</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
-    <p class="sub">${EX.taskText?('<b>'+String(EX.taskText).replace(/</g,"&lt;")+'</b>'):'Complete the activity below.'} When you finish, it is ticked off and your progress updates automatically.</p>
+  const _tt=EX.taskText?(AR&&typeof ACT_AR!=="undefined"&&ACT_AR[EX.taskText]?ACT_AR[EX.taskText]:EX.taskText):"";
+  m.innerHTML=`<div class="ovl"><div class="ex"${AR?' dir="rtl" style="text-align:right"':''}>
+    <div class="flex-between"><h2 style="margin:0">${AR?PR_AR.practiceTitle:"Practice"} — ${AR?skillL(EX.skill):EX.skill}</h2><button class="btn ghost sm" onclick="closeExercise()">✕</button></div>
+    <p class="sub">${_tt?('<b>'+String(_tt).replace(/</g,"&lt;")+'</b>'):(AR?PR_AR.completeBelow:'Complete the activity below.')} ${AR?PR_AR.whenFinish:"When you finish, it is ticked off and your progress updates automatically."}</p>
     ${body}
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">${footer}</div>
   </div></div>`;
