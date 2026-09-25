@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-25d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-26a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -641,7 +641,14 @@ function retakeUnlockedForStudent(){
 // One-tap retake: clears the local "already submitted" state and reopens the paper for this student.
 function startRetake(id){ try{ lockdownEnd(); }catch(e){} openAssignment(id,false); }
 function classesList(){ if(ADMIN_AS) return (CACHE.allClasses||[]).filter(function(c){return c.teacherUid===ADMIN_AS.uid;}); return CACHE.classes||[]; }
-function teacherTests(){ if(ADMIN_AS) return []; return CACHE.tests||[]; }
+function teacherTests(){ if(ADMIN_AS) return (CACHE.allTests||[]).filter(function(t){return t.teacherUid===ADMIN_AS.uid;}); return CACHE.tests||[]; }
+// Whose dashboard are we working on? When an admin is viewing a teacher's dashboard, everything they
+// create belongs to THAT teacher (not the admin), so it shows up on the teacher's own dashboard.
+function ownerUid(){ return ADMIN_AS ? ADMIN_AS.uid : myUid(); }
+function ownerUser(){ if(!ADMIN_AS) return AUTH||{}; return (CACHE.users||[]).filter(function(u){return u.uid===ADMIN_AS.uid;})[0]||ADMIN_AS; }
+function ownerName(){ var u=ownerUser(); return (u&&(u.name||u.email))||""; }
+function ownerEmail(){ var u=ownerUser(); return ((u&&u.email)||"").toLowerCase(); }
+function ownerStudents(){ var u=ownerUser(); return (u&&u.students)||[]; }
 function adminOpenTeacher(uid){ if(!isAdmin())return; var u=(adminUsers()||[]).filter(function(x){return x.uid===uid;})[0]||{uid:uid}; ADMIN_AS={uid:uid,name:u.name,email:u.email}; S.adminSection=null; S.adminTeacher=null; S.openClassId=null; S.teacherView=null; render(); }
 function adminExitTeacher(){ ADMIN_AS=null; S.openClassId=null; S.teacherView=null; S.adminSection="activity"; render(); }
 function freshState(){return {student:null,answers:{},result:null,plan:null,taskDone:{},writeResponse:"",activeTab:"home",authMode:"login"};}
@@ -987,7 +994,7 @@ function saveEditedTest(){
   var qs=(S.editQs||[]); if(!qs.length){ alert("Add at least one question."); return; }
   var subj=S.bankSubj||"English", grade=S.bankGrade||"6";
   var questions=qs.map(function(q){ return {q:q.q,options:q.options,answer:q.answer,skill:q.skill||"",sub:q.sub||"",level:q.level||"C"}; });
-  db.collection("tests").add({teacherUid:myUid(),title:title,subject:subj,grade:grade,questions:questions,source:"edited",createdAt:Date.now()})
+  db.collection("tests").add({teacherUid:ownerUid(),title:title,subject:subj,grade:grade,questions:questions,source:"edited",createdAt:Date.now()})
     .then(function(){ S.bankMode="view"; S.editQs=null; render(); alert("Saved “"+title+"”. Assign it to a class from a class's page (Diagnostic test selector), or to a single student in My classes → Assign."); })
     .catch(function(e){ alert(fbErr(e)); });
 }
@@ -1531,7 +1538,7 @@ function viewAnalysis(){
 }
 
 function viewTeacher(){
-  const me=AUTH, as=assignments(), roster=me.students||[];
+  const me=AUTH, as=assignments(), roster=ownerStudents();
   const grades=GRADES.map(g=>`<option value="${g.id}">${g.label}</option>`).join("");
   const rosterRows=roster.length?roster.map(s=>{
     const sa=as.filter(a=>a.studentEmail===s.email), done=sa.filter(a=>a.status==="completed");
@@ -1592,18 +1599,18 @@ function addStudent(){
   const name=document.getElementById("t_sname").value.trim(), email=document.getElementById("t_semail").value.trim().toLowerCase();
   const msg=document.getElementById("tmsg");
   if(!name||!email){msg.textContent="Enter a name and email.";return;}
-  if((AUTH.students||[]).find(s=>s.email===email)){msg.textContent="That student is already on your list.";return;}
-  db.collection("users").doc(AUTH.uid).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(e=>{const m=document.getElementById("tmsg"); if(m)m.textContent=fbErr(e);});
+  if(ownerStudents().find(s=>s.email===email)){msg.textContent="That student is already on your list.";return;}
+  db.collection("users").doc(ownerUid()).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(e=>{const m=document.getElementById("tmsg"); if(m)m.textContent=fbErr(e);});
 }
 function assignDiagnostic(){
   const studentEmail=document.getElementById("as_student").value, subject=document.getElementById("as_subject").value;
   const prevGrade=document.getElementById("as_prev").value, curGrade=document.getElementById("as_cur").value;
   const term=document.getElementById("as_term").value, publishDate=document.getElementById("as_date").value||"";
   const parent=((document.getElementById("as_parent")||{}).value||"").replace(/[^0-9]/g,"");
-  const s=(AUTH.students||[]).find(x=>x.email===studentEmail);
+  const s=ownerStudents().find(x=>x.email===studentEmail);
   const testId=(document.getElementById("as_test")||{}).value||"";
   const ct=testId?teacherTests().find(x=>x.id===testId):null;
-  const payload={teacherUid:myUid(),teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
+  const payload={teacherUid:ownerUid(),teacherEmail:ownerEmail(),teacherName:ownerName(),studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
   if(ct){ payload.customQuestions=ct.questions||[]; payload.customTitle=ct.title||"Custom test"; }
   db.collection("assignments").add(payload)
     .then(()=>{const m=document.getElementById("amsg"); if(m)m.textContent=ct?("Assigned “"+ct.title+"” — it's on the student's dashboard."):"Assigned! It is now on the student's dashboard.";})
@@ -1758,6 +1765,7 @@ function ensureAdminListeners(){
   if(CACHE._adminOn || !isAdmin()) return; CACHE._adminOn=true;
   _unsub.push(db.collection("users").onSnapshot(function(s){ CACHE.users=s.docs.map(function(d){return Object.assign({uid:d.id},d.data());}); render(); }, function(e){console.warn(e);}));
   _unsub.push(db.collection("assignments").onSnapshot(function(s){ CACHE.allAssign=s.docs.map(function(d){return Object.assign({id:d.id},d.data());}); render(); }, function(e){console.warn(e);}));
+  _unsub.push(db.collection("tests").onSnapshot(function(s){ CACHE.allTests=s.docs.map(function(d){return Object.assign({id:d.id},d.data());}); render(); }, function(e){console.warn(e);}));
   _unsub.push(db.collection("classes").onSnapshot(function(s){ CACHE.allClasses=s.docs.map(function(d){return Object.assign({id:d.id},d.data());}); render(); }, function(e){console.warn(e);}));
 }
 function uStatus(u){ return u.blocked?'<span class="pill red">Blocked</span>':'<span class="pill green">Active</span>'; }
@@ -2118,7 +2126,7 @@ function saveImportedTest(){
     var questions=sanitizeQuestions(IMPORTED.questions);
     if(!questions.length){ say("Couldn’t prepare questions.","red"); impBox("The detected items couldn’t be prepared — each question needs at least 2 options.","red"); return; }
     say("Saving…","muted"); impBox("Saving “"+String(title).replace(/</g,"&lt;")+"” — "+questions.length+" question(s)…","muted");
-    var payload={teacherUid:myUid(), title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
+    var payload={teacherUid:ownerUid(), title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
     db.collection("tests").add(payload)
       .then(function(ref){
         say("Saved ✓","ok");
@@ -2358,8 +2366,8 @@ function viewProgressGraphs(){
 }
 function removeStudent(email){
   if(!confirm("Remove this student from your roster?\n\n(Their diagnostics are kept — delete those separately if you also want them gone.)"))return;
-  const list=(AUTH.students||[]).filter(s=>s.email!==email);
-  db.collection("users").doc(AUTH.uid).update({students:list}).catch(e=>alert(fbErr(e)));
+  const list=ownerStudents().filter(s=>s.email!==email);
+  db.collection("users").doc(ownerUid()).update({students:list}).catch(e=>alert(fbErr(e)));
 }
 function deleteAssignment(id){
   if(!confirm("Delete this diagnostic and its result permanently? This cannot be undone."))return;
@@ -2388,7 +2396,7 @@ function resetDashboard(){
   Promise.all(
     as.map(a=>db.collection("assignments").doc(a.id).delete().catch(()=>{}))
       .concat(cs.map(c=>db.collection("classes").doc(c.id).delete().catch(()=>{})))
-      .concat([db.collection("users").doc(AUTH.uid).update({students:[]}).catch(()=>{})])
+      .concat([db.collection("users").doc(ownerUid()).update({students:[]}).catch(()=>{})])
   ).then(()=>{S.openClassId=null;alert("Your dashboard has been reset.");}).catch(e=>alert(fbErr(e)));
 }
 
@@ -2421,7 +2429,7 @@ function generateTerm(classId,term){
   db.collection("classes").doc(classId).update({genNonce:freshNonce}).catch(function(){});
   Promise.all(pending.map(m=>{
     const prior=priorSummaryFor(m.email,classId,t);
-    return db.collection("assignments").add({teacherUid:myUid(),teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:freshNonce,status:"pending",createdAt:Date.now()}).then(function(){return null;},function(e){return e||{code:"unknown"};});
+    return db.collection("assignments").add({teacherUid:(c.teacherUid||ownerUid()),teacherEmail:(c.teacherEmail||ownerEmail()),teacherName:(c.teacherName||ownerName()),studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:freshNonce,status:"pending",createdAt:Date.now()}).then(function(){return null;},function(e){return e||{code:"unknown"};});
   })).then(function(errs){
     var bad=(errs||[]).filter(Boolean);
     S.classTerm=t; render();
@@ -2499,7 +2507,7 @@ function createClass(){
   if(!name||!grade){msg.style.color="var(--red)";msg.textContent="Choose a class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Creating…";
   const termDates={1:document.getElementById("c_t1").value||"",2:document.getElementById("c_t2").value||"",3:document.getElementById("c_t3").value||""};
-  db.collection("classes").add({teacherUid:myUid(),teacherName:AUTH.name,name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
+  db.collection("classes").add({teacherUid:ownerUid(),teacherName:ownerName(),teacherEmail:ownerEmail(),name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
     .then(()=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--ok)";m.textContent="Class created — share its join code.";}})
     .catch(e=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
@@ -2514,8 +2522,8 @@ function addToClass(id){
   if(assignments().find(a=>a.classId===id&&a.studentEmail===email)){msg.style.color="var(--red)";msg.textContent="That student is already in this class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Adding…";
   const td=c.termDates||{};
-  db.collection("assignments").add({teacherUid:myUid(),teacherEmail:AUTH.email,teacherName:AUTH.name,studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
-    .then(()=>db.collection("users").doc(AUTH.uid).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(()=>{}))
+  db.collection("assignments").add({teacherUid:(c.teacherUid||ownerUid()),teacherEmail:(c.teacherEmail||ownerEmail()),teacherName:(c.teacherName||ownerName()),studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
+    .then(()=>db.collection("users").doc(ownerUid()).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(()=>{}))
     .then(()=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--ok)";m.textContent="Added — their Term 1 diagnostic is on their dashboard. Generate later terms from the class view.";}})
     .catch(e=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
@@ -2547,6 +2555,37 @@ function joinClass(){
       return enrol(match);
     });
   }).catch(e=>{const m=document.getElementById("joinMsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
+}
+// ---- Admin: move a class (and all its students' diagnostics) to another teacher ----
+function transferClassBox(c){
+  var teachers=(CACHE.users||[]).filter(function(u){ return u.role==="teacher" && u.uid!==c.teacherUid; })
+    .sort(function(a,b){ return String(a.name||a.email).localeCompare(String(b.name||b.email)); });
+  var cur=(CACHE.users||[]).filter(function(u){return u.uid===c.teacherUid;})[0];
+  var opts=teachers.map(function(u){ return '<option value="'+u.uid+'">'+esc(u.name||u.email)+' ('+esc(u.email||"")+')</option>'; }).join("");
+  return '<div class="card" style="border:1px solid #fde68a;background:#fffbeb"><h3 style="margin:0 0 4px;font-size:15px">🛡️ Admin · Class owner</h3>'
+    +'<p class="sub" style="margin:0 0 8px">This class currently belongs to <b>'+esc((cur&&(cur.name||cur.email))||c.teacherName||"unknown")+'</b>. Move it (with every student and diagnostic) to another teacher so it appears on their dashboard.</p>'
+    +(teachers.length?('<div class="row"><div class="col"><select id="xfer_to">'+opts+'</select></div><div class="col" style="display:flex;align-items:flex-end"><button class="btn" onclick="transferClass(\''+c.id+'\')">Move class to this teacher</button> <span id="xfer_msg" style="font-size:12px;margin-left:8px"></span></div></div>'):'<p class="muted" style="font-size:12px">No other teacher accounts found.</p>')
+    +'</div>';
+}
+function transferClass(classId){
+  if(!isAdmin()) return;
+  var sel=document.getElementById("xfer_to"); if(!sel||!sel.value) return;
+  var t=(CACHE.users||[]).filter(function(u){return u.uid===sel.value;})[0]; if(!t) return;
+  var c=(CACHE.allClasses||[]).concat(CACHE.classes||[]).filter(function(x){return x.id===classId;})[0]; if(!c) return;
+  if(!confirm("Move \""+(c.name||"this class")+"\" to "+(t.name||t.email)+"?\n\nThe class, its join code, and every student's diagnostics and results will move to their dashboard.")) return;
+  var msg=document.getElementById("xfer_msg"); if(msg){ msg.style.color="var(--muted)"; msg.textContent="Moving…"; }
+  var owner={teacherUid:t.uid, teacherName:(t.name||t.email||""), teacherEmail:(t.email||"").toLowerCase()};
+  var all=(CACHE.allAssign||[]).concat(CACHE.assignments||[]), seen={};
+  var cas=all.filter(function(a){ if(a.classId!==classId||seen[a.id]) return false; seen[a.id]=1; return true; });
+  var studs={}; cas.forEach(function(a){ if(a.studentEmail) studs[a.studentEmail]={name:a.studentName||a.studentEmail,email:a.studentEmail}; });
+  var ops=[db.collection("classes").doc(classId).update(owner)]
+    .concat(cas.map(function(a){ return db.collection("assignments").doc(a.id).update(owner); }));
+  var sl=Object.keys(studs).map(function(k){return studs[k];});
+  if(sl.length) ops.push(db.collection("users").doc(t.uid).update({students:firebase.firestore.FieldValue.arrayUnion.apply(null,sl)}).catch(function(){}));
+  Promise.all(ops).then(function(){
+    alert("✅ \""+(c.name||"Class")+"\" now belongs to "+(t.name||t.email)+" ("+cas.length+" student diagnostic(s) moved). It will show on their dashboard.");
+    ADMIN_AS=null; S.openClassId=null; render();
+  }).catch(function(e){ if(msg){ msg.style.color="var(--red)"; msg.textContent="Couldn’t move: "+((e&&e.code)||"")+" "+((e&&e.message)||e); } });
 }
 function viewClass(id){
   const c=classesList().find(x=>x.id===id);
@@ -2597,7 +2636,8 @@ function viewClass(id){
     </div>`;
   }).join(""):(done.length?`<div class="card"><p class="muted" style="margin:0">No students flagged for Term ${term} — everyone is at or above grade level. 🎉</p></div>`:`<div class="card"><p class="muted" style="margin:0">No completed Term ${term} tests yet. As students take this term's diagnostic, those needing skill development appear here automatically.</p></div>`);
   const termSel=`<select style="width:auto;display:inline-block" onchange="setClassTerm(this.value)">${[1,2,3].map(t=>`<option value="${t}" ${term===String(t)?"selected":""}>Term ${t}${td[t]?" · "+fmtDate(td[t]):""}</option>`).join("")}</select>`;
-  return `<div class="card"><div class="flex-between"><h2 style="margin:0">${c.name}</h2><button class="btn ghost sm" onclick="closeClass()">← All classes</button></div>
+  const moveBox=isAdmin()?transferClassBox(c):"";
+  return moveBox+`<div class="card"><div class="flex-between"><h2 style="margin:0">${c.name}</h2><button class="btn ghost sm" onclick="closeClass()">← All classes</button></div>
     <p class="sub">${subjChip(c.subject)} · ${gLabel(c.prevGrade)} → ${gLabel(c.curGrade)}</p>
     <div class="flex-between" style="margin:10px 0;gap:10px;flex-wrap:wrap"><div><label style="display:inline;margin-right:8px">View term</label>${termSel}</div>
       <div class="muted" style="font-size:12px">${td[term]?`Term ${term} ${td[term]<=todayISO()?"opened":"opens"} ${fmtDate(td[term])}`:`Term ${term} — no publish date set`}</div></div>
