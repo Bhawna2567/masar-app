@@ -211,7 +211,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-23a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-25a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1880,32 +1880,113 @@ function openUserGuide(){
 }
 
 /* ===== QUICK IMPORT — teacher pastes their own test, app builds it ===== */
+// Normalize imported text so Arabic (and messy PDF) content parses reliably: NFKC folds Arabic
+// presentation-forms/ligatures to standard letters, bidi/format controls are stripped, Arabic-Indic
+// and Persian digits become ASCII, and odd spaces are regularised.
+function normImport(text){
+  if(text==null) return "";
+  var t=String(text);
+  try{ t=t.normalize("NFKC"); }catch(e){}
+  t=t.replace(/[‎‏‪-‮⁦-⁩؜﻿]/g,"");
+  t=t.replace(/[٠-٩]/g,function(d){return String(d.charCodeAt(0)-0x0660);});
+  t=t.replace(/[۰-۹]/g,function(d){return String(d.charCodeAt(0)-0x06f0);});
+  t=t.replace(/[   ]/g," ");
+  return t;
+}
+// Map an option/answer label (Latin A–F, Arabic أ ب ج د ه و ز, or a 1-based digit) to a 0-based index.
+function labelToIndex(lbl){
+  if(lbl==null) return -1;
+  var s=String(lbl).trim().replace(/^[\(\[\{]\s*|\s*[\)\]\}]$/g,"");
+  if(/^\d+$/.test(s)) return parseInt(s,10)-1;
+  if(/^[A-Za-z]$/.test(s)) return s.toUpperCase().charCodeAt(0)-65;
+  var AR={"ا":0,"أ":0,"إ":0,"آ":0,"ٱ":0,"ب":1,"ج":2,"د":3,"ه":4,"و":5,"ز":6,"ح":7,"ط":8};
+  return (AR[s]!=null)?AR[s]:-1;
+}
+var OPT_SEP="[\\)\\.\\-\\u2013\\u2014:\\u060c]";      // ) . - – — :  ،
+var OPT_LETTER="[A-Fa-f\\u0621-\\u064A]";              // Latin A–F or any single Arabic letter
+function optHead(t){
+  var m=t.match(new RegExp("^\\(?\\s*("+OPT_LETTER+"|\\d{1,2})\\s*"+OPT_SEP+"\\s+([\\s\\S]*)$"));
+  if(!m) return null; return {label:m[1], rest:m[2]};
+}
+function endsQuestion(t){ return /[؟?]\s*$/.test(t); }   // ends with ؟ or ?
+// Bilingual, script-agnostic importer. Handles Arabic (RTL, Arabic-Indic digits, أ ب ج د options,
+// "الإجابة: ب" answer lines, options merged onto one line) as well as English letter/number options.
 function parseImport(text, areas){
-  var lines=(text||"").split(/\r?\n/), out=[], warnings=[], cur=null;
-  function isOpt(l){ return /^\s*(\*|[\-•]|[A-Za-z][\.\)])\s+/.test(l); }
+  text=normImport(text);
+  var lines=text.split(/\r?\n/), out=[], warnings=[], cur=null;
   var skillRe=/^\s*\[\s*skill\s*:\s*(.+?)\s*\]\s*$/i;
-  var ansRe=/^\s*(answer|ans|correct|key)\s*[:\-]\s*(.+?)\s*$/i;
-  function setAnswer(q,val){ if(/^[A-Za-z]$/.test(val)){ var idx=val.toUpperCase().charCodeAt(0)-65; if(idx>=0&&idx<q.options.length)q.answer=idx; return; } for(var k=0;k<q.options.length;k++){ if(q.options[k].toLowerCase()===val.toLowerCase()){q.answer=k;return;} } var m=val.match(/^[A-Za-z][\.\)]\s*(.+)$/); if(m)setAnswer(q,m[1].trim()); }
-  function finalize(){ if(cur){ if(cur.options.length>=2){ if(cur.answer<0){ cur.answer=0; warnings.push('"'+cur.q.slice(0,32)+'…": no correct option marked with *, used the first option.'); } out.push(cur); } else if(cur.q){ warnings.push('"'+cur.q.slice(0,32)+'…": needs at least 2 options — skipped.'); } } cur=null; }
+  var ansRe=/^\s*(answer|ans|correct|key|الإجابة|الاجابة|الجواب|الحل|الصحيحة|المفتاح)\s*[:\-–]\s*(.+?)\s*$/i;
+  var bulletRe=/^\s*[\-–—•▪◦]\s+/;
+  function newQuestion(line){
+    var q=line.trim()
+      .replace(/^\s*(?:\d+|[Qq]\d*|س\d*|السؤال\s*\d*)\s*[\.\)\-–:]\s*/,"")
+      .replace(/^\s*[\(\[]\s*\d+\s*[\)\]]\s*/,"");
+    cur={q:q, opts:[], answerRaw:null, skill:null};
+  }
+  function detectCorrectInline(t){
+    var correct=false;
+    if(/\*$/.test(t)){ correct=true; t=t.replace(/\s*\*\s*$/,""); }
+    if(/\(\s*(?:correct|صح|صحيح)\s*\)\s*$/i.test(t)){ correct=true; t=t.replace(/\s*\(\s*(?:correct|صح|صحيح)\s*\)\s*$/i,""); }
+    return {text:t.trim(), correct:correct};
+  }
+  function addOption(label, rawText, forceCorrect){
+    var dc=detectCorrectInline(rawText);
+    cur.opts.push({label:label, text:dc.text, correct:!!forceCorrect||dc.correct});
+  }
+  function splitMerged(line){
+    var re=new RegExp("(?:^|\\s)\\(?("+OPT_LETTER+"|\\d{1,2})\\s*"+OPT_SEP+"\\s+","g");
+    var idxs=[], m; while((m=re.exec(line))){ idxs.push(m.index+(/^\s/.test(m[0])?1:0)); }
+    if(idxs.length<2) return null;
+    var parts=[]; for(var i=0;i<idxs.length;i++){ var s=idxs[i], e=(i+1<idxs.length)?idxs[i+1]:line.length; parts.push(line.slice(s,e).trim()); }
+    return parts;
+  }
+  function finalize(){
+    if(!cur) return;
+    if(cur.opts.length>=2){
+      // If every option carries a label, order by label so answer letters line up even when the PDF
+      // emitted them out of order (right-to-left rows).
+      var haveLabels=cur.opts.every(function(o){return o.label!=null && labelToIndex(o.label)>=0;});
+      if(haveLabels) cur.opts.sort(function(a,b){return labelToIndex(a.label)-labelToIndex(b.label);});
+      var options=cur.opts.map(function(o){return o.text;});
+      var answer=-1;
+      for(var k=0;k<cur.opts.length;k++){ if(cur.opts[k].correct){ answer=k; break; } }
+      if(answer<0 && cur.answerRaw!=null){
+        var v=String(cur.answerRaw).trim().replace(/^[\(\[]\s*|\s*[\)\]]$/g,"");
+        var li=labelToIndex(v);
+        if(li>=0 && li<options.length) answer=li;
+        else { for(var t2=0;t2<options.length;t2++){ if(options[t2].toLowerCase()===v.toLowerCase()){ answer=t2; break; } } }
+      }
+      if(answer<0){ answer=0; warnings.push('"'+(cur.q||"").slice(0,32)+'…": no correct answer marked — used the first option (you can fix it).'); }
+      out.push({q:cur.q, options:options, answer:answer, skill:cur.skill});
+    } else if(cur.q){ warnings.push('"'+cur.q.slice(0,32)+'…": needs at least 2 options — skipped.'); }
+    cur=null;
+  }
   for(var i=0;i<lines.length;i++){
     var line=lines[i].replace(/\s+$/,"");
-    if(!line.trim()){ continue; }
-    var sm=line.match(skillRe);
-    if(sm && cur){ cur.skill=sm[1].trim(); continue; }
-    var am=line.match(ansRe);
-    if(am && cur && cur.options.length){ setAnswer(cur, am[2].trim()); continue; }
-    if(cur && isOpt(line)){
-      var t=line.trim(), correct=false;
-      if(/^\*/.test(t)){ correct=true; t=t.replace(/^\*\s*/,""); }
-      else { t=t.replace(/^[\-•]\s*/,"").replace(/^[A-Za-z][\.\)]\s*/,""); }
-      if(/\*\s*$/.test(t)){ correct=true; t=t.replace(/\s*\*\s*$/,""); }
-      if(/\(\s*correct\s*\)\s*$/i.test(t)){ correct=true; t=t.replace(/\s*\(\s*correct\s*\)\s*$/i,""); }
-      var idx=cur.options.length; cur.options.push(t.trim()); if(correct)cur.answer=idx;
+    if(!line.trim()) continue;
+    var sm=line.match(skillRe); if(sm && cur){ cur.skill=sm[1].trim(); continue; }
+    var am=line.match(ansRe); if(am && cur){ cur.answerRaw=am[2].trim(); continue; }
+    var trimmed=line.trim();
+    var leadStar=/^\*\s*/.test(trimmed);
+    var isBullet=bulletRe.test(trimmed);
+    var head=optHead(leadStar?trimmed.replace(/^\*\s*/,""):trimmed);
+    var qEnds=endsQuestion(trimmed);
+    var asOption=false;
+    if(cur && cur.q!=null && !qEnds){
+      if(leadStar||isBullet) asOption=true;
+      else if(head){
+        if(/^\d+$/.test(head.label)){ if(labelToIndex(head.label)===cur.opts.length) asOption=true; } // numeric options must continue the sequence
+        else asOption=true;   // a Latin/Arabic letter label is always an option
+      }
+    }
+    if(asOption){
+      var body=leadStar?trimmed.replace(/^\*\s*/,""):trimmed;
+      var parts=splitMerged(body);
+      if(parts){ parts.forEach(function(p,pi){ var h=optHead(p); if(h) addOption(h.label,h.rest, leadStar&&pi===0); else addOption(null,p.replace(bulletRe,""), leadStar&&pi===0); }); }
+      else { var h2=optHead(body); if(h2) addOption(h2.label,h2.rest,leadStar); else addOption(null, body.replace(bulletRe,""), leadStar); }
       continue;
     }
-    finalize();
-    var q=line.trim().replace(/^\s*(\d+[\.\)]|Q\s*[:\.\)]?)\s*/i,"");
-    cur={q:q, options:[], answer:-1, skill:null};
+    finalize(); newQuestion(trimmed);
   }
   finalize();
   for(var j=0;j<out.length;j++){ if(!out[j].skill || areas.indexOf(out[j].skill)<0){ out[j].skill=areas[j%areas.length]; } }
@@ -1950,11 +2031,24 @@ function reconstructLines(items){
   var ys=Object.keys(rows).map(Number).sort(function(a,b){return b-a;});
   return ys.map(function(y){ return rows[y].sort(function(a,b){return a.x-b.x;}).map(function(o){return o.s;}).join(" ").replace(/\s+/g," ").trim(); }).filter(function(l){return l;}).join("\n");
 }
-function finishImport(text, subj){ IMPORTED=parseImport(text, skillsFor(subj)); IMPORTED.raw=text; renderImportPreview(); }
+function finishImport(text, subj){ IMPORTED=parseImport(text, skillsFor(subj)); IMPORTED.raw=text; IMPORTED.rawLen=normImport(text).replace(/\s/g,"").length; renderImportPreview(); }
 function reparseImport(subj){ if(IMPORTED && IMPORTED.raw!=null){ finishImport(IMPORTED.raw, subj); } }
+// Read questions the teacher pasted directly into the box (most reliable route for Arabic / scanned files).
+function importFromPaste(){
+  var ta=document.getElementById("imp_paste"); if(!ta)return;
+  var txt=ta.value||"";
+  if(!txt.trim()){ var p=document.getElementById("imp_preview"); if(p) p.innerHTML='<div class="notice">Paste your test text into the box first.</div>'; return; }
+  var subj=(document.getElementById("imp_subject")||{}).value||"English";
+  finishImport(txt, subj);
+}
 function renderImportPreview(){
   var el=document.getElementById("imp_preview"); if(!el)return;
-  if(!IMPORTED || !IMPORTED.questions.length){ el.innerHTML='<div class="notice">No questions could be detected in this file. Make sure it follows the format above — one question per line, each option on its own line, and the correct answer marked with a leading <b>*</b> or an <b>Answer:</b> line.</div>'; return; }
+  if(!IMPORTED || !IMPORTED.questions.length){
+    // Distinguish "no text at all" (scanned/image PDF) from "text but wrong format".
+    if(IMPORTED && (IMPORTED.rawLen||0) < 15){
+      el.innerHTML='<div class="notice">We couldn’t read any text from this file — it looks like a <b>scanned image PDF</b> (no text layer). Two easy fixes: (1) open the file, select the questions, copy them, and <b>paste them into the box below</b>; or (2) re-save it as a <b>Word .docx</b> and upload that.</div>'; return;
+    }
+    el.innerHTML='<div class="notice">No questions could be detected. Arabic and English are both supported. Make sure each question is on its own line (ending with <b>؟</b> or <b>?</b>), each option is on its own line labelled <b>أ) ب) ج) د)</b> or <b>A) B) C) D)</b>, and the correct answer is marked with a leading <b>*</b> or an answer line such as <b>الإجابة: ب</b> or <b>Answer: B</b>. You can also paste the text directly into the box below.</div>'; return; }
   var res=IMPORTED;
   var html='<p style="font-size:13px;margin:0 0 8px"><b>'+res.questions.length+' question(s) detected.</b> Review below, then Save.</p>';
   html+=res.questions.slice(0,8).map(function(qq,i){ return '<div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px"><b>Q'+(i+1)+'.</b> '+qq.q.replace(/</g,"&lt;")+' <span class="tag">'+qq.skill+'</span><div style="margin-top:4px">'+qq.options.map(function(o,oi){ return (oi===qq.answer?'✅ ':'• ')+o.replace(/</g,"&lt;"); }).join('<br>')+'</div></div>'; }).join("");
@@ -2069,6 +2163,9 @@ function importCard(){
     + '<label style="margin-top:10px">Upload your test file (PDF or Word .docx)</label>'
     + '<input type="file" id="imp_file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="handleImportFile(this)" style="width:100%;padding:14px;border:1px dashed var(--green);border-radius:10px;font-size:13px;background:#f3f4ff;cursor:pointer">'
     + '<p class="muted" style="font-size:11px;margin:6px 0 0">Adeptly reads your file and builds the questions automatically. For best results, format each question on its own line with each option on a separate line below it, and mark the <b>correct answer</b> with a leading <b>*</b> (e.g. <code>* 96</code>) <i>or</i> an <b>Answer:</b> line (e.g. <code>Answer: B</code>). An optional <b>[skill: …]</b> line tags the skill; untagged questions are spread across skills automatically. If no answer is marked, the first option is used and flagged so you can fix it.</p>'
+    + '<div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:12px"><label>…or paste your test text here (works well for Arabic / scanned files)</label>'
+    + '<textarea id="imp_paste" dir="auto" placeholder="مثال:\n١) ما وحدة قياس القوة؟\nأ) نيوتن\nب) جول\nج) واط\nد) أمبير\nالإجابة: أ" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit"></textarea>'
+    + '<div style="margin-top:6px"><button class="btn ghost" onclick="importFromPaste()">📋 Read pasted text</button></div></div>'
     + '<div style="margin-top:10px"><button class="btn" onclick="saveImportedTest()">Save test</button> <span id="imp_msg" style="font-size:12px;color:var(--ok)"></span></div>'
     + '<div id="imp_preview" style="margin-top:12px"></div>'
     + '</div>';
