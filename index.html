@@ -213,7 +213,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-26d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-29a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -709,7 +709,7 @@ function startListeners(){
     _unsub.push(db.collection("tests").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.tests=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
     _unsub.push(db.collection("users").doc(AUTH.uid).onSnapshot(d=>{ if(d.exists){ var cu=fbAuth.currentUser; AUTH=Object.assign({},AUTH,d.data(),{uid:(cu&&cu.uid)||AUTH.uid,email:((cu&&cu.email)||AUTH.email||"").toLowerCase()}); ensureAdminListeners(); render(); } }, e=>console.warn(e)));
   } else {
-    _unsub.push(db.collection("assignments").where("studentEmail","==",AUTH.email).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
+    _unsub.push(db.collection("assignments").where("studentEmail","==",AUTH.email).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); CACHE.assignLoaded=true; CACHE.assignErr=null; render();}, e=>{ console.warn(e); CACHE.assignLoaded=true; CACHE.assignErr=e; render(); }));
   }
 }
 
@@ -2662,6 +2662,41 @@ function transferClassTo(classId, toUid){
     S.openClassId=null; render();
   }).catch(function(e){ var t2="Couldn’t move: "+((e&&e.code)||"")+" "+((e&&e.message)||e); if(msg){ msg.style.color="var(--red)"; msg.textContent=t2; } else alert(t2); });
 }
+// Admin-only: does an account exist for the email on the class list? (Teachers can't read the user list.)
+function accountStatusPill(email){
+  if(!isAdmin() || !(CACHE.users&&CACHE.users.length) || !email) return "";
+  var e=String(email).trim().toLowerCase();
+  var u=CACHE.users.filter(function(x){ return String(x.email||"").trim().toLowerCase()===e; })[0];
+  if(!u) return '<div style="font-size:10px;color:var(--red);font-weight:700">⚠ No account uses this email — the student signs in with a different one (use ✉️ Email)</div>';
+  if(u.role==="teacher") return '<div style="font-size:10px;color:var(--red);font-weight:700">⚠ This email belongs to a TEACHER account</div>';
+  return "";
+}
+// Point a student's diagnostics at the email they actually sign in with. Updates every diagnostic this
+// teacher holds for the old email (all classes and terms) plus the teacher's student list.
+function changeStudentEmail(oldEmail){
+  var old=String(oldEmail||"").trim().toLowerCase(); if(!old) return;
+  var hint="";
+  if(isAdmin() && CACHE.users && CACHE.users.length){
+    var nm=((assignments()||[]).filter(function(a){return a.studentEmail===old;})[0]||{}).studentName||"";
+    var first=String(nm).trim().split(/\s+/)[0].toLowerCase();
+    var cands=CACHE.users.filter(function(u){ return u.role!=="teacher" && first && String(u.name||"").toLowerCase().indexOf(first)>=0 && String(u.email||"").toLowerCase()!==old; }).slice(0,5);
+    if(cands.length) hint="\n\nStudent accounts with a similar name:\n"+cands.map(function(u){return "  • "+(u.name||"")+" — "+u.email;}).join("\n");
+  }
+  var nv=prompt("Enter the email this student actually signs in with.\nAll of their diagnostics and results will move to it.\n\nCurrent: "+old+hint, old);
+  if(nv==null) return; nv=String(nv).trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nv)){ alert("That doesn't look like a valid email."); return; }
+  if(nv===old) return;
+  if(isAdmin() && CACHE.users && CACHE.users.length && !CACHE.users.some(function(u){return String(u.email||"").toLowerCase()===nv;})){
+    if(!confirm("No account exists yet with "+nv+".\nThe diagnostics will be waiting for the student once they register with that email. Continue?")) return;
+  }
+  var mine=(assignments()||[]).filter(function(a){ return a.studentEmail===old; });
+  if(!mine.length){ alert("No diagnostics found for "+old+"."); return; }
+  var ops=mine.map(function(a){ return db.collection("assignments").doc(a.id).update({studentEmail:nv}); });
+  var roster=ownerStudents().map(function(x){ return x.email===old?Object.assign({},x,{email:nv}):x; });
+  ops.push(db.collection("users").doc(ownerUid()).update({students:roster}).catch(function(){}));
+  Promise.all(ops).then(function(){ alert("✅ Moved "+mine.length+" diagnostic(s) from "+old+" to "+nv+".\nThe student will see them as soon as they sign in with "+nv+"."); })
+    .catch(function(e){ alert("Couldn't update the email: "+fbErr(e)+((e&&e.code)?" ("+e.code+")":"")); });
+}
 function viewClass(id){
   const c=classesList().find(x=>x.id===id);
   if(!c){S.openClassId=null;return viewTeacher();}
@@ -2685,10 +2720,11 @@ function viewClass(id){
     // force-submit couldn't record a full result), so the teacher can always reopen the test.
     const retakeBtn=(a.status==="completed"||a.kicked)?`<button class="btn ghost sm" onclick="allowRetake('${a.id}')">${a.retakeAllowed?"Retake ✓":"Allow retake"}</button>`:"";
     // Password help for a forgetful student (teachers may reset only their own students).
-    const pwBtn=a.studentEmail?` <button class="btn ghost sm" onclick="adminSetPassword('${(a.studentEmail||'').replace(/'/g,"\\'")}')">🔑 Password</button>`:"";
+    const pwBtn=a.studentEmail?` <button class="btn ghost sm" onclick="adminSetPassword('${(a.studentEmail||'').replace(/'/g,"\\'")}')">🔑 Password</button> <button class="btn ghost sm" title="Change the email this student signs in with" onclick="changeStudentEmail('${(a.studentEmail||'').replace(/'/g,"\\'")}')">✉️ Email</button>`:"";
+    const acct=accountStatusPill(a.studentEmail);
     const btn=(a.status==="completed"?`<button class="btn sm" onclick="teacherOpenStudent('${a.id}')">Open →</button> <button class="btn sm" onclick="openAnalysis('${a.id}')">📈 Analysis</button> <button class="btn gold sm" onclick="downloadMarkedPDF('${a.id}')">⬇ Marked</button>${termsDone>1?` <button class="btn ghost sm" onclick="downloadStudentMarked('${a.studentEmail}','${id}')">⬇ All terms</button>`:""} <button class="btn ghost sm" onclick="sendReportMenu('${a.id}')">📲 Parent</button> ${retakeBtn}`:retakeBtn)+pwBtn;
     const viol = a.kicked?`<div style="font-size:10px;color:var(--red);font-weight:700">⛔ removed after ${a.violations||a.leaveCount||3} violations</div>`:(a.leaveCount?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠ left screen ${a.leaveCount}×</div>`:"");
-    return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
+    return `<tr><td><b>${a.studentName||a.studentEmail}</b><div class="muted" style="font-size:11px">${a.studentEmail}</div>${acct}${viol}</td><td>${st}</td><td>${flag}</td><td>${btn}</td></tr>`;
   }).join(""):`<tr><td colspan="4" class="muted">No students enrolled for Term ${term} yet.</td></tr>`;
   const benchmark=80;
   const detail=flagged.length?flagged.slice().sort((a,b)=>(a.score||0)-(b.score||0)).map(a=>{
@@ -2756,10 +2792,19 @@ function updateTermDate(id,term,val){
 }
 function viewHome(){
   const me=AUTH;
-  const fSub=S.sSubject||"", fTerm=S.sTerm||"";
-  let list=assignments().slice();
+  let fSub=S.sSubject||"", fTerm=S.sTerm||"";
+  const allMine=assignments()||[];
+  let list=allMine.slice();
   if(fSub) list=list.filter(a=>a.subject===fSub);
   if(fTerm) list=list.filter(a=>aTerm(a)===fTerm);
+  // A remembered Term/Subject filter must never hide ALL of a student's diagnostics.
+  if(!list.length && allMine.length && (fSub||fTerm)){ S.sSubject=""; S.sTerm=""; fSub=""; fTerm=""; list=allMine.slice(); }
+  // Explain an empty dashboard instead of leaving the student with only "Join a class".
+  let linkNote="";
+  if(AUTH && AUTH.role!=="teacher"){
+    if(CACHE.assignErr){ linkNote=`<div class="notice" style="background:#fef2f2;border-color:#fecaca">⚠ Your diagnostics couldn’t be loaded (${esc((CACHE.assignErr&&CACHE.assignErr.code)||"error")}). Log out and back in; if it continues, show this message to your teacher.</div>`; }
+    else if(CACHE.assignLoaded && !allMine.length){ linkNote=`<div class="notice" style="background:#fffbeb;border-color:#fde68a">ℹ️ You’re signed in as <b>${esc(AUTH.email||"")}</b>, and no diagnostics are linked to this email yet.<br>If you’ve already taken a test or your teacher added you to a class, you are probably signed in with a <b>different account</b> — log out and sign in with the email your teacher used, or ask your teacher to update your email on their class list.</div>`; }
+  }
   list.sort((a,b)=>{const ca=(a.className||"~"),cb=(b.className||"~"); if(ca!==cb)return ca.localeCompare(cb); const ta=aTerm(a),tb=aTerm(b); if(ta!==tb)return ta.localeCompare(tb); return (b.createdAt||0)-(a.createdAt||0);});
   const rows=list.length?list.map(a=>{
     const meta=`<div class="muted" style="font-size:11px;margin-top:3px"><span class="tag">Term ${aTerm(a)}</span> ${a.publishDate?fmtDate(a.publishDate):"Available now"}${a.className?` · ${a.className}`:""}</div>`;
@@ -2782,7 +2827,7 @@ function viewHome(){
     ${unlockedProbes.map(a=>`<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px"><div><b>${subjChip(a.subject)}</b> <span class="muted" style="font-size:12px">${a.className||""} · Term ${aTerm(a)}</span></div><button class="btn gold sm" onclick="startStudentProbe('${a.id}')">▶ Start progress check</button></div>`).join("")}</div>`:"";
   const sidCard=`<div class="card" style="${AUTH.studentId?'':'border:2px solid var(--gold);background:#fffdf5'}"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">🆔 Student ID</h2><p class="sub" style="margin:2px 0 0">${AUTH.studentId?('Your ID: <b>'+String(AUTH.studentId).replace(/</g,"&lt;")+'</b> — this links your past results to your progress.'):'Add your MOE Student ID so your teacher can link your previous results to your progress.'}</p></div></div>
     <div class="row" style="margin-top:8px"><div class="col"><input id="my_sid" value="${(AUTH.studentId||'').replace(/"/g,'&quot;')}" placeholder="e.g. 20230004282"></div><div class="col" style="display:flex;align-items:flex-end"><button class="btn" onclick="saveStudentId()">${AUTH.studentId?'Update ID':'Save my ID'}</button> <span id="sidMsg" style="font-size:12px;margin-left:8px"></span></div></div></div>`;
-  return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">${me.email} · Student dashboard</p></div>
+  return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">Signed in as <b>${esc(me.email||"")}</b> · Student dashboard</p></div>${linkNote}
   ${sidCard}
   ${probeBanner}
   <div class="card"><h2>Join a class</h2><p class="sub">Got a class code from your teacher? Enter it, and add your parent's WhatsApp number so your teacher can send them your reports.</p>
