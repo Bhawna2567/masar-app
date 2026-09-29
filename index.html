@@ -149,6 +149,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="pool-chemistry.js"></script>
 <script src="pool-physics-ar.js"></script>
 <script src="practice-ar.js"></script>
+<script src="practice-math.js"></script>
+<script src="practice-sci-bank.js"></script>
 <script src="english-gen.js"></script>
 <script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
@@ -213,7 +215,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-29a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-29b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3815,6 +3817,33 @@ function _bankExercise(bankMap,actMap,taskText,poolSubject,poolExtra,seed){
     return {type:"mcq",instr:taskText,items:items}; }
   return {type:"mcq",instr:taskText,items:take10(orderByWeak(collectPoolItems("English",poolSubject),poolSubject),poolExtra)};
 }
+// Science / Physics / Chemistry practice that MATCHES the activity: (1) questions written for this exact activity,
+// (2) bank questions on the activity's topic, nearest the student's grade first, (3) never a question the student
+// already met in their diagnostic. Arabic classes get the aligned Arabic version of every question.
+function sciPracticeItems(subj,skill,taskText,seed){
+  var ar=practiceIsArabic(), gnum=parseInt(String((S.student&&(S.student.prevGrade||S.student.curGrade))||"6").replace(/[^0-9]/g,""),10)||6;
+  var topic=(typeof SCI_TOPIC!=="undefined"&&SCI_TOPIC[taskText])?new RegExp(SCI_TOPIC[taskText],"i"):null;
+  var seen={}, own=[], near=[];
+  var diag=_diagnosticStems();
+  function add(list,q){ var k=String(q.q).trim().toLowerCase(); if(seen[k]||diag[k]) return; seen[k]=1; list.push(q); }
+  // (1) activity-specific practice questions
+  var B=(typeof SCI_PRACTICE_BANK!=="undefined"&&SCI_PRACTICE_BANK[taskText])||[];
+  B.forEach(function(it){ var L=ar?it.ar:it.en; add(own,{q:L.q,options:L.o.slice(),answer:0,sub:it.sub}); });
+  // (2) bank questions of this skill (and topic), with their grade distance
+  var cand=[];
+  for(var g in QUESTION_POOL){ var en=QUESTION_POOL[g]&&QUESTION_POOL[g][subj]; if(!en) continue;
+    var arr=QUESTION_BANK_AR[g]&&QUESTION_BANK_AR[g][subj], aligned=arr&&arr.length===en.length;
+    var gd=Math.abs((parseInt(String(g).replace(/[^0-9]/g,""),10)||gnum)-gnum);
+    en.forEach(function(q,i){ if(q.skill!==skill) return; var onTopic=!topic||topic.test((q.sub||"")+" "+q.q);
+      var src=ar?(aligned?arr[i]:null):q; if(!src) return;
+      cand.push({q:{q:src.q,options:src.options.slice(),answer:src.answer,sub:q.sub},gd:gd,on:onTopic}); }); }
+  cand=_seedShuffle(cand,seed).sort(function(a,b){ return (b.on-a.on)||(a.gd-b.gd); });
+  cand.forEach(function(c){ if(c.on) add(near,c.q); });
+  var pool=_seedShuffle(own,seed).concat(near), out=pool.slice(0,10);
+  // (3) only if the topic is genuinely thin, top up with the closest-grade questions of the same skill
+  if(out.length<6){ cand.forEach(function(c){ if(!c.on && out.length<10){ var k=String(c.q.q).trim().toLowerCase(); if(!seen[k]&&!diag[k]){ seen[k]=1; out.push(c.q); } } }); }
+  return out;
+}
 function buildExercise(skill,taskText,seed){
   var instr=taskText||""; seed=seed||1;
   if(skill==="Writing"){
@@ -3829,10 +3858,17 @@ function buildExercise(skill,taskText,seed){
     var rsub=(typeof READING_ACT!=="undefined"&&READING_ACT[taskText])||null;
     var rbank=(rsub&&typeof READING_BANK!=="undefined"&&READING_BANK[rsub])?READING_BANK[rsub]:null;
     var passages=rbank||((typeof PRACTICE_PASSAGES!=="undefined"&&PRACTICE_PASSAGES.length)?PRACTICE_PASSAGES:null);
-    if(passages&&passages.length){ var p=_seedShuffle(passages,seed)[0];
+    // A reading exercise ALWAYS shows its passage: only passages that really have text and questions are used.
+    var usable=(passages||[]).filter(function(x){ return x && String(x.text||"").replace(/\s/g,"").length>60 && x.qs && x.qs.length; });
+    if(!usable.length && typeof PRACTICE_PASSAGES!=="undefined") usable=PRACTICE_PASSAGES.filter(function(x){ return x && String(x.text||"").length>60 && x.qs && x.qs.length; });
+    if(usable.length){ var p=_seedShuffle(usable,seed)[0];
       return {type:"mcq",instr:instr,intro:_passageInner(p),items:(p.qs||[]).map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);})}; }
-    var items=orderByWeak(collectPoolItems("English","Reading"),"Reading");
-    return {type:"mcq",instr:instr,items:items.slice(0,10)};
+    // Last resort (bank file missing): generate a fresh passage WITH its own questions — never loose questions.
+    if(typeof ENG_GEN!=="undefined" && ENG_GEN.reading){
+      var rg=ENG_GEN.reading((S.student&&(S.student.prevGrade||S.student.curGrade))||"6","practice-"+seed);
+      if(rg && rg.passage && rg.qs && rg.qs.length) return {type:"mcq",instr:instr,intro:_passageInner({title:rg.title,text:rg.passage}),items:rg.qs.slice(0,8).map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);})};
+    }
+    return {type:"mcq",instr:instr,intro:'<div class="notice" style="margin:0">The reading passages could not be loaded. Please refresh the page and try again.</div>',items:[]};
   }
   if(skill==="Grammar")    return _bankExercise(typeof GRAMMAR_BANK!=="undefined"?GRAMMAR_BANK:null, typeof GRAMMAR_ACT!=="undefined"?GRAMMAR_ACT:null, taskText, "Grammar", GRAMMAR_POOL, seed);
   if(skill==="Vocabulary") return _bankExercise(typeof VOCAB_BANK!=="undefined"?VOCAB_BANK:null, typeof VOCAB_ACT!=="undefined"?VOCAB_ACT:null, taskText, "Vocabulary", VOCAB_POOL, seed);
@@ -3841,13 +3877,16 @@ function buildExercise(skill,taskText,seed){
   // off-topic maths question). Weak sub-skills first, then a seeded set so each week differs.
   var sciSubj = (PHYS_SKILLS.indexOf(skill)>=0)?"Physics":(SCI_SKILLS.indexOf(skill)>=0)?"Science":(CHEM_SKILLS.indexOf(skill)>=0)?"Chemistry":null;
   if(sciSubj){
-    var _arP=practiceIsArabic(), _src=_arP?collectPoolItems(sciSubj,skill,true):[];
-    if(_src.length<4) _src=collectPoolItems(sciSubj,skill,false);
-    var pitems=orderByWeak(excludeDiagnostic(_src,6),skill);
-    if(pitems.length){ pitems=_seedShuffle(pitems,seed).slice(0,10).map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);});
+    var pitems=sciPracticeItems(sciSubj,skill,taskText,seed);
+    if(pitems.length){ pitems=pitems.map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);});
       return {type:"mcq",instr:instr,items:pitems}; }
     // No question bank authored for this subject/skill yet — show a clear message instead of maths.
     return {type:"mcq",instr:instr,intro:'<div class="notice" style="margin:0;background:#fef3c7;border-color:#fde68a">'+(practiceIsArabic()?(PR_AR.noBank+' ('+skillL(skill)+')'):('A practice question bank for <b>'+skill+'</b> ('+sciSubj+') hasn’t been added yet. Your teacher can add one soon.'))+'</div>',items:[]};
+  }
+  if(typeof MATH_SKILLS!=="undefined" && MATH_SKILLS.indexOf(skill)>=0 && typeof mathActivityExercise==="function"){
+    var _mg=(S.student&&(S.student.prevGrade||S.student.curGrade))||"6";
+    var _mx=mathActivityExercise(taskText, seed, _mg, practiceIsArabic());
+    if(_mx) return {type:_mx.type, instr:instr, intro:_mx.intro, items:_mx.items};
   }
   return {type:"mathinput",instr:instr,items:genMath(skill,10,practiceIsArabic())};
 }
@@ -3883,10 +3922,20 @@ function launchExercise(key,skill){
 function exPick(i,oi){ if(EX.submitted)return; EX.resp[i]=oi; renderExercise(); }
 function exInput(i,v){ EX.resp[i]=v; }
 function exWrite(v){ EX.resp.text=v; }
+// Read a typed numeric answer: accepts Arabic-Indic digits (٤٥), the Arabic decimal mark (٫), a
+// typographic minus (−) and a fraction like 3/4, so correct answers are never marked wrong.
+function exNum(v){
+  var t=String(v==null?"":v).trim()
+    .replace(/[\u0660-\u0669]/g,function(d){return String(d.charCodeAt(0)-0x0660);})
+    .replace(/[\u06f0-\u06f9]/g,function(d){return String(d.charCodeAt(0)-0x06f0);})
+    .replace(/[\u066b]/g,".").replace(/[\u2212\u2013]/g,"-").replace(/\s+/g,"");
+  var f=t.match(/^(-?\d+)\/(\d+)$/); if(f && +f[2]) return (+f[1])/(+f[2]);
+  return parseFloat(t.replace(/[^0-9.\-]/g,""));
+}
 function submitExercise(){
   const d=EX.def;
   if(d.type==="mcq"){let c=0; d.items.forEach((it,i)=>{ if(EX.resp[i]===it.answer)c++; }); EX.correct=c; EX.total=d.items.length; EX.score=Math.round(c/d.items.length*100);}
-  else if(d.type==="mathinput"){let c=0; d.items.forEach((it,i)=>{ const v=parseFloat(String(EX.resp[i]==null?"":EX.resp[i]).replace(/[^0-9.\-]/g,"")); if(!isNaN(v)&&Math.abs(v-it.answer)<0.02)c++; }); EX.correct=c; EX.total=d.items.length; EX.score=Math.round(c/d.items.length*100);}
+  else if(d.type==="mathinput"){let c=0; d.items.forEach((it,i)=>{ const v=exNum(EX.resp[i]); if(!isNaN(v)&&Math.abs(v-it.answer)<0.02)c++; }); EX.correct=c; EX.total=d.items.length; EX.score=Math.round(c/d.items.length*100);}
   else { const t=(EX.resp.text||""); EX.words=t.trim()?t.trim().split(/\s+/).length:0; EX.score=writingScore(t); }
   EX.submitted=true; renderExercise();
 }
@@ -3920,7 +3969,7 @@ function renderExercise(){
     } else {
       d.items.forEach((it,i)=>{
         let mark="";
-        if(EX.submitted){ const v=parseFloat(String(EX.resp[i]==null?"":EX.resp[i]).replace(/[^0-9.\-]/g,"")); const ok=!isNaN(v)&&Math.abs(v-it.answer)<0.02; mark=` <span style="font-weight:700;color:${ok?'var(--ok)':'var(--red)'}">${ok?'✓':'✗ ('+it.answer+')'}</span>`; }
+        if(EX.submitted){ const v=exNum(EX.resp[i]); const ok=!isNaN(v)&&Math.abs(v-it.answer)<0.02; mark=` <span style="font-weight:700;color:${ok?'var(--ok)':'var(--red)'}">${ok?'✓':'✗ ('+it.answer+')'}</span>`; }
         body+=`<div class="exq"><div style="font-weight:600;margin-bottom:8px">${AR?PR_AR.q:"Q"}${i+1}. ${it.q}</div>
           <input dir="ltr" ${EX.submitted?"disabled":""} value="${EX.resp[i]!=null?EX.resp[i]:""}" oninput="exInput(${i},this.value)" placeholder="${AR?PR_AR.yourAnswer:"Your answer"}" style="max-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">${mark}</div>`;
       });

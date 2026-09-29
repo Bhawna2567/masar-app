@@ -294,3 +294,64 @@ if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
    {s:EARTH,l:"H",sub:"Geologic time",a:0,en:{q:"The era known as the 'Age of Dinosaurs' is the:",o:["Mesozoic","Paleozoic","Cenozoic","Precambrian only"]},ar:{q:"العصر المعروف بـ'عصر الديناصورات' هو:",o:["الحقب الوسطى (الميزوزوي)","الحقب القديمة (الباليوزوي)","الحقب الحديثة (السينوزوي)","ما قبل الكامبري فقط"]}}
   ]);
 })();
+
+/* ================= GRADE 9 GENERAL — Integrated Science (bilingual) =================
+   Tests the G09 General scope & sequence (Physics Toolkit, Motion, Forces, Work & Energy, Waves,
+   States of matter, Matter). Diagnoses a Grade 10 General class. Filed as Science (science strands)
+   and, for the physics chapters, as Physics (physics strands) — in English AND Arabic. */
+(function(){
+  var PS="Physical Science", INQ="Scientific Inquiry & Technology";
+  var MU="Measurement & Units", MF="Motion & Forces", WS="Waves & Sound";
+  var I=[
+   // ---- Physics toolkit ----
+   {s:INQ,p:MU,l:"F",sub:"Methods of science",en:{q:"A testable explanation that a scientist proposes before an experiment is a:",o:["hypothesis","law","conclusion","measurement"]},ar:{q:"التفسير القابل للاختبار الذي يقترحه العالِم قبل التجربة يُسمّى:",o:["فرضية","قانونًا","استنتاجًا","قياسًا"]}},
+   {s:INQ,p:MU,l:"F",sub:"SI units",en:{q:"The SI base unit of length is the:",o:["metre (m)","kilogram (kg)","second (s)","newton (N)"]},ar:{q:"وحدة الطول الأساسية في النظام الدولي هي:",o:["المتر (m)","الكيلوغرام (kg)","الثانية (s)","النيوتن (N)"]}},
+   {s:INQ,p:MU,l:"F",sub:"SI units",en:{q:"Which quantity is measured in kilograms?",o:["Mass","Time","Temperature","Length"]},ar:{q:"أيّ كمية تُقاس بالكيلوغرام؟",o:["الكتلة","الزمن","درجة الحرارة","الطول"]}},
+   {s:INQ,p:MU,l:"C",sub:"Precision and accuracy",en:{q:"Measurements that are very close to the accepted (true) value are:",o:["accurate","precise only","random","estimated"]},ar:{q:"القياسات القريبة جدًا من القيمة المقبولة (الحقيقية) توصف بأنها:",o:["دقيقة (صحيحة)","متقاربة فقط","عشوائية","تقديرية"]}},
+   {s:INQ,p:MU,l:"C",sub:"Graphing data",en:{q:"In an experiment, the variable the scientist changes on purpose is the:",o:["independent variable","dependent variable","controlled variable","constant"]},ar:{q:"في التجربة، المتغيّر الذي يغيّره العالِم عمدًا هو:",o:["المتغيّر المستقل","المتغيّر التابع","المتغيّر المضبوط","الثابت"]}},
+   {s:INQ,p:MU,l:"H",sub:"Graphing data",en:{q:"A straight-line graph passing through the origin shows that the two variables are:",o:["directly proportional","inversely proportional","unrelated","decreasing together"]},ar:{q:"الرسم البياني الخطي المستقيم المار بنقطة الأصل يدل على أن المتغيّرين:",o:["متناسبان طرديًا","متناسبان عكسيًا","غير مرتبطين","يتناقصان معًا"]}},
+   // ---- Representing / accelerated motion ----
+   {s:PS,p:MF,l:"F",sub:"Scalars and vectors",en:{q:"Which of these is a vector quantity?",o:["Displacement","Distance","Time","Mass"]},ar:{q:"أيٌّ مما يلي كمية متجهة؟",o:["الإزاحة","المسافة","الزمن","الكتلة"]}},
+   {s:PS,p:MF,l:"F",sub:"Speed",en:{q:"A runner covers 100 m in 20 s. Her average speed is:",o:["5 m/s","2000 m/s","80 m/s","0.2 m/s"]},ar:{q:"يقطع عدّاء 100 m في 20 s. متوسط سرعته يساوي:",o:["5 m/s","2000 m/s","80 m/s","0.2 m/s"]}},
+   {s:PS,p:MF,l:"C",sub:"Position–time graphs",en:{q:"The slope of a position–time graph gives the object's:",o:["velocity","acceleration","mass","force"]},ar:{q:"ميل منحنى الموقع–الزمن يعطي مقدار:",o:["السرعة المتجهة","التسارع","الكتلة","القوة"]}},
+   {s:PS,p:MF,l:"C",sub:"Velocity",en:{q:"Velocity differs from speed because velocity also includes:",o:["direction","mass","time","temperature"]},ar:{q:"تختلف السرعة المتجهة عن السرعة القياسية لأنها تتضمن أيضًا:",o:["الاتجاه","الكتلة","الزمن","درجة الحرارة"]}},
+   {s:PS,p:MF,l:"F",sub:"Acceleration",en:{q:"Acceleration is the rate of change of:",o:["velocity","position only","mass","distance only"]},ar:{q:"التسارع هو معدل التغيّر في:",o:["السرعة المتجهة","الموقع فقط","الكتلة","المسافة فقط"]}},
+   {s:PS,p:MF,l:"C",sub:"Acceleration",en:{q:"The SI unit of acceleration is:",o:["m/s²","m/s","N","J"]},ar:{q:"وحدة التسارع في النظام الدولي هي:",o:["m/s²","m/s","N","J"]}},
+   {s:PS,p:MF,l:"H",sub:"Constant acceleration",en:{q:"A car starts from rest and accelerates at 2 m/s² for 5 s. Its final velocity is:",o:["10 m/s","2.5 m/s","7 m/s","25 m/s"]},ar:{q:"تبدأ سيارة الحركة من السكون بتسارع 2 m/s² لمدة 5 s. سرعتها النهائية تساوي:",o:["10 m/s","2.5 m/s","7 m/s","25 m/s"]}},
+   {s:PS,p:MF,l:"C",sub:"Free fall",en:{q:"Near Earth's surface, an object in free fall accelerates at about:",o:["9.8 m/s²","1 m/s²","98 m/s²","0 m/s²"]},ar:{q:"قرب سطح الأرض، يتسارع الجسم الساقط سقوطًا حرًا بمقدار يقارب:",o:["9.8 m/s²","1 m/s²","98 m/s²","0 m/s²"]}},
+   // ---- Forces ----
+   {s:PS,p:MF,l:"F",sub:"Newton's first law",en:{q:"The tendency of an object to resist a change in its motion is called:",o:["inertia","friction","weight","acceleration"]},ar:{q:"ميل الجسم إلى مقاومة التغيّر في حالته الحركية يُسمّى:",o:["القصور الذاتي","الاحتكاك","الوزن","التسارع"]}},
+   {s:PS,p:MF,l:"C",sub:"Newton's second law",en:{q:"A net force acts on a 2 kg object giving it an acceleration of 3 m/s². The force is:",o:["6 N","1.5 N","5 N","0.67 N"]},ar:{q:"تؤثر قوة محصلة في جسم كتلته 2 kg فتكسبه تسارعًا مقداره 3 m/s². مقدار القوة:",o:["6 N","1.5 N","5 N","0.67 N"]}},
+   {s:PS,p:MF,l:"H",sub:"Weight",en:{q:"Using g = 9.8 m/s², the weight of a 5 kg object is:",o:["49 N","5 N","14.8 N","0.5 N"]},ar:{q:"باستخدام g = 9.8 m/s²، وزن جسم كتلته 5 kg يساوي:",o:["49 N","5 N","14.8 N","0.5 N"]}},
+   {s:PS,p:MF,l:"C",sub:"Newton's third law",en:{q:"According to Newton's third law, action and reaction forces are:",o:["equal in size and opposite in direction","equal in size and in the same direction","unequal and opposite","acting on the same object"]},ar:{q:"وفق قانون نيوتن الثالث، قوتا الفعل وردّ الفعل:",o:["متساويتان مقدارًا ومتعاكستان اتجاهًا","متساويتان مقدارًا وفي الاتجاه نفسه","غير متساويتين ومتعاكستان","تؤثران في الجسم نفسه"]}},
+   {s:PS,p:MF,l:"F",sub:"Friction",en:{q:"Friction always acts:",o:["opposite to the direction of motion","in the direction of motion","upward","toward the Earth's centre"]},ar:{q:"تؤثر قوة الاحتكاك دائمًا:",o:["عكس اتجاه الحركة","في اتجاه الحركة","إلى الأعلى","نحو مركز الأرض"]}},
+   {s:PS,p:MF,l:"H",sub:"Balanced forces",en:{q:"If the net force on a moving object is zero, the object:",o:["keeps moving at constant velocity","stops immediately","speeds up","falls"]},ar:{q:"إذا كانت القوة المحصلة المؤثرة في جسم متحرك صفرًا، فإن الجسم:",o:["يستمر في الحركة بسرعة متجهة ثابتة","يتوقف فورًا","تزداد سرعته","يسقط"]}},
+   // ---- Work, energy, machines ----
+   {s:PS,p:MF,l:"C",sub:"Work",en:{q:"A 10 N force pushes a box 3 m in the direction of the force. The work done is:",o:["30 J","3.3 J","13 J","0.3 J"]},ar:{q:"تدفع قوة مقدارها 10 N صندوقًا مسافة 3 m في اتجاه القوة. الشغل المبذول:",o:["30 J","3.3 J","13 J","0.3 J"]}},
+   {s:PS,p:MF,l:"F",sub:"Energy",en:{q:"The SI unit of work and energy is the:",o:["joule (J)","newton (N)","watt (W)","pascal (Pa)"]},ar:{q:"وحدة الشغل والطاقة في النظام الدولي هي:",o:["الجول (J)","النيوتن (N)","الواط (W)","الباسكال (Pa)"]}},
+   {s:PS,p:MF,l:"C",sub:"Kinetic energy",en:{q:"An object's kinetic energy depends on its:",o:["mass and speed","colour and shape","height only","temperature only"]},ar:{q:"تعتمد الطاقة الحركية للجسم على:",o:["كتلته وسرعته","لونه وشكله","ارتفاعه فقط","درجة حرارته فقط"]}},
+   {s:PS,p:MF,l:"H",sub:"Machines",en:{q:"A simple machine makes a task easier by:",o:["changing the size or direction of the force","reducing the work to zero","creating energy","removing friction completely"]},ar:{q:"تسهّل الآلة البسيطة إنجاز العمل عن طريق:",o:["تغيير مقدار القوة أو اتجاهها","جعل الشغل صفرًا","توليد الطاقة","إزالة الاحتكاك تمامًا"]}},
+   // ---- Vibrations and waves ----
+   {s:PS,p:WS,l:"F",sub:"Periodic motion",en:{q:"The time taken for one complete oscillation is the:",o:["period","amplitude","wavelength","frequency"]},ar:{q:"الزمن اللازم لإتمام اهتزازة كاملة واحدة يُسمّى:",o:["الزمن الدوري","السعة","الطول الموجي","التردد"]}},
+   {s:PS,p:WS,l:"F",sub:"Wave properties",en:{q:"The maximum displacement of a wave from its rest position is its:",o:["amplitude","period","wavelength","speed"]},ar:{q:"أقصى إزاحة للموجة عن موضع سكونها تُسمّى:",o:["السعة","الزمن الدوري","الطول الموجي","السرعة"]}},
+   {s:PS,p:WS,l:"H",sub:"Wave speed",en:{q:"A wave has frequency 2 Hz and wavelength 3 m. Its speed is:",o:["6 m/s","1.5 m/s","5 m/s","0.67 m/s"]},ar:{q:"موجة ترددها 2 Hz وطولها الموجي 3 m. سرعتها تساوي:",o:["6 m/s","1.5 m/s","5 m/s","0.67 m/s"]}},
+   {s:PS,p:WS,l:"C",sub:"Wave behaviour",en:{q:"Sound cannot travel through:",o:["a vacuum","water","steel","air"]},ar:{q:"لا يمكن للصوت أن ينتقل خلال:",o:["الفراغ","الماء","الفولاذ","الهواء"]}},
+   // ---- Solids, liquids and gases (science only) ----
+   {s:PS,p:null,l:"F",sub:"Thermal energy",en:{q:"Thermal energy always flows from:",o:["a hotter object to a colder object","a colder object to a hotter object","a solid to a gas only","nowhere"]},ar:{q:"تنتقل الطاقة الحرارية دائمًا من:",o:["الجسم الأسخن إلى الجسم الأبرد","الجسم الأبرد إلى الجسم الأسخن","المادة الصلبة إلى الغاز فقط","لا تنتقل"]}},
+   {s:PS,p:null,l:"C",sub:"Properties of fluids",en:{q:"A force of 100 N acts on an area of 2 m². The pressure is:",o:["50 Pa","200 Pa","102 Pa","0.02 Pa"]},ar:{q:"تؤثر قوة مقدارها 100 N في مساحة 2 m². الضغط يساوي:",o:["50 Pa","200 Pa","102 Pa","0.02 Pa"]}},
+   {s:PS,p:null,l:"H",sub:"Behaviour of gases",en:{q:"If a gas is heated in a sealed rigid container, its pressure:",o:["increases","decreases","stays the same","becomes zero"]},ar:{q:"إذا سُخّن غاز في وعاء صلب مغلق، فإن ضغطه:",o:["يزداد","يقل","يبقى ثابتًا","يصبح صفرًا"]}},
+   {s:PS,p:null,l:"F",sub:"States of matter",en:{q:"In a solid, the particles:",o:["vibrate about fixed positions","move freely in all directions","are far apart","do not move at all"]},ar:{q:"في المادة الصلبة، الجسيمات:",o:["تهتز حول مواضع ثابتة","تتحرك بحرية في جميع الاتجاهات","متباعدة جدًا","لا تتحرك إطلاقًا"]}},
+   // ---- Matter: properties and change (science only) ----
+   {s:PS,p:null,l:"F",sub:"Properties of matter",en:{q:"Which of these is a physical property?",o:["Density","Flammability","Ability to rust","Reactivity with acid"]},ar:{q:"أيٌّ مما يلي خاصية فيزيائية؟",o:["الكثافة","قابلية الاشتعال","القابلية للصدأ","التفاعل مع الحمض"]}},
+   {s:PS,p:null,l:"C",sub:"Changes in matter",en:{q:"Which is a chemical change?",o:["Burning wood","Melting ice","Cutting paper","Dissolving sugar in water"]},ar:{q:"أيٌّ مما يلي تغيّر كيميائي؟",o:["احتراق الخشب","انصهار الجليد","قص الورق","ذوبان السكر في الماء"]}},
+   {s:PS,p:null,l:"H",sub:"Elements and compounds",en:{q:"The law of definite proportions states that a compound always contains its elements in:",o:["the same proportion by mass","any proportion","equal numbers of atoms","varying amounts"]},ar:{q:"ينص قانون النسب الثابتة على أن المركّب يحتوي دائمًا على عناصره:",o:["بالنسبة الكتلية نفسها","بأي نسبة","بأعداد متساوية من الذرات","بكميات متغيّرة"]}},
+   {s:PS,p:null,l:"C",sub:"Mixtures",en:{q:"Salt water is an example of a:",o:["homogeneous mixture (solution)","heterogeneous mixture","compound","element"]},ar:{q:"الماء المالح مثال على:",o:["مخلوط متجانس (محلول)","مخلوط غير متجانس","مركّب","عنصر"]}}
+  ];
+  function pack(lang, subj){
+    return I.filter(function(it){ return subj==="Science" || it.p; }).map(function(it){
+      var t=it[lang]; return {skill:(subj==="Science"?it.s:it.p), level:it.l, sub:it.sub, q:t.q, options:t.o.slice(), answer:0}; });
+  }
+  QUESTION_POOL["9G"]=QUESTION_POOL["9G"]||{}; QUESTION_BANK_AR["9G"]=QUESTION_BANK_AR["9G"]||{};
+  QUESTION_POOL["9G"]["Science"]=pack("en","Science"); QUESTION_BANK_AR["9G"]["Science"]=pack("ar","Science");
+  QUESTION_POOL["9G"]["Physics"]=pack("en","Physics"); QUESTION_BANK_AR["9G"]["Physics"]=pack("ar","Physics");
+})();
