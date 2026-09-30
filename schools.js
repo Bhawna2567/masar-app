@@ -139,6 +139,7 @@ function adminSchoolsView(){
     +'<h3 style="font-size:14px;margin:16px 0 6px">Add a school</h3><div class="row"><div class="col"><input id="new_school_name" placeholder="School name"></div><div class="col" style="display:flex;align-items:flex-end"><button class="btn" onclick="addSchool()">+ Add school</button> <span id="sch_msg" style="font-size:12px;margin-left:8px"></span></div></div>'
     +(unl?'<div class="notice" style="margin-top:12px">'+unl+' record(s) have no school label yet (made on an older version). <button class="btn sm" onclick="migrateToSchools(true)">Label them as '+esc(schoolShort(DEFAULT_SCHOOL))+'</button></div>':'')
     +'</div>'
+    +splitByEmailCard()
     +'<div class="card"><h2 style="margin:0 0 4px">👩‍🏫 Which schools each teacher belongs to</h2><p class="sub">Tick every school a teacher works at. Teachers with more than one school get a switcher on their dashboard.</p>'
     +'<table><thead><tr><th>Teacher</th><th>Schools</th><th></th></tr></thead><tbody>'+trows+'</tbody></table></div>';
 }
@@ -198,4 +199,84 @@ function moveClassToSchool(classId, sid){
   var ops=[db.collection("classes").doc(classId).update({schoolId:sid})].concat(cas.map(function(a){ return db.collection("assignments").doc(a.id).update({schoolId:sid}); }));
   (CACHE.users||[]).forEach(function(u){ if(u.role==="student" && emails[String(u.email||"").toLowerCase()]) ops.push(db.collection("users").doc(u.uid).update({school:sid})); });
   Promise.all(ops).then(function(){ alert("✅ Moved “"+c.name+"” to "+schoolName(sid)+"."); }).catch(function(e){ alert("Couldn’t move it: "+fbErr(e)); });
+}
+
+/* ---------------- Super-admin: move students to the right school by email ----------------
+   For records made before the schools were set up. Example: Ibn Hazm boys' emails start with "stum".
+   A class holding ONLY matching students moves whole. A MIXED class is split: matching students move into a
+   copy of the class in the target school (new class code); everyone else stays in the original class. */
+function splitByEmailCard(){
+  if(!schoolsEnabled()) return "";
+  var subs={}; (CACHE.allAssign||[]).forEach(function(a){ if(a.subject) subs[a.subject]=1; });
+  return '<div class="card"><h2 style="margin:0 0 4px">📧 Move students by email</h2><p class="sub">Put students (and their classes and results) into the right school using how their email starts — e.g. Ibn Hazm boys start with <b>stum</b>, Al Noaimiyah girls with <b>stuf</b>.</p>'
+    +'<div class="row"><div class="col"><label>Email starts with</label><input id="sp_prefix" value="stum"></div>'
+    +'<div class="col"><label>Subject</label><select id="sp_subject"><option value="Chemistry">Chemistry</option><option value="">All subjects</option>'+Object.keys(subs).filter(function(s){return s!=="Chemistry";}).sort().map(function(s){ return '<option value="'+esc(s)+'">'+esc(s)+'</option>'; }).join("")+'</select></div>'
+    +'<div class="col"><label>Move to</label><select id="sp_target">'+schoolList().map(function(s){ return '<option value="'+s.id+'"'+(s.id==="ibnhazm"?' selected':'')+'>'+esc(s.name)+'</option>'; }).join("")+'</select></div></div>'
+    +'<div style="margin-top:10px"><button class="btn" onclick="previewSplit()">Preview</button></div><div id="sp_out" style="margin-top:12px"></div></div>';
+}
+function _splitPlan(){
+  var prefix=String((document.getElementById("sp_prefix")||{}).value||"").trim().toLowerCase();
+  var subj=(document.getElementById("sp_subject")||{}).value||"";
+  var target=(document.getElementById("sp_target")||{}).value||"";
+  if(!prefix||!target) return {error:"Enter how the emails start and choose a school."};
+  var all=CACHE.allAssign||[], cls=CACHE.allClasses||[];
+  var hit=function(a){ return String(a.studentEmail||"").toLowerCase().indexOf(prefix)===0 && (!subj||a.subject===subj) && sidOf(a)!==target; };
+  var moving=all.filter(hit); var byClass={};
+  moving.forEach(function(a){ var k=a.classId||"_none"; (byClass[k]=byClass[k]||[]).push(a); });
+  var groups=Object.keys(byClass).map(function(k){
+    var c=cls.filter(function(x){return x.id===k;})[0]||null;
+    var inClass=c?all.filter(function(a){return a.classId===k;}):[];
+    var stay=inClass.filter(function(a){ return !hit(a); });
+    var emails={}; byClass[k].forEach(function(a){ emails[String(a.studentEmail).toLowerCase()]=1; });
+    return {classId:k, cls:c, move:byClass[k], stayCount:stay.length, students:Object.keys(emails), mode:!c?"records":(stay.length?"split":"whole")};
+  });
+  var emailsAll={}; moving.forEach(function(a){ emailsAll[String(a.studentEmail).toLowerCase()]=1; });
+  var other=all.filter(function(a){ return emailsAll[String(a.studentEmail||"").toLowerCase()] && subj && a.subject!==subj && sidOf(a)!==target; }).length;
+  return {prefix:prefix, subj:subj, target:target, groups:groups, moving:moving, students:Object.keys(emailsAll), other:other};
+}
+function previewSplit(){
+  var out=document.getElementById("sp_out"); var P=_splitPlan(); if(!out) return;
+  if(P.error){ out.innerHTML='<div class="notice">'+P.error+'</div>'; return; }
+  if(!P.moving.length){ out.innerHTML='<div class="notice">Nothing to move — no '+(P.subj||"")+' diagnostics from emails starting “'+esc(P.prefix)+'” are outside '+esc(schoolName(P.target))+'.</div>'; return; }
+  var rows=P.groups.map(function(g){
+    var what=g.mode==="whole"?"Whole class moves to "+esc(schoolShort(P.target))
+      :g.mode==="split"?"Split — these students move to a new "+esc(schoolShort(P.target))+" copy of the class (new class code); "+g.stayCount+" other record(s) stay"
+      :"Individual diagnostics (no class) move";
+    return '<tr><td><b>'+esc(g.cls?g.cls.name:"(no class)")+'</b><div class="muted" style="font-size:11px">'+esc(g.cls?(g.cls.teacherName||""):"")+(g.cls?" · "+esc(subjLabelLong(g.cls.subject)):"")+'</div></td><td>'+g.students.length+' student(s), '+g.move.length+' diagnostic(s)</td><td>'+what+'</td></tr>'; }).join("");
+  out.innerHTML='<table><thead><tr><th>Class</th><th>Moving</th><th>What happens</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<p style="font-size:13px;margin:8px 0">'+P.students.length+' student(s) will belong to <b>'+esc(schoolName(P.target))+'</b>. Their teachers are added to that school so they can switch to it.</p>'
+    +(P.other?'<div class="notice" style="margin:6px 0">ℹ These students also have '+P.other+' diagnostic(s) in other subjects outside '+esc(schoolShort(P.target))+'. They are not moved now (choose “All subjects” to move everything).</div>':'')
+    +'<button class="btn" onclick="runSplit()">Move now</button> <span id="sp_msg" style="font-size:12px;margin-left:8px"></span>';
+}
+function runSplit(){
+  if(!isAdmin()) return; var P=_splitPlan(); if(P.error||!P.moving.length) return;
+  if(!confirm("Move "+P.moving.length+" diagnostic(s) for "+P.students.length+" student(s) to "+schoolName(P.target)+"?")) return;
+  var msg=document.getElementById("sp_msg"); if(msg){ msg.textContent="Moving…"; }
+  var ops=[], newCodes=[], teachers={};
+  P.groups.forEach(function(g){
+    var c=g.cls;
+    if(c) teachers[c.teacherUid]=1; g.move.forEach(function(a){ if(a.teacherUid) teachers[a.teacherUid]=1; });
+    if(g.mode==="whole"){
+      ops.push(function(){ return db.collection("classes").doc(c.id).update({schoolId:P.target}); });
+      g.move.forEach(function(a){ ops.push(function(){ return db.collection("assignments").doc(a.id).update({schoolId:P.target}); }); });
+    } else if(g.mode==="split"){
+      ops.push(function(){
+        var copy=Object.assign({},c); delete copy.id; copy.schoolId=P.target; copy.joinCode=genCode(); copy.createdAt=Date.now(); copy.splitFrom=c.id;
+        return db.collection("classes").add(copy).then(function(ref){ newCodes.push(c.name+" ("+schoolShort(P.target)+"): "+copy.joinCode);
+          return Promise.all(g.move.map(function(a){ return db.collection("assignments").doc(a.id).update({schoolId:P.target, classId:ref.id}); })); });
+      });
+    } else {
+      g.move.forEach(function(a){ ops.push(function(){ return db.collection("assignments").doc(a.id).update({schoolId:P.target}); }); });
+    }
+  });
+  // students now belong to the target school
+  (CACHE.users||[]).forEach(function(u){ if(u.role==="student" && P.students.indexOf(String(u.email||"").toLowerCase())>=0) ops.push(function(){ return db.collection("users").doc(u.uid).update({school:P.target}); }); });
+  // teachers join the target school; their student-list entries follow the students
+  Object.keys(teachers).forEach(function(uid){ var t=(CACHE.users||[]).filter(function(u){return u.uid===uid;})[0]; if(!t) return;
+    var sch=userSchools(t); if(sch.indexOf(P.target)<0) sch=sch.concat([P.target]);
+    var roster=(t.students||[]).map(function(x){ return P.students.indexOf(String(x.email||"").toLowerCase())>=0?Object.assign({},x,{school:P.target}):x; });
+    ops.push(function(){ return db.collection("users").doc(uid).update({schools:sch, students:roster}); }); });
+  ops.reduce(function(p,f){ return p.then(f); }, Promise.resolve())
+    .then(function(){ alert("✅ Moved "+P.moving.length+" diagnostic(s) for "+P.students.length+" student(s) to "+schoolName(P.target)+"."+(newCodes.length?"\n\nNew class code(s) for the moved students:\n"+newCodes.join("\n")+"\n\n(The original classes keep their old codes for the students who stayed.)":"")); render(); })
+    .catch(function(e){ if(msg){ msg.style.color="var(--red)"; msg.textContent="Couldn’t finish: "+fbErr(e); } });
 }
