@@ -151,6 +151,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="practice-ar.js"></script>
 <script src="practice-math.js"></script>
 <script src="practice-sci-bank.js"></script>
+<script src="schools.js"></script>
 <script src="english-gen.js"></script>
 <script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
@@ -215,7 +216,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-29b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD = "2026-09-30a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -496,7 +497,7 @@ function buildProbe(a){
   add(all,function(q){return weakSk[q.skill];});       // any grade, weak skills
   add(prefer,function(){return true;});                // top up with any this-grade
   add(all,function(){return true;});
-  return out.slice(0,10);
+  return balanceOptions(out.slice(0,10), null);   // fresh, balanced option order for every progress check
 }
 var PROBE=null;
 function runProbe(id){
@@ -647,7 +648,7 @@ function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
 // ADMIN_AS: when an admin is viewing a teacher's dashboard, these getters return THAT teacher's data
 // (from the admin-wide caches) so every teacher view works exactly as it does for the teacher.
 var ADMIN_AS=null;
-function assignments(){ if(ADMIN_AS) return (CACHE.allAssign||[]).filter(function(a){return a.teacherUid===ADMIN_AS.uid;}); return CACHE.assignments; }
+function assignments(){ var b = ADMIN_AS ? (CACHE.allAssign||[]).filter(function(a){return a.teacherUid===ADMIN_AS.uid;}) : (CACHE.assignments||[]); if(!ADMIN_AS && AUTH && AUTH.role==="student") return b; return b.filter(inCur); }
 // Assignments the teacher has just reopened for THIS student (retake unlocked). Covers both a normal
 // completion and a lockdown removal, so the unlock is always visible no matter which tab they're on.
 function retakeUnlockedForStudent(){
@@ -662,16 +663,17 @@ function retakeUnlockedForStudent(){
 }
 // One-tap retake: clears the local "already submitted" state and reopens the paper for this student.
 function startRetake(id){ try{ lockdownEnd(); }catch(e){} openAssignment(id,false); }
-function classesList(){ if(ADMIN_AS) return (CACHE.allClasses||[]).filter(function(c){return c.teacherUid===ADMIN_AS.uid;}); return CACHE.classes||[]; }
-function teacherTests(){ if(ADMIN_AS) return (CACHE.allTests||[]).filter(function(t){return t.teacherUid===ADMIN_AS.uid;}); return CACHE.tests||[]; }
+function classesList(){ var b = ADMIN_AS ? (CACHE.allClasses||[]).filter(function(c){return c.teacherUid===ADMIN_AS.uid;}) : (CACHE.classes||[]); return b.filter(inCur); }
+function teacherTests(){ var b = ADMIN_AS ? (CACHE.allTests||[]).filter(function(t){return t.teacherUid===ADMIN_AS.uid;}) : (CACHE.tests||[]); return b.filter(inCur); }
 // Whose dashboard are we working on? When an admin is viewing a teacher's dashboard, everything they
 // create belongs to THAT teacher (not the admin), so it shows up on the teacher's own dashboard.
 function ownerUid(){ return ADMIN_AS ? ADMIN_AS.uid : myUid(); }
 function ownerUser(){ if(!ADMIN_AS) return AUTH||{}; return (CACHE.users||[]).filter(function(u){return u.uid===ADMIN_AS.uid;})[0]||ADMIN_AS; }
 function ownerName(){ var u=ownerUser(); return (u&&(u.name||u.email))||""; }
 function ownerEmail(){ var u=ownerUser(); return ((u&&u.email)||"").toLowerCase(); }
-function ownerStudents(){ var u=ownerUser(); return (u&&u.students)||[]; }
-function adminOpenTeacher(uid){ if(!isAdmin())return; var u=(adminUsers()||[]).filter(function(x){return x.uid===uid;})[0]||{uid:uid}; ADMIN_AS={uid:uid,name:u.name,email:u.email}; S.adminSection=null; S.adminTeacher=null; S.openClassId=null; S.teacherView=null; render(); }
+function ownerStudents(){ var u=ownerUser(); return ((u&&u.students)||[]).filter(function(x){ return !schoolsEnabled() || (x.school||DEFAULT_SCHOOL)===curSchool(); }); }
+function ownerStudentsAll(){ var u=ownerUser(); return (u&&u.students)||[]; }
+function adminOpenTeacher(uid){ if(!isAdmin())return; var u=(adminUsers()||[]).filter(function(x){return x.uid===uid;})[0]||{uid:uid}; ADMIN_AS={uid:uid,name:u.name,email:u.email}; S.asSchool=(adminSchool()!=="ALL" && userSchools(u).indexOf(adminSchool())>=0)?adminSchool():(userSchools(u)[0]||DEFAULT_SCHOOL); S.adminSection=null; S.adminTeacher=null; S.openClassId=null; S.teacherView=null; render(); }
 function adminExitTeacher(){ ADMIN_AS=null; S.openClassId=null; S.teacherView=null; S.adminSection="activity"; render(); }
 function freshState(){return {student:null,answers:{},result:null,plan:null,taskDone:{},writeResponse:"",activeTab:"home",authMode:"login"};}
 function stateKey(){return "masar_cloud_state_"+(AUTH?AUTH.uid:"guest");}
@@ -683,7 +685,7 @@ function reset(){ if(READONLY) return; if(confirm("Clear this student's progress
 function syncResultToAssignment(){
   if(!(AUTH&&AUTH.role==="student")||!S.result||!S.activeAssignment) return;
   const r=S.result;
-  const payload={status:"completed",score:r.overallPct,level:r.level?r.level.name:"",levelCls:r.level?r.level.cls:"grey",skillPct:r.skillPct||{},subject:S.student.subject,language:(S.student.language||"English"),prevGrade:S.student.prevGrade,writePrompt:r.writePrompt||"",writeResponse:r.writeResponse||"",completedAt:Date.now(),retakeAllowed:false};
+  const payload={optv:(S.optv===2?2:null),status:"completed",score:r.overallPct,level:r.level?r.level.name:"",levelCls:r.level?r.level.cls:"grey",skillPct:r.skillPct||{},subject:S.student.subject,language:(S.student.language||"English"),prevGrade:S.student.prevGrade,writePrompt:r.writePrompt||"",writeResponse:r.writeResponse||"",completedAt:Date.now(),retakeAllowed:false};
   // Persist per-question data at the top level too (not only nested in snapshot) so the
   // teacher's marked-PDF export can always find it.
   payload.answers=r.answers||{};
@@ -705,6 +707,7 @@ function syncResultToAssignment(){
 }
 function startListeners(){
   _unsub.forEach(u=>{try{u()}catch(e){}}); _unsub=[];
+  _unsub.push(db.collection("schools").onSnapshot(s=>{CACHE.schools=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
   if(AUTH.role==="teacher"){
     _unsub.push(db.collection("assignments").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.assignments=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
     _unsub.push(db.collection("classes").where("teacherUid","==",AUTH.uid).onSnapshot(s=>{CACHE.classes=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
@@ -783,6 +786,7 @@ function render(){
     var tnav2=teacherNav(); var tbody2=(S.teacherView==="analysis")?viewAnalysis():(S.teacherView==="bank")?viewQuestionBank():(S.openClassId?viewClass(S.openClassId):viewTeacher());
     v.innerHTML=asBanner+tnav2+tbody2; _scrollTopIfViewChanged(); return; }
   if(isAdmin() && S.adminSection){ tabsEl.innerHTML=""; v.innerHTML=viewAdmin(); _scrollTopIfViewChanged(); return; }
+  if(AUTH.role==="teacher" && !VIEWING && needsSchoolGate()){ tabsEl.innerHTML=""; v.innerHTML=schoolGateView(); _scrollTopIfViewChanged(); return; }
   if(AUTH.role==="teacher" && !VIEWING){ tabsEl.innerHTML=""; var tnav=teacherNav(); var tbody=(S.teacherView==="analysis")?viewAnalysis():(S.teacherView==="bank")?viewQuestionBank():(S.openClassId?viewClass(S.openClassId):viewTeacher()); v.innerHTML=verifyBanner()+tnav+tbody; _scrollTopIfViewChanged(); return; }
   renderTabs();
   const map={home:viewHome,setup:viewSetup,diagnostic:viewDiagnostic,results:viewResults,gaps:viewGaps,report:viewReport,goals:viewGoals,plan:viewPlan,folders:viewFolders,tracker:viewTracker,graphs:viewProgressGraphs,curriculum:viewCurriculum};
@@ -825,6 +829,7 @@ function viewAuth(){
       <select id="a_role"><option value="teacher">Teacher</option><option value="student">Student</option></select>
       <div style="height:10px"></div>
       <label>Full name</label><input id="a_name" placeholder="e.g. Sara Al Hashimi"><div style="height:10px"></div>
+      <label>School code <span class="muted" style="font-weight:400">(teachers only — from your school)</span></label><input id="a_school" placeholder="e.g. NOAIM-7K2Q" style="text-transform:uppercase"><div style="height:10px"></div>
       <label>Student ID <span class="muted" style="font-weight:400">(students only — your MOE number; links your past results)</span></label><input id="a_sid" placeholder="e.g. 20230004282"><div style="height:10px"></div>`:""}
     <label>School email</label><input id="a_email" type="email" placeholder="name@school.ae"><div style="height:10px"></div>
     <label>Password</label><input id="a_pass" type="password" placeholder="at least 8 characters" onkeydown="if(event.key==='Enter'){${mode==='register'?'doRegister':'doLogin'}()}">
@@ -845,7 +850,13 @@ function doRegister(){
   if(pass.length<8){msg.textContent="Password must be at least 8 characters.";return;}
   msg.textContent="Creating account…";
   fbAuth.createUserWithEmailAndPassword(email,pass)
-    .then(cred=>{ try{ cred.user.sendEmailVerification(); }catch(e){} var doc={role:role,name:name,email:email,students:[]}; if(role==="student"&&studentId)doc.studentId=studentId; return db.collection("users").doc(cred.user.uid).set(doc); })
+    .then(cred=>{ try{ cred.user.sendEmailVerification(); }catch(e){} var doc={role:role,name:name,email:email,students:[]}; if(role==="student"&&studentId)doc.studentId=studentId;
+      if(role!=="teacher") return db.collection("users").doc(cred.user.uid).set(doc);
+      // Teachers join their school with the school code. If the code is missing or wrong, they are asked again after sign-in.
+      var sc=((document.getElementById("a_school")||{}).value||"");
+      return db.collection("schools").get().then(function(q){ var hit=null, any=!q.empty; q.forEach(function(d){ if(!hit && normSchoolCode((d.data()||{}).code)===normSchoolCode(sc)) hit=d.id; });
+        if(any){ doc.schools=hit?[hit]:[]; if(hit) doc.activeSchool=hit; } return db.collection("users").doc(cred.user.uid).set(doc); })
+        .catch(function(){ return db.collection("users").doc(cred.user.uid).set(doc); }); })
     .catch(e=>{const m=document.getElementById("authMsg"); if(m)m.textContent=fbErr(e);});
 }
 // Passwords are stored by Firebase as one-way hashes and can NEVER be read back by anyone — the safe
@@ -930,7 +941,7 @@ function teacherNav(){
     +'<b style="font-size:14px;margin-right:6px">Teacher dashboard</b>'
     +'<button class="btn '+(v==="classes"?"":"ghost")+' sm" onclick="setTeacherView(\'classes\')">🏫 My classes</button>'
     +'<button class="btn '+(v==="analysis"?"":"ghost")+' sm" onclick="setTeacherView(\'analysis\')">📈 Skill analysis</button>'
-    +'<button class="btn '+(v==="bank"?"":"ghost")+' sm" onclick="setTeacherView(\'bank\')">🗂 Question bank</button></div>';
+    +'<button class="btn '+(v==="bank"?"":"ghost")+' sm" onclick="setTeacherView(\'bank\')">🗂 Question bank</button>'+teacherSchoolSwitcher()+'</div>';
 }
 function setTeacherView(v){ S.teacherView=v; render(); }
 function openAnalysis(id){ S.teacherView="analysis"; S.analysisId=id; render(); }
@@ -1016,7 +1027,7 @@ function saveEditedTest(){
   var qs=(S.editQs||[]); if(!qs.length){ alert("Add at least one question."); return; }
   var subj=S.bankSubj||"English", grade=S.bankGrade||"6";
   var questions=qs.map(function(q){ return {q:q.q,options:q.options,answer:q.answer,skill:q.skill||"",sub:q.sub||"",level:q.level||"C"}; });
-  db.collection("tests").add({teacherUid:ownerUid(),title:title,subject:subj,grade:grade,questions:questions,source:"edited",createdAt:Date.now()})
+  db.collection("tests").add({teacherUid:ownerUid(),schoolId:curSchool(),title:title,subject:subj,grade:grade,questions:questions,source:"edited",createdAt:Date.now()})
     .then(function(){ S.bankMode="view"; S.editQs=null; render(); alert("Saved “"+title+"”. Assign it to a class from a class's page (Diagnostic test selector), or to a single student in My classes → Assign."); })
     .catch(function(e){ alert(fbErr(e)); });
 }
@@ -1183,7 +1194,7 @@ function handleResultsImport(input){
       if(msg) msg.textContent="Saving "+ids.length+" students…";
       var chunks=[]; for(var i=0;i<ids.length;i+=400) chunks.push(ids.slice(i,i+400));
       var chain=Promise.resolve();
-      chunks.forEach(function(ck){ chain=chain.then(function(){ var b=db.batch(); ck.forEach(function(sid){ var rec=byId[sid]; rec.importedAt=Date.now(); rec.importedBy=(AUTH&&AUTH.name)||""; b.set(db.collection("priorResults").doc(sid),rec,{merge:true}); }); return b.commit(); }); });
+      chunks.forEach(function(ck){ chain=chain.then(function(){ var b=db.batch(); ck.forEach(function(sid){ var rec=byId[sid]; rec.schoolId=(adminSchool()!=="ALL"?adminSchool():DEFAULT_SCHOOL); rec.importedAt=Date.now(); rec.importedBy=(AUTH&&AUTH.name)||""; b.set(db.collection("priorResults").doc(sid),rec,{merge:true}); }); return b.commit(); }); });
       return chain.then(function(){
         CACHE.prior={};
         var checkId=(ids.indexOf("2015002974")>=0)?"2015002974":ids[0];
@@ -1614,8 +1625,8 @@ function viewTeacher(){
   <div class="card"><h2>Assigned diagnostics</h2><table><thead><tr><th>Student</th><th>Subject</th><th>Grades</th><th>Status</th><th></th></tr></thead><tbody>${assignRows}</tbody></table></div>`;
   const settingsBody=`<div class="card"><h2>Back up your data</h2><p class="sub">Download all your classes and diagnostics as a file you can keep safe. Good to do before any big change.</p><button class="btn ghost" onclick="exportBackup()">⬇ Download my data (JSON)</button></div>
   <div class="card" style="border:1px solid #f3c8cc"><h2>Reset dashboard</h2><p class="sub">Permanently delete all your students, classes and diagnostics to start fresh. This cannot be undone.</p><button class="btn" style="background:var(--red)" onclick="resetDashboard()">Reset everything</button></div>`;
-  const body = sec==="classes"?classCard() : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
-  return `<div class="card"><h2>Teacher Dashboard</h2><p class="sub">${me.name} · ${me.email}</p></div>${nav}${body}`;
+  const body = sec==="classes"?(allMyClassesCard()+classCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
+  return `<div class="card"><h2>Teacher Dashboard</h2><p class="sub">${me.name} · ${me.email}${schoolsEnabled()?" · 🏫 <b>"+esc(schoolName(curSchool()))+"</b>":""}</p></div>${nav}${body}`;
 }
 function setTSection(s){ S.tSection=s; render(); }
 function addStudent(){
@@ -1623,7 +1634,7 @@ function addStudent(){
   const msg=document.getElementById("tmsg");
   if(!name||!email){msg.textContent="Enter a name and email.";return;}
   if(ownerStudents().find(s=>s.email===email)){msg.textContent="That student is already on your list.";return;}
-  db.collection("users").doc(ownerUid()).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(e=>{const m=document.getElementById("tmsg"); if(m)m.textContent=fbErr(e);});
+  db.collection("users").doc(ownerUid()).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email,school:curSchool()})}).catch(e=>{const m=document.getElementById("tmsg"); if(m)m.textContent=fbErr(e);});
 }
 function assignDiagnostic(){
   const studentEmail=document.getElementById("as_student").value, subject=document.getElementById("as_subject").value;
@@ -1633,7 +1644,7 @@ function assignDiagnostic(){
   const s=ownerStudents().find(x=>x.email===studentEmail);
   const testId=(document.getElementById("as_test")||{}).value||"";
   const ct=testId?teacherTests().find(x=>x.id===testId):null;
-  const payload={teacherUid:ownerUid(),teacherEmail:ownerEmail(),teacherName:ownerName(),studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
+  const payload={teacherUid:ownerUid(),teacherEmail:ownerEmail(),teacherName:ownerName(),schoolId:curSchool(),studentEmail:studentEmail,studentName:s?s.name:studentEmail,subject:ct?ct.subject:subject,prevGrade:ct?ct.grade:prevGrade,curGrade:curGrade,term:term,publishDate:publishDate,parentPhone:parent,status:"pending",createdAt:Date.now()};
   if(ct){ payload.customQuestions=ct.questions||[]; payload.customTitle=ct.title||"Custom test"; }
   db.collection("assignments").add(payload)
     .then(()=>{const m=document.getElementById("amsg"); if(m)m.textContent=ct?("Assigned “"+ct.title+"” — it's on the student's dashboard."):"Assigned! It is now on the student's dashboard.";})
@@ -1780,9 +1791,9 @@ function removeLockBadge(){ var b=document.getElementById("lockBadge"); if(b&&b.
 
 /* ===== ADMIN ===== */
 function isAdmin(){ return !!(AUTH && (AUTH.admin===true || (typeof ADMIN_EMAILS!=="undefined" && ADMIN_EMAILS.indexOf((((AUTH.email)||"")).toLowerCase())>=0))); }
-function adminUsers(){ return CACHE.users||[]; }
-function adminAssign(){ return CACHE.allAssign||[]; }
-function adminClasses(){ return CACHE.allClasses||[]; }
+function adminUsers(){ return (CACHE.users||[]).filter(userInAdminScope); }
+function adminAssign(){ return (CACHE.allAssign||[]).filter(inAdminScope); }
+function adminClasses(){ return (CACHE.allClasses||[]).filter(inAdminScope); }
 function setAdmin(sec){ ADMIN_AS=null; S.adminSection = (sec==="_close")?null:sec; render(); }
 function ensureAdminListeners(){
   if(CACHE._adminOn || !isAdmin()) return; CACHE._adminOn=true;
@@ -1797,9 +1808,9 @@ function adminMenu(){
   var sec=S.adminSection||"reports";
   return '<div class="card"><div class="flex-between"><h2 style="margin:0">Admin</h2><button class="btn ghost sm" onclick="setAdmin(\'_close\')">← Back to my dashboard</button></div>'
    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">'
-   +[["reports","📊 Admin Reports"],["classes","🏫 All classes"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
+   +[["schools","🏫 Schools"],["reports","📊 Admin Reports"],["classes","📚 All classes"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
    +' <button class="btn ghost sm" onclick="exportUsersCSV()">⬇ Export users CSV</button> <button class="btn ghost sm" onclick="exportStudentsByClass()">🏫 Export students by class</button>'
-   +'</div></div>';
+   +'</div>'+adminSchoolSwitcher()+'</div>';
 }
 function adminReports(){
   var us=adminUsers(), as=adminAssign();
@@ -1844,7 +1855,7 @@ function adminDisk(){
 function adminTwoFactor(){
   return '<div class="card"><h2>Two-factor authentication</h2><p class="sub">Extra login security for accounts.</p><p style="font-size:14px;line-height:1.7">Built-in SMS two-factor for teacher/student logins needs Firebase’s paid <b>Blaze</b> plan. On the current free plan, your accounts are already protected by:</p><ul style="font-size:14px;line-height:1.8"><li><b>App Check</b> is enforced — only the real app can reach your data.</li><li>Passwords must be at least <b>8 characters</b>.</li><li><b>Email verification</b> is requested at sign-up.</li><li>You can <b>block</b> any suspicious account from Manage users.</li></ul><p class="muted" style="font-size:12px">Also turn on <b>2FA for your GitHub account</b> — that protects the whole app. If you upgrade to Blaze later, SMS multi-factor for teachers can be switched on.</p></div>';
 }
-function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="classes"?adminAllClasses() : sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
+function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="schools"?adminSchoolsView() : sec==="classes"?adminAllClasses() : sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
 
 /* ===== ADMIN: drill into any teacher's classes and their students' progress ===== */
 function esc(s){ return (""+(s==null?"":s)).replace(/[&<>"]/g,function(m){return m==="&"?"&amp;":m==="<"?"&lt;":m===">"?"&gt;":"&quot;";}); }
@@ -2149,7 +2160,7 @@ function saveImportedTest(){
     var questions=sanitizeQuestions(IMPORTED.questions);
     if(!questions.length){ say("Couldn’t prepare questions.","red"); impBox("The detected items couldn’t be prepared — each question needs at least 2 options.","red"); return; }
     say("Saving…","muted"); impBox("Saving “"+String(title).replace(/</g,"&lt;")+"” — "+questions.length+" question(s)…","muted");
-    var payload={teacherUid:ownerUid(), title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
+    var payload={teacherUid:ownerUid(), schoolId:curSchool(), title:title, subject:subj, grade:grade, questions:questions, source:"import", createdAt:Date.now()};
     db.collection("tests").add(payload)
       .then(function(ref){
         say("Saved ✓","ok");
@@ -2192,7 +2203,7 @@ function buildDiagnosticData(){
     var wantAr=((document.getElementById("pv_lang")||{}).value==="Arabic") && AR_SUBJECTS.indexOf(subj)>=0;
     var arBank=wantAr?bankFor(grade,subj,true):null;
     if(arBank){
-      var arQs=assembleFromPool(arBank, diagSeed(AUTH&&AUTH.email,grade,subj,"1",pvN));
+      var arQs=balanceOptions(assembleFromPool(arBank, diagSeed(AUTH&&AUTH.email,grade,subj,"1",pvN)),"pv|"+(AUTH&&AUTH.uid)+"|"+pvN+"|"+grade+"|"+subj+"|ar");
       return {subj:subj,grade:grade,qs:arQs,passage:null,ar:true,
               title:"اختبار تشخيصي — "+gLabel(grade)+" · "+(AR_SUBJ_NAME[subj]||subj)};
     }
@@ -2204,6 +2215,7 @@ function buildDiagnosticData(){
     title="Diagnostic — "+gLabel(grade)+" "+subjLabelLong(subj);
   }
   var hasAr=(qs||[]).some(function(q){ return /[\u0600-\u06FF]/.test((q&&q.q)||""); });
+  qs=balanceOptions(qs,"pv|"+(AUTH&&AUTH.uid)+"|"+pvNonce()+"|"+grade+"|"+subj);
   return {subj:subj,grade:grade,qs:qs,passage:passage,title:title,ar:hasAr,
           note:(typeof arMissing!=="undefined"&&arMissing&&!hasAr)?(subj==="English"?"English tests are in English only.":"No Arabic version exists for this grade and subject yet, so this shows the English test."):""};
 }
@@ -2421,7 +2433,7 @@ function viewProgressGraphs(){
 }
 function removeStudent(email){
   if(!confirm("Remove this student from your roster?\n\n(Their diagnostics are kept — delete those separately if you also want them gone.)"))return;
-  const list=ownerStudents().filter(s=>s.email!==email);
+  const list=ownerStudentsAll().filter(s=>s.email!==email);
   db.collection("users").doc(ownerUid()).update({students:list}).catch(e=>alert(fbErr(e)));
 }
 function deleteAssignment(id){
@@ -2484,7 +2496,7 @@ function generateTerm(classId,term){
   db.collection("classes").doc(classId).update({genNonce:freshNonce}).catch(function(){});
   Promise.all(pending.map(m=>{
     const prior=priorSummaryFor(m.email,classId,t);
-    return db.collection("assignments").add({teacherUid:(c.teacherUid||ownerUid()),teacherEmail:(c.teacherEmail||ownerEmail()),teacherName:(c.teacherName||ownerName()),studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:freshNonce,status:"pending",createdAt:Date.now()}).then(function(){return null;},function(e){return e||{code:"unknown"};});
+    return db.collection("assignments").add({teacherUid:(c.teacherUid||ownerUid()),teacherEmail:(c.teacherEmail||ownerEmail()),teacherName:(c.teacherName||ownerName()),schoolId:sidOf(c),studentEmail:m.email,studentName:m.name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:classId,className:c.name,term:t,publishDate:td[t]||"",prior:prior||null,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:freshNonce,status:"pending",createdAt:Date.now()}).then(function(){return null;},function(e){return e||{code:"unknown"};});
   })).then(function(errs){
     var bad=(errs||[]).filter(Boolean);
     S.classTerm=t; render();
@@ -2562,7 +2574,7 @@ function createClass(){
   if(!name||!grade){msg.style.color="var(--red)";msg.textContent="Choose a class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Creating…";
   const termDates={1:document.getElementById("c_t1").value||"",2:document.getElementById("c_t2").value||"",3:document.getElementById("c_t3").value||""};
-  db.collection("classes").add({teacherUid:ownerUid(),teacherName:ownerName(),teacherEmail:ownerEmail(),name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
+  db.collection("classes").add({teacherUid:ownerUid(),teacherName:ownerName(),teacherEmail:ownerEmail(),schoolId:curSchool(),name:name,subject:subject,language:language,prevGrade:prev,curGrade:cur,joinCode:genCode(),termDates:termDates,createdAt:Date.now()})
     .then(()=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--ok)";m.textContent="Class created — share its join code.";}})
     .catch(e=>{const m=document.getElementById("cmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
@@ -2577,8 +2589,8 @@ function addToClass(id){
   if(assignments().find(a=>a.classId===id&&a.studentEmail===email)){msg.style.color="var(--red)";msg.textContent="That student is already in this class.";return;}
   msg.style.color="var(--muted)";msg.textContent="Adding…";
   const td=c.termDates||{};
-  db.collection("assignments").add({teacherUid:(c.teacherUid||ownerUid()),teacherEmail:(c.teacherEmail||ownerEmail()),teacherName:(c.teacherName||ownerName()),studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
-    .then(()=>db.collection("users").doc(ownerUid()).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email})}).catch(()=>{}))
+  db.collection("assignments").add({teacherUid:(c.teacherUid||ownerUid()),teacherEmail:(c.teacherEmail||ownerEmail()),teacherName:(c.teacherName||ownerName()),schoolId:sidOf(c),studentEmail:email,studentName:name,subject:c.subject,language:c.language||"English",prevGrade:c.prevGrade,curGrade:c.curGrade,classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
+    .then(()=>db.collection("users").doc(ownerUid()).update({students:firebase.firestore.FieldValue.arrayUnion({name:name,email:email,school:sidOf(c)})}).catch(()=>{}))
     .then(()=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--ok)";m.textContent="Added — their Term 1 diagnostic is on their dashboard. Generate later terms from the class view.";}})
     .catch(e=>{const m=document.getElementById("csmsg");if(m){m.style.color="var(--red)";m.textContent=fbErr(e);}});
 }
@@ -2594,9 +2606,17 @@ function joinClass(){
   if(parent){ db.collection("users").doc(AUTH.uid).update({parentPhone:parent}).catch(()=>{}); AUTH.parentPhone=parent; }
   function enrol(c){
     const m=document.getElementById("joinMsg");
+    // Class codes only work inside the student's own school. A student's school is set by the first class they join.
+    if(schoolsEnabled()){ const mine=AUTH.school||null, theirs=sidOf(c);
+      if(mine && mine!==theirs && (CACHE.assignments||[]).length){ if(m){m.style.color="var(--red)";m.textContent="That class belongs to another school ("+schoolName(theirs)+"). Check the code with your teacher.";} return; }
+      if(mine!==theirs){ AUTH.school=theirs; return db.collection("users").doc(AUTH.uid).update({school:theirs}).catch(()=>{}).then(()=>enrolIn(c)); } }
+    return enrolIn(c);
+  }
+  function enrolIn(c){
+    const m=document.getElementById("joinMsg");
     if(assignments().find(a=>a.classId===c.id)){if(m){m.style.color="var(--ok)";m.textContent="You're already in "+c.name+" — your diagnostic is in “My diagnostics” below.";}return;}
     const td=c.termDates||{};
-    return db.collection("assignments").add({teacherUid:c.teacherUid,teacherName:c.teacherName,studentEmail:AUTH.email,studentName:AUTH.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,language:c.language||"English",classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
+    return db.collection("assignments").add({teacherUid:c.teacherUid,teacherName:c.teacherName,schoolId:sidOf(c),studentEmail:AUTH.email,studentName:AUTH.name,subject:c.subject,prevGrade:c.prevGrade,curGrade:c.curGrade,language:c.language||"English",classId:c.id,className:c.name,term:"1",publishDate:td[1]||"",parentPhone:parent,customQuestions:(c.diagQuestions&&c.diagQuestions.length?c.diagQuestions:null),customTitle:(c.diagTitle||null),genNonce:c.genNonce||0,status:"pending",createdAt:Date.now()})
       .then(()=>{const m2=document.getElementById("joinMsg");if(m2){m2.style.color="var(--ok)";m2.textContent="Joined "+c.name+"! Your Term 1 diagnostic is in the list below.";}});
   }
   // Exact match first; if the index is momentarily stale or the stored code drifted in
@@ -2617,7 +2637,7 @@ function staffUsers(){ return (CACHE.users||[]).filter(function(u){ return u && 
 // Admin: every class in the school with its real owner, join code and size — and a Move control per row,
 // so a class filed under the wrong account can be fixed in one click.
 function adminAllClasses(){
-  var cls=(CACHE.allClasses||[]).slice(), us=CACHE.users||[], as=CACHE.allAssign||[];
+  var cls=adminClasses().slice(), us=CACHE.users||[], as=CACHE.allAssign||[];
   function uName(uid){ var u=us.filter(function(x){return x.uid===uid;})[0]; return u?(u.name||u.email):"(unknown account)"; }
   var staff=staffUsers().slice().sort(function(a,b){return String(a.name||a.email).localeCompare(String(b.name||b.email));});
   var mine=myUid();
@@ -2628,10 +2648,11 @@ function adminAllClasses(){
     return '<tr><td><b>'+esc(c.name)+'</b><div class="muted" style="font-size:11px">'+esc(subjLabelLong(c.subject))+' · '+esc(c.language||"English")+'</div></td>'
       +'<td>'+esc(uName(c.teacherUid))+(c.teacherUid===mine?' <span class="pill amber">you</span>':'')+'</td>'
       +'<td><code style="font-size:14px;letter-spacing:2px">'+esc(c.joinCode||"—")+'</code></td><td>'+Object.keys(n).length+'</td>'
-      +'<td><select id="mv_'+c.id+'" style="width:auto;display:inline-block">'+opts+'</select> <button class="btn sm" onclick="transferClassTo(\''+c.id+'\',document.getElementById(\'mv_'+c.id+'\').value)">Move</button></td></tr>';
+      +'<td><select id="mv_'+c.id+'" style="width:auto;display:inline-block">'+opts+'</select> <button class="btn sm" onclick="transferClassTo(\''+c.id+'\',document.getElementById(\'mv_'+c.id+'\').value)">Move</button></td>'
+      +(schoolsEnabled()?'<td><select style="width:auto;display:inline-block" onchange="moveClassToSchool(\''+c.id+'\',this.value)">'+schoolList().map(function(sc){ return '<option value="'+sc.id+'"'+(sc.id===sidOf(c)?' selected':'')+'>'+esc(schoolShort(sc.id))+'</option>'; }).join("")+'</select></td>':'')+'</tr>';
   }).join("");
   return '<div class="card"><h2 style="margin:0 0 4px">🏫 All classes</h2><p class="sub">Every class in the school and the account that owns it. A class shows on a teacher’s dashboard only if <b>they</b> are the owner — classes marked <span class="pill amber">you</span> are on your dashboard. Pick the right teacher and press <b>Move</b>; the class keeps its join code and every student’s diagnostics move with it.</p>'
-    +(cls.length?('<table><thead><tr><th>Class</th><th>Owner</th><th>Join code</th><th>Students</th><th>Move to</th></tr></thead><tbody>'+rows+'</tbody></table>'):'<p class="muted">No classes yet.</p>')+'</div>';
+    +(cls.length?('<table><thead><tr><th>Class</th><th>Owner</th><th>Join code</th><th>Students</th><th>Move to teacher</th>'+(schoolsEnabled()?'<th>School</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table>'):'<p class="muted">No classes yet.</p>')+'</div>';
 }
 // ---- Admin: move a class (and all its students' diagnostics) to another teacher ----
 function transferClassBox(c){
@@ -2694,7 +2715,7 @@ function changeStudentEmail(oldEmail){
   var mine=(assignments()||[]).filter(function(a){ return a.studentEmail===old; });
   if(!mine.length){ alert("No diagnostics found for "+old+"."); return; }
   var ops=mine.map(function(a){ return db.collection("assignments").doc(a.id).update({studentEmail:nv}); });
-  var roster=ownerStudents().map(function(x){ return x.email===old?Object.assign({},x,{email:nv}):x; });
+  var roster=ownerStudentsAll().map(function(x){ return x.email===old?Object.assign({},x,{email:nv}):x; });
   ops.push(db.collection("users").doc(ownerUid()).update({students:roster}).catch(function(){}));
   Promise.all(ops).then(function(){ alert("✅ Moved "+mine.length+" diagnostic(s) from "+old+" to "+nv+".\nThe student will see them as soon as they sign in with "+nv+"."); })
     .catch(function(e){ alert("Couldn't update the email: "+fbErr(e)+((e&&e.code)?" ("+e.code+")":"")); });
@@ -2829,7 +2850,7 @@ function viewHome(){
     ${unlockedProbes.map(a=>`<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px"><div><b>${subjChip(a.subject)}</b> <span class="muted" style="font-size:12px">${a.className||""} · Term ${aTerm(a)}</span></div><button class="btn gold sm" onclick="startStudentProbe('${a.id}')">▶ Start progress check</button></div>`).join("")}</div>`:"";
   const sidCard=`<div class="card" style="${AUTH.studentId?'':'border:2px solid var(--gold);background:#fffdf5'}"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">🆔 Student ID</h2><p class="sub" style="margin:2px 0 0">${AUTH.studentId?('Your ID: <b>'+String(AUTH.studentId).replace(/</g,"&lt;")+'</b> — this links your past results to your progress.'):'Add your MOE Student ID so your teacher can link your previous results to your progress.'}</p></div></div>
     <div class="row" style="margin-top:8px"><div class="col"><input id="my_sid" value="${(AUTH.studentId||'').replace(/"/g,'&quot;')}" placeholder="e.g. 20230004282"></div><div class="col" style="display:flex;align-items:flex-end"><button class="btn" onclick="saveStudentId()">${AUTH.studentId?'Update ID':'Save my ID'}</button> <span id="sidMsg" style="font-size:12px;margin-left:8px"></span></div></div></div>`;
-  return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">Signed in as <b>${esc(me.email||"")}</b> · Student dashboard</p></div>${linkNote}
+  return `<div class="card"><h2>Welcome, ${(me.name||'').split(' ')[0]} 👋</h2><p class="sub">Signed in as <b>${esc(me.email||"")}</b> · Student dashboard${(schoolsEnabled()&&AUTH.school)?" · 🏫 "+esc(schoolName(AUTH.school)):""}</p></div>${linkNote}
   ${sidCard}
   ${probeBanner}
   <div class="card"><h2>Join a class</h2><p class="sub">Got a class code from your teacher? Enter it, and add your parent's WhatsApp number so your teacher can send them your reports.</p>
@@ -2869,6 +2890,7 @@ function openAssignment(id,completed){
   var snap=a.snapshot&&a.snapshot.result;
   var priorAns = (a.status==="completed") ? (a.answers || (snap&&snap.answers) || {}) : {};
   var priorWrite = (a.status==="completed") ? (a.writeResponse || (snap&&snap.writeResponse) || "") : "";
+  S.optv = Object.keys(priorAns).length ? (a.optv===2?2:undefined) : 2;
   S.answers=Object.assign({},priorAns);S.result=null;S.plan=null;S.taskDone={};S.writeResponse=priorWrite;S.activeTab="diagnostic";
   save(); render(); lockdownStart("diagnostic");
 }
@@ -3049,7 +3071,16 @@ function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.languag
 var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية","Matter & Atomic Structure":"المادة وتركيب الذرة","Bonding & Compounds":"الترابط والمركبات","Reactions & Stoichiometry":"التفاعلات والحسابات الكيميائية","States, Solutions & Organic":"الحالات والمحاليل والكيمياء العضوية","Measurement & Units":"القياس والوحدات","Motion & Forces":"الحركة والقوى","Waves & Sound":"الموجات والصوت","Light & Optics":"الضوء والبصريات"};
 var AR_SUBJ_NAME={"Math":"الرياضيات","Science":"العلوم","Chemistry":"الكيمياء","Physics":"الفيزياء","English":"اللغة الإنجليزية"};
 function skillLabel(s,ar){ return ar?(AR_SKILL[s]||s):s; }
+var _GQ_MEMO={k:null,v:null};
+function diagOptSeed(email,assignmentId,nonce){ return "opt2|"+String(email||"").toLowerCase()+"|"+(assignmentId||"")+"|"+(nonce||0); }
 function getQuestions(){
+  var raw=_getQuestionsRaw();
+  if(!raw||!raw.length||S.optv!==2) return raw;           // attempts started before this fix keep their original order
+  var key=diagOptSeed(AUTH&&AUTH.email,S.activeAssignment,studentNonce())+"|"+raw.length+"|"+raw.map(function(q){return q.q;}).join("\u0001");
+  if(_GQ_MEMO.k!==key){ _GQ_MEMO={k:key, v:balanceOptions(raw, diagOptSeed(AUTH&&AUTH.email,S.activeAssignment,studentNonce()))}; }
+  return _GQ_MEMO.v;
+}
+function _getQuestionsRaw(){
   if(S.customQuestions && S.customQuestions.length) return S.customQuestions;
   const g=S.student.prevGrade, subj=S.student.subject;
   if(diagnosticIsArabic()){
@@ -3188,6 +3219,11 @@ function cefrCardHtml(a){
 // Rebuild the exact question set for a completed assignment (deterministic from grade/subject/language),
 // used as a fallback when a stored per-question snapshot isn't present.
 function rebuildQuestionsForAssignment(a){
+  var _q=_rebuildQuestionsRaw(a);
+  if(_q && _q.length && a && a.optv===2) return balanceOptions(_q, diagOptSeed(a.studentEmail,a.id,a.genNonce||0));
+  return _q;
+}
+function _rebuildQuestionsRaw(a){
   var snap=a.snapshot&&a.snapshot.result;
   if(a.customQuestions&&a.customQuestions.length) return a.customQuestions;
   if(snap&&snap && a.snapshot.student&&a.snapshot.student.customQuestions&&a.snapshot.student.customQuestions.length) return a.snapshot.student.customQuestions;
@@ -3803,6 +3839,48 @@ function take10(bank,extra){
 }
 function _exShuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 // Deterministic shuffle: a given week always shows the same items, but different weeks differ.
+/* ===== Answer-option balancing =====
+   Every multiple-choice set (weekly practice, diagnostic, progress check, teacher preview) goes through
+   balanceOptions(): the correct answer is spread evenly over A/B/C/D inside each exercise, never 3 in a row,
+   distractors in random order, and the order differs per student. "All/None of the above" stays last.
+   seedStr = null → fresh random every time (practice); a string → the same order every time (diagnostic,
+   so a refresh, the saved answers, the results and the marked PDF all line up). */
+function _hashStr(str){ str=String(str); var h1=0xdeadbeef, h2=0x41c6ce57; for(var i=0;i<str.length;i++){ var ch=str.charCodeAt(i); h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909); h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909); return ((h1^h2)>>>0)||1; }
+function _rngFrom(seedStr){
+  if(seedStr==null){ try{ if(window.crypto&&crypto.getRandomValues){ return function(){ var u=new Uint32Array(1); crypto.getRandomValues(u); return u[0]/4294967296; }; } }catch(e){} return Math.random; }
+  var a=_hashStr(seedStr); return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+}
+var _PIN_OPT=/^\s*(all|none|both|neither)\s+of\s+(the\s+)?(above|these|them)\b|^\s*(جميع|كل)\s+ما\s+سبق|^\s*لا\s+شيء\s+مما\s+سبق|^\s*(لا\s+)?شيء\s+مما\s+ذكر/i;
+function balanceOptions(items, seedStr){
+  if(!items||!items.length) return items;
+  var r=_rngFrom(seedStr);
+  function sh(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(r()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  // Balanced target letters for the 4-option questions: A,B,C,D equally often, shuffled, no triple repeats.
+  var four=items.filter(function(q){ return q&&q.options&&q.options.length===4; }).length, T=[];
+  var perm=sh([0,1,2,3]);                       // which letters get the leftover slots is random too
+  for(var i=0;i<four;i++) T.push(perm[i%4]);
+  T=sh(T);
+  for(var k=2;k<T.length;k++){ if(T[k]===T[k-1]&&T[k]===T[k-2]){ for(var m=k+1;m<T.length;m++){ if(T[m]!==T[k]){ var tt=T[k]; T[k]=T[m]; T[m]=tt; break; } } } }
+  for(var k2=T.length-1;k2>=2;k2--){ if(T[k2]===T[k2-1]&&T[k2]===T[k2-2]){ for(var m2=0;m2<k2-2;m2++){ if(T[m2]!==T[k2] && (m2===0||T[m2-1]!==T[k2]) && T[m2+1]!==T[k2]){ var t2=T[k2]; T[k2]=T[m2]; T[m2]=t2; break; } } } }
+  var ti=0;
+  return items.map(function(q){
+    if(!q||!q.options||q.options.length<2||typeof q.answer!=="number"||q.answer<0||q.answer>=q.options.length) return q;
+    var n=q.options.length, correct=q.options[q.answer];
+    var pinned=[], free=[]; q.options.forEach(function(o,idx){ (_PIN_OPT.test(String(o))?pinned:free).push(idx); });
+    var order;
+    if(n===4 && !pinned.length){
+      var target=T[ti++], others=sh(free.filter(function(x){return x!==q.answer;})); order=[];
+      for(var p=0,o=0;p<4;p++){ order.push(p===target?q.answer:others[o++]); }
+    } else {
+      if(n===4) ti++;
+      order=sh(free).concat(pinned);            // "All/None of the above" keeps its place at the end
+    }
+    var out=Object.assign({},q); out.options=order.map(function(x){return q.options[x];}); out.answer=order.indexOf(q.answer);
+    if(out.options[out.answer]!==correct) return q;   // safety: never change which option is correct
+    return out;
+  });
+}
 function _seedShuffle(a,seed){ a=a.slice(); var s=(seed>>>0)||1; function r(){ s=(s*1664525+1013904223)>>>0; return s/4294967296; } for(var i=a.length-1;i>0;i--){ var j=Math.floor(r()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 // A stable rotation seed from a folder key (term-week-index): same week -> same seed; different weeks -> different.
 function seedFromKey(key){ try{ var p=String(key).split("-"); var t=parseInt(p[0],10)||1, wk=parseInt(p[1],10)||1, i=parseInt(p[2],10)||0; return (((t*17+wk)*31+i+7)>>>0)||1; }catch(e){ return 1; } }
@@ -3845,6 +3923,11 @@ function sciPracticeItems(subj,skill,taskText,seed){
   return out;
 }
 function buildExercise(skill,taskText,seed){
+  var d=_buildExerciseRaw(skill,taskText,seed);
+  if(d && d.type==="mcq" && d.items && d.items.length) d.items=balanceOptions(d.items, null);
+  return d;
+}
+function _buildExerciseRaw(skill,taskText,seed){
   var instr=taskText||""; seed=seed||1;
   if(skill==="Writing"){
     var tv=(typeof WRITING_TOPICS!=="undefined")?WRITING_TOPICS[taskText]:null;
