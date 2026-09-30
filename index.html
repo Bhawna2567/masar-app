@@ -216,7 +216,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-09-30c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-09-30d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -411,6 +411,41 @@ function computeAchiever(qs,answers){
   return {tier:tier, ratio:Math.round(ratio*100), bands:lb};
 }
 function achieverCls(t){ return t==="High"?"green":t==="Medium"?"amber":"red"; }
+/* ===== MOE at-risk levels (F / BF / BP) =====
+   Cycle 2 (Grades 5–8): pass 50% → F 0–39.9 · BF 40–49.9 · BP 50–59.9
+   Cycle 3 (Grades 9–12): pass 60% → F 0–49.9 · BF 50–59.9 · BP 60–69.9
+   Cycle 1 (Grades 1–4) uses the Cycle 2 bands. Based on the student's CURRENT grade. */
+function cycleOfGrade(g){ var n=parseInt(String(g||""),10); if(!n) return null; return n>=9?3:(n>=5?2:1); }
+function passMarkFor(g){ return cycleOfGrade(g)===3?60:50; }
+var RISK_INFO={
+  F:{code:"F",label:"F · Fail",ar:"راسب",cls:"red",desc:"Failing — highest risk"},
+  BF:{code:"BF",label:"BF · Borderline fail",ar:"راسب حدّي",cls:"amber",desc:"Just below the pass mark"},
+  BP:{code:"BP",label:"BP · Borderline pass",ar:"ناجح حدّي",cls:"amber",desc:"Just above the pass mark — still at risk"}
+};
+function riskBandFor(score,grade){
+  if(score==null||isNaN(score)) return null;
+  var pass=passMarkFor(grade), x=Number(score), code=null;
+  if(x<pass-10) code="F"; else if(x<pass) code="BF"; else if(x<pass+10) code="BP";
+  if(!code) return null;
+  var cyc=cycleOfGrade(grade);
+  return Object.assign({cycle:cyc,pass:pass},RISK_INFO[code]);
+}
+function riskOf(a){ if(!a||a.status!=="completed"||a.score==null) return null; return riskBandFor(a.score, a.curGrade||a.prevGrade); }
+function riskChip(r){ return r?'<span class="pill '+r.cls+'" title="'+r.desc+' (Cycle '+r.cycle+', pass mark '+r.pass+'%)" style="'+(r.code==="F"?"font-weight:700":r.code==="BP"?"background:#fef9c3;color:#854d0e":"")+'">⚠ '+r.code+'</span>':""; }
+function riskRangesText(grade){ var p=passMarkFor(grade), c=cycleOfGrade(grade); return "Cycle "+(c===1?"1 (uses Cycle 2 bands)":c)+" · pass mark "+p+"% · F 0–"+(p-10.1).toFixed(1)+"% · BF "+(p-10)+"–"+(p-0.1).toFixed(1)+"% · BP "+p+"–"+(p+9.9).toFixed(1)+"%"; }
+function atRiskCardHtml(done,grade){
+  if(!done||!done.length) return "";
+  var g={F:[],BF:[],BP:[]};
+  done.forEach(function(a){ var r=riskOf(a); if(r) g[r.code].push(a); });
+  var total=g.F.length+g.BF.length+g.BP.length;
+  var col=function(code){ var r=RISK_INFO[code], list=g[code].slice().sort(function(a,b){return (a.score||0)-(b.score||0);});
+    return '<div style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:10px;padding:10px 12px"><div class="flex-between"><b><span class="pill '+r.cls+'" style="'+(code==="BP"?"background:#fef9c3;color:#854d0e":"")+'">'+r.label+'</span></b><b style="font-size:20px">'+list.length+'</b></div>'
+      +'<div class="muted" style="font-size:11px;margin:4px 0 6px">'+r.desc+'</div>'
+      +(list.length?list.map(function(a){ return '<div style="font-size:13px;padding:2px 0;border-top:1px dashed var(--line)">'+esc(a.studentName||a.studentEmail)+' <span class="muted">· '+(a.score||0)+'%</span></div>'; }).join(""):'<div class="muted" style="font-size:12px">None</div>')+'</div>'; };
+  return '<div class="card" style="border-left:4px solid var(--red)"><h2 style="margin:0 0 4px">⚠️ At-risk students — '+total+' of '+done.length+'</h2>'
+    +'<p class="sub" style="margin:0 0 10px">'+riskRangesText(grade)+'</p>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+col("F")+col("BF")+col("BP")+'</div></div>';
+}
 /* ===== RTI / MTSS tier model ===== achiever band → tier of support (tunable). */
 var RTI_TIERS={
  High:  {tier:1,label:"Tier 1 · Universal",  short:"Tier 1", cls:"green", benchmark:80, freq:"Whole-class core instruction; screen once per term.", desc:"On track with quality core teaching."},
@@ -1335,12 +1370,13 @@ function _subForQ(q){ if(q&&q.sub)return q.sub; if(!_SUBMAP)_buildSubMap(); retu
 function analyzeSet(list,subj){
   var areas=skillsFor(subj);
   var students=list.map(function(a){ var sp=a.skillPct||{}, overall=(a.score!=null?a.score:0);
-    return {name:a.studentName||a.studentEmail, overall:overall, cefr:(subj==="English"?cefrFromPct(overall):""), tier:(a.achieverTier||(a.achiever&&a.achiever.tier)||""), skills:sp, term:aTerm(a)}; });
+    return {name:a.studentName||a.studentEmail, overall:overall, cefr:(subj==="English"?cefrFromPct(overall):""), tier:(a.achieverTier||(a.achiever&&a.achiever.tier)||""), risk:((riskBandFor(a.score,a.curGrade||a.prevGrade)||{}).code||""), skills:sp, term:aTerm(a)}; });
   var skillAvg={}; areas.forEach(function(k){ var s=0,n=0; students.forEach(function(st){ if(st.skills[k]!=null){s+=st.skills[k];n++;} }); skillAvg[k]=n?Math.round(s/n):0; });
   var overallAvg=students.length?Math.round(students.reduce(function(s,st){return s+st.overall;},0)/students.length):0;
   var tiers={High:0,Medium:0,Low:0}; students.forEach(function(st){ if(tiers[st.tier]!=null)tiers[st.tier]++; });
+  var risk={F:0,BF:0,BP:0}; students.forEach(function(st){ if(risk[st.risk]!=null)risk[st.risk]++; });
   var subAgg={}; list.forEach(function(a){ var d=qsAns(a); if(!d.qs||!d.ans)return; d.qs.forEach(function(q,i){ var sub=_subForQ(q); if(!sub)return; var key=q.skill+" — "+sub; if(!subAgg[key])subAgg[key]={skill:q.skill,sub:sub,correct:0,total:0}; subAgg[key].total++; if(d.ans[i]===q.answer)subAgg[key].correct++; }); });
-  return {students:students,areas:areas,skillAvg:skillAvg,overallAvg:overallAvg,tiers:tiers,subAgg:subAgg,n:students.length};
+  return {students:students,areas:areas,skillAvg:skillAvg,overallAvg:overallAvg,tiers:tiers,risk:risk,subAgg:subAgg,n:students.length};
 }
 function hdrRow(ws,rowArr){ var r=ws.addRow(rowArr); r.font={bold:true}; r.eachCell(function(c){ c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFEEF2FF"}}; c.border={bottom:{style:"thin",color:{argb:"FFCBD5E1"}}}; }); return r; }
 async function buildAnalysisWorkbook(title,subj,perTerm,isYear){
@@ -1353,8 +1389,8 @@ async function buildAnalysisWorkbook(title,subj,perTerm,isYear){
   sm.addRow([title]).font={bold:true,size:14};
   sm.addRow(["Subject: "+subj+"     Generated: "+new Date().toLocaleDateString()]);
   sm.addRow([]);
-  hdrRow(sm,["Period","Students","Class average %","Tier 1 · Universal (High)","Tier 2 · Targeted (Medium)","Tier 3 · Intensive (Low)"]);
-  perTerm.forEach(function(pt){ var d=pt.data; sm.addRow([("Term "+pt.term),d.n,d.overallAvg,d.tiers.High,d.tiers.Medium,d.tiers.Low]); });
+  hdrRow(sm,["Period","Students","Class average %","Tier 1 · Universal (High)","Tier 2 · Targeted (Medium)","Tier 3 · Intensive (Low)","F · Fail","BF · Borderline fail","BP · Borderline pass"]);
+  perTerm.forEach(function(pt){ var d=pt.data; sm.addRow([("Term "+pt.term),d.n,d.overallAvg,d.tiers.High,d.tiers.Medium,d.tiers.Low,d.risk.F,d.risk.BF,d.risk.BP]); });
   sm.addRow(["RTI benchmark (typical)","","","~80%","~15%","~5%"]);
   sm.addRow([]);
   hdrRow(sm,["Skill"].concat(perTerm.map(function(pt){return "Term "+pt.term+" avg %";})));
@@ -1372,11 +1408,12 @@ async function buildAnalysisWorkbook(title,subj,perTerm,isYear){
   }
   // ---- Students ----
   var st=wb.addWorksheet("Students"); st.columns=[{width:8},{width:26},{width:12},{width:8},{width:12}].concat(areas.map(function(){return {width:16};}));
-  hdrRow(st,["Term","Student","Overall %"].concat(subj==="English"?["CEFR"]:[]).concat(["Achiever","RTI tier"]).concat(areas.map(function(k){return k+" %";})));
+  hdrRow(st,["Term","Student","Overall %"].concat(subj==="English"?["CEFR"]:[]).concat(["Achiever","RTI tier","Risk level"]).concat(areas.map(function(k){return k+" %";})));
   perTerm.forEach(function(pt){ pt.data.students.sort(function(a,b){return b.overall-a.overall;}).forEach(function(s){
     var rt=rtiFor(s.tier);
-    var row=["T"+pt.term,s.name,s.overall].concat(subj==="English"?[s.cefr]:[]).concat([s.tier,(rt?rt.label:"")]).concat(areas.map(function(k){return s.skills[k]!=null?s.skills[k]:"";}));
+    var row=["T"+pt.term,s.name,s.overall].concat(subj==="English"?[s.cefr]:[]).concat([s.tier,(rt?rt.label:""),(s.risk?RISK_INFO[s.risk].label:"")]).concat(areas.map(function(k){return s.skills[k]!=null?s.skills[k]:"";}));
     var r=st.addRow(row); var tc=r.getCell(subj==="English"?5:4); var col=s.tier==="High"?GREEN:s.tier==="Medium"?AMBER:s.tier==="Low"?RED:"64748b"; tc.font={bold:true,color:{argb:"FF"+col}};
+    if(s.risk){ var rc=r.getCell((subj==="English"?5:4)+2); rc.font={bold:true,color:{argb:"FF"+(s.risk==="F"?RED:s.risk==="BF"?"ea580c":"ca8a04")}}; }
   }); });
   // ---- Sub-skill gaps ----
   var sk=wb.addWorksheet("Sub-skill gaps"); sk.columns=[{width:22},{width:34},{width:12},{width:12}];
@@ -1413,17 +1450,17 @@ async function exportCohortExcel(classId,term){
     var ws=wb.addWorksheet("Cohort summary"); ws.columns=[{width:28},{width:10},{width:14}].concat(areas.map(function(){return {width:16};})).concat([{width:8},{width:8},{width:8}]);
     ws.addRow(["Cohort Diagnostic Analysis — "+gLabel(grade)+" "+subj+(term==="year"?" — Whole Year":(" — Term "+term))]).font={bold:true,size:14};
     ws.addRow(["Generated: "+new Date().toLocaleDateString()+"     Classes: "+cohortClasses.length]); ws.addRow([]);
-    hdrRow(ws,["Class","Students","Overall avg %"].concat(areas.map(function(k){return k+" %";})).concat(["High","Med","Low"]));
+    hdrRow(ws,["Class","Students","Overall avg %"].concat(areas.map(function(k){return k+" %";})).concat(["High","Med","Low","F","BF","BP"]));
     var rowsForChart=[]; var cohAll=[];
     cohortClasses.forEach(function(c){
       var list=[]; terms.forEach(function(t){ list=list.concat(classCompletedForTerm(c.id,t)); });
       if(!list.length) return; var d=analyzeSet(list,subj); cohAll=cohAll.concat(list);
-      ws.addRow([c.name,d.n,d.overallAvg].concat(areas.map(function(k){return d.skillAvg[k];})).concat([d.tiers.High,d.tiers.Medium,d.tiers.Low]));
+      ws.addRow([c.name,d.n,d.overallAvg].concat(areas.map(function(k){return d.skillAvg[k];})).concat([d.tiers.High,d.tiers.Medium,d.tiers.Low,d.risk.F,d.risk.BF,d.risk.BP]));
       rowsForChart.push({name:c.name,avg:d.overallAvg});
     });
     if(!cohAll.length){ alert("No completed diagnostics for this cohort yet."); return; }
     var coh=analyzeSet(cohAll,subj);
-    var tot=ws.addRow(["COHORT TOTAL",coh.n,coh.overallAvg].concat(areas.map(function(k){return coh.skillAvg[k];})).concat([coh.tiers.High,coh.tiers.Medium,coh.tiers.Low])); tot.font={bold:true};
+    var tot=ws.addRow(["COHORT TOTAL",coh.n,coh.overallAvg].concat(areas.map(function(k){return coh.skillAvg[k];})).concat([coh.tiers.High,coh.tiers.Medium,coh.tiers.Low,coh.risk.F,coh.risk.BF,coh.risk.BP])); tot.font={bold:true};
     // charts
     var GREEN="16a34a",AMBER="f59e0b",RED="dc2626",BLUE="4f46e5";
     var byClass=await chartPNG({type:"bar",data:{labels:rowsForChart.map(function(r){return r.name;}),datasets:[{label:"Class average %",data:rowsForChart.map(function(r){return r.avg;}),backgroundColor:"#"+BLUE}]},options:{plugins:{title:{display:true,text:"Average by class"}},scales:{y:{min:0,max:100}}}},560,320);
@@ -2737,7 +2774,7 @@ function viewClass(id){
   const rosterRows=ca.length?ca.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map(a=>{
     const tier=a.achieverTier||(a.achiever&&a.achiever.tier)||null;
     const st=a.kicked?`<span class="pill red">Removed</span>${a.status==="completed"?` <span class="pill ${a.levelCls||rag(a.score||0)}" style="margin-left:4px">${a.score||0}%</span>`:""}`:(a.status==="completed"?`<span class="pill ${a.levelCls||rag(a.score||0)}">${a.score}% · ${a.level||""}</span>`:(isPublished(a)?`<span class="pill amber">Pending</span>`:`<span class="pill grey">Opens ${fmtDate(a.publishDate)}</span>`));
-    const flag=a.kicked?`<span class="pill red">⛔ Flagged — removed</span>`:((a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span> ${rtiChip(tier)}`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`)));
+    const flag=a.kicked?`<span class="pill red">⛔ Flagged — removed</span>`:((a.status==="completed"&&tier)?`<span class="pill ${achieverCls(tier)}">${tier} achiever</span> ${rtiChip(tier)} ${riskChip(riskOf(a))}`:(flaggedIds[a.id]?`<span class="pill red">Needs support</span>`:(a.status==="completed"?`<span class="pill green">On track</span>`:`<span class="muted">—</span>`)));
     const termsDone=caAll.filter(x=>x.studentEmail===a.studentEmail&&x.status==="completed").length;
     // Allow retake appears for any completed attempt AND for any kicked-out student (even if the
     // force-submit couldn't record a full result), so the teacher can always reopen the test.
@@ -2791,6 +2828,7 @@ function viewClass(id){
     if(has) return `<div class="notice" style="background:#eef2ff;border-color:#d6dbff;color:var(--ink)">✅ Term ${term} diagnostic generated for ${ca.length} student(s)${Number(term)>1?`, built on their Term ${Number(term)-1} results`:""}. <button class="btn ghost sm" onclick="generateTerm('${c.id}','${term}')">Generate for newly-joined students</button></div>`;
     return `<div class="card" style="border:1px solid #c7b8f5;background:#faf8ff"><h3 style="margin:0 0 4px;font-size:15px">⚡ Term ${term} not generated yet</h3><p class="sub" style="margin:0 0 10px">Students see Term ${term} only after you generate it. It will be built on each student's Term ${Number(term)-1} results, so the goals and activities continue from where they left off.</p><button class="btn" onclick="generateTerm('${c.id}','${term}')">Generate Term ${term} diagnostic for the class</button></div>`;
   })()}
+  ${atRiskCardHtml(done, c.curGrade||c.prevGrade)}
   ${mtssPyramidCard(done)}
   <div class="card"><div class="flex-between" style="align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Class roster — Term ${term}</h2>${caAll.some(a=>a.status==="completed")?`<button class="btn gold sm" onclick="downloadClassMarked('${c.id}')">⬇ Download all marked tests (all terms)</button>`:""}</div>
     <p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish. Use the per-row <b>⬇ Marked</b> for a single test, <b>⬇ All terms</b> for one student across terms, or <b>Download all marked tests</b> above for the whole class.</p>
@@ -3441,6 +3479,9 @@ function viewResults(){
       <div class="box"><div class="n" style="font-size:18px">${gLabel(S.student.curGrade)}</div><div class="l">Current Grade</div></div>
     </div>
     ${achieverCardHtml(r.achiever)}
+    ${(function(){ if(!AUTH||AUTH.role==="student") return ""; var rk=riskBandFor(r.overallPct,S.student.curGrade||S.student.prevGrade); var p=passMarkFor(S.student.curGrade||S.student.prevGrade);
+      return rk?`<div class="notice" style="margin-top:10px;border-color:var(--red)"><b>At-risk level:</b> ${riskChip(rk)} <b>${rk.label}</b> — ${rk.desc}. <span class="muted" style="font-size:12px">${riskRangesText(S.student.curGrade||S.student.prevGrade)}</span></div>`
+        :`<div class="notice" style="margin-top:10px;background:#f0fdf4;border-color:#bbf7d0"><b>At-risk level:</b> not at risk (${r.overallPct}% ≥ ${p+10}%).</div>`; })()}
   </div>
   <div class="card">
     <h2>Skill breakdown</h2>
