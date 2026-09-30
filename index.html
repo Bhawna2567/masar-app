@@ -216,7 +216,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD = "2026-09-30b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-09-30c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1625,7 +1625,7 @@ function viewTeacher(){
   <div class="card"><h2>Assigned diagnostics</h2><table><thead><tr><th>Student</th><th>Subject</th><th>Grades</th><th>Status</th><th></th></tr></thead><tbody>${assignRows}</tbody></table></div>`;
   const settingsBody=`<div class="card"><h2>Back up your data</h2><p class="sub">Download all your classes and diagnostics as a file you can keep safe. Good to do before any big change.</p><button class="btn ghost" onclick="exportBackup()">⬇ Download my data (JSON)</button></div>
   <div class="card" style="border:1px solid #f3c8cc"><h2>Reset dashboard</h2><p class="sub">Permanently delete all your students, classes and diagnostics to start fresh. This cannot be undone.</p><button class="btn" style="background:var(--red)" onclick="resetDashboard()">Reset everything</button></div>`;
-  const body = sec==="classes"?(allMyClassesCard()+classCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
+  const body = sec==="classes"?(classCard()+allMyClassesCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
   return `<div class="card"><h2>Teacher Dashboard</h2><p class="sub">${me.name} · ${me.email}${schoolsEnabled()?" · 🏫 <b>"+esc(schoolName(curSchool()))+"</b>":""}</p></div>${nav}${body}`;
 }
 function setTSection(s){ S.tSection=s; render(); }
@@ -2546,8 +2546,8 @@ function classCard(){
     const td=c.termDates||{};
     const sched=[1,2,3].map(t=>td[t]?`T${t} ${fmtDate(td[t])}`:`T${t} —`).join("<br>");
     return `<tr><td><b>${c.name}</b><div class="muted" style="font-size:11px">Join code <b style="letter-spacing:1px">${c.joinCode}</b></div></td><td>${subjChip(c.subject)}${isArabic(c.language)?` <span class="pill amber" style="font-size:10px">العربية</span>`:""}</td><td style="font-size:11px;line-height:1.6">${sched}</td><td>${students} students · ${done.length} done</td><td>${avg!=null?avg+"%":"—"}</td><td>${flagged?`<span class="pill red">${flagged} flagged</span>`:(done.length?`<span class="pill green">All on track</span>`:`<span class="muted">—</span>`)}</td><td><button class="btn sm" onclick="openClass('${c.id}')">Open →</button> <button class="btn ghost sm" onclick="deleteClass('${c.id}')">Delete</button></td></tr>`;
-  }).join(""):`<tr><td colspan="7" class="muted">No classes${fSub?" for this subject":" yet. Create one below"}.</td></tr>`;
-  return `<div class="card"><div class="flex-between"><h2 style="margin:0">My classes</h2>
+  }).join(""):`<tr><td colspan="7" class="muted">${fSub?"No classes for this subject.":((typeof schoolEmptyHint==="function"&&schoolEmptyHint())||"No classes yet. Create one below.")}</td></tr>`;
+  return `<div class="card"><div class="flex-between"><h2 style="margin:0">My classes${(typeof schoolsEnabled==="function"&&schoolsEnabled()&&mySchools().length>1)?` <span class="pill green" style="font-size:12px;vertical-align:middle">🏫 ${esc(schoolShort(curSchool()))}</span>`:""}</h2>
       <div><label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setFilterSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${fSub==="Physics"?"selected":""}>Physics</option><option value="Science" ${fSub==="Science"?"selected":""}>Science</option><option value="Chemistry" ${fSub==="Chemistry"?"selected":""}>Chemistry</option></select></div></div>
     <p class="sub">Create a class, set when each term's diagnostic publishes, and share the join code. The class takes one diagnostic per term; Adeptly flags who needs skill development.</p>
     <table><thead><tr><th>Class</th><th>Subject</th><th>Term schedule</th><th>Enrolment</th><th>Avg</th><th>Flagged</th><th></th></tr></thead><tbody>${rows}</tbody></table>

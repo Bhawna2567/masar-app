@@ -73,13 +73,25 @@ function allMyClassesRaw(){
 }
 function allMyClassesCard(){
   if(!schoolsEnabled() || mySchools().length<2) return "";
-  var cls=allMyClassesRaw().slice().sort(function(a,b){ return String(schoolShort(sidOf(a))).localeCompare(String(schoolShort(sidOf(b))))||String(a.name).localeCompare(String(b.name)); });
-  if(!cls.length) return "";
   var c=curSchool();
-  return '<div class="card"><h2 style="margin:0 0 4px">📚 All my classes</h2><p class="sub">Every class you teach, in every school. Opening a class switches to its school — each school’s results and reports stay separate.</p>'
-    +cls.map(function(k){ var s=sidOf(k); return '<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:6px;gap:8px;flex-wrap:wrap"><span><b>'+esc(k.name)+'</b> <span class="muted" style="font-size:12px">· '+esc(subjLabelLong(k.subject))+'</span></span>'
-      +'<span style="display:flex;gap:8px;align-items:center"><span class="pill '+(s===c?"green":"amber")+'">'+esc(schoolShort(s))+'</span><button class="btn sm" onclick="openClassInSchool(\''+k.id+'\',\''+s+'\')">Open</button></span></div>'; }).join("")
-    +'</div>';
+  var others=allMyClassesRaw().filter(function(k){ return sidOf(k)!==c; });
+  if(!others.length) return "";
+  var asAll=(typeof ADMIN_AS!=="undefined" && ADMIN_AS)?(CACHE.allAssign||[]):(CACHE.assignments||[]);
+  var groups={}; others.forEach(function(k){ var s=sidOf(k); (groups[s]=groups[s]||[]).push(k); });
+  var html=Object.keys(groups).map(function(s){
+    var rows=groups[s].sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); }).map(function(k){
+      var n=new Set(asAll.filter(function(x){return x.classId===k.id;}).map(function(x){return x.studentEmail;})).size;
+      return '<div class="flex-between" style="border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:6px;gap:8px;flex-wrap:wrap"><span><b>'+esc(k.name)+'</b> <span class="muted" style="font-size:12px">· '+esc(subjLabelLong(k.subject))+' · '+n+' students · code '+esc(k.joinCode||"")+'</span></span>'
+        +'<button class="btn sm" onclick="openClassInSchool(\''+k.id+'\',\''+s+'\')">Switch to '+esc(schoolShort(s))+' & open</button></div>';
+    }).join("");
+    return '<h3 style="font-size:14px;margin:12px 0 6px">🏫 '+esc(schoolName(s))+' <span class="muted" style="font-weight:400">('+groups[s].length+')</span></h3>'+rows;
+  }).join("");
+  return '<div class="card"><details><summary style="cursor:pointer;font-weight:600">📚 Your classes in other schools ('+others.length+') — not part of '+esc(schoolShort(c))+'</summary><p class="sub" style="margin-top:6px">These belong to other schools, so they are not counted in this school’s results or reports.</p>'+html+'</details></div>';
+}
+function schoolEmptyHint(){
+  if(!schoolsEnabled() || mySchools().length<2) return "";
+  var c=curSchool(), others=allMyClassesRaw().filter(function(k){ return sidOf(k)!==c; }).length;
+  return 'No classes in <b>'+esc(schoolName(c))+'</b> yet. Create one below'+(others?', or — if students of this school took tests in a class listed under “other schools” — ask the admin to use <b>Schools → 📧 Move students by email</b>.':'.');
 }
 function mySchoolsCard(){
   if(!schoolsEnabled() || isAdmin() || (typeof ADMIN_AS!=="undefined" && ADMIN_AS)) return "";
