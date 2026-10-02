@@ -22,12 +22,15 @@ html,body{min-height:100%}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-tap-highlight-color:transparent}
 a{color:var(--green)}
 .app{max-width:1080px;margin:0 auto;padding:0 18px 90px}
-.credit-bar{max-width:1044px;margin:12px auto 0;padding:11px 18px;background:linear-gradient(90deg,#fff7e6,#fffbeb);border:1.5px solid #f4c55c;border-radius:12px;color:#5b3d00;font-size:15px;line-height:1.5;text-align:center;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 2px 8px rgba(180,120,0,.12)}
-.credit-bar b{color:#3b2600;font-weight:800}
-.credit-ic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#f4b400;color:#fff;font-size:14px;flex:0 0 auto}
-.credit-sch{font-weight:600;white-space:normal}
-@media (max-width:640px){.credit-bar{margin:10px 10px 0;font-size:13px;padding:9px 12px}}
-@media print{.credit-bar{box-shadow:none;margin:6px 0}}
+.credit-bar{max-width:1044px;margin:12px auto 0;padding:16px 20px 18px;background:#111827;border-radius:14px;text-align:center;box-shadow:0 4px 14px rgba(17,24,39,.25);font-family:Georgia,"Iowan Old Style","Times New Roman",serif}
+.credit-bar .cr-label{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#9ca3af}
+.credit-bar .cr-name{font-style:italic;font-size:21px;color:#dcc48e;line-height:1.35}
+.credit-bar .cr-by{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#c9a55a;margin:4px 0 2px}
+.credit-bar .cr-line{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.credit-bar .cr-dia{color:#c9a55a;font-size:16px}
+.credit-bar .cr-sch{color:#fff;font-size:19px}
+@media (max-width:640px){.credit-bar{margin:10px 10px 0;padding:12px 12px 14px}.credit-bar .cr-label,.credit-bar .cr-by{font-size:11px;letter-spacing:2px}.credit-bar .cr-name{font-size:17px}.credit-bar .cr-sch{font-size:15px}.credit-bar .cr-line{gap:8px}}
+@media print{.credit-bar{box-shadow:none;margin:6px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 header.top{background:linear-gradient(120deg,var(--green),var(--green-d));color:#fff;padding:calc(16px + env(safe-area-inset-top)) 22px 16px;border-radius:0 0 16px 16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
 .logo{width:42px;height:42px;border-radius:10px;overflow:hidden;flex-shrink:0;line-height:0}
 .brand h1{margin:0;font-size:20px;letter-spacing:.3px}
@@ -133,8 +136,10 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
   <button id="installBtn">⤓ Install app</button>
 </header>
 <div class="credit-bar" role="note" aria-label="Developer credit">
-  <span class="credit-ic">★</span>
-  <span>Developed under the guidance of <b>Fanda Salem Ahmed Helais Alkaabi</b> by <b>Bhawna Sharma</b> <span class="credit-sch">(Al Noaimiyah Girls School – Cycle 1, 2 &amp; 3)</span></span>
+  <div class="cr-label">Developed under the guidance of</div>
+  <div class="cr-name">Fanda Salem Ahmed Helais Alkaabi</div>
+  <div class="cr-by">By</div>
+  <div class="cr-line"><span class="cr-name">Bhawna Sharma</span><span class="cr-dia" aria-hidden="true">◆</span><span class="cr-sch">Al Noaimiyah Girls School — Cycle 1, 2 &amp; 3</span></div>
 </div>
 
 <div class="app">
@@ -226,7 +231,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-01a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-02a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
