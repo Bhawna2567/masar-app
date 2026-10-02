@@ -170,6 +170,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted
 <script src="english-gen.js"></script>
 <script src="skill-tutorials.js"></script>
 <script src="practice-bank.js"></script>
+<script src="biology.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -204,8 +205,8 @@ const PHYS_SKILLS = ["Measurement & Units","Motion & Forces","Waves & Sound","Li
 const SCI_SKILLS  = ["Life Science","Physical Science","Earth & Space Science","Scientific Inquiry & Technology"];
 const CHEM_SKILLS = ["Matter & Atomic Structure","Bonding & Compounds","Reactions & Stoichiometry","States, Solutions & Organic"];
 // Subject labels used in headings/exports.
-var SUBJ_LABEL={Math:"Maths",Physics:"Physics",Science:"Science",Chemistry:"Chemistry",English:"English"};
-var SUBJ_LABEL_LONG={Math:"Mathematics",Physics:"Physics",Science:"Science",Chemistry:"Chemistry",English:"English"};
+var SUBJ_LABEL={Math:"Maths",Physics:"Physics",Science:"Science",Chemistry:"Chemistry",Biology:"Biology",English:"English"};
+var SUBJ_LABEL_LONG={Math:"Mathematics",Physics:"Physics",Science:"Science",Chemistry:"Chemistry",Biology:"Biology",English:"English"};
 function subjLabel(s){ return SUBJ_LABEL[s]||"English"; }
 function subjLabelLong(s){ return SUBJ_LABEL_LONG[s]||"English"; }
 // Preset classes/sections for the Create-a-class chooser. Each maps to a diagnostic grade (GRADES id).
@@ -231,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-02a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-02b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -365,6 +366,8 @@ function bankFor(grade,subj,ar){
   function get(gg,ss){ return (SRC[gg]&&SRC[gg][ss]&&SRC[gg][ss].length)?SRC[gg][ss]:null; }
   var b=get(g,subj)||(g!==gA?get(gA,subj):null);
   if(b) return b;
+  // Biology: no Grade 10 file was provided, so a Grade 11 class (diagnosed on G10) uses the G9 Advanced Biology bank.
+  if(subj==="Biology"){ var BF={"10A":"9A","10G":"9A"}; if(BF[g]) return get(BF[g],"Biology"); }
   if(subj==="Science"){
     var alt=get(g,"Chemistry")||get(gA,"Chemistry")||get(g,"Physics")||get(gA,"Physics");
     if(alt){ var M={"Measurement & Units":"Scientific Inquiry & Technology"};
@@ -776,7 +779,7 @@ function startListeners(){
 }
 
 const gLabel = id => (GRADES.find(g=>g.id===id)||{}).label||id;
-const skillsFor = subj => subj==="Math"?MATH_SKILLS:(subj==="Physics"?PHYS_SKILLS:(subj==="Science"?SCI_SKILLS:(subj==="Chemistry"?CHEM_SKILLS:ENG_SKILLS)));
+const skillsFor = subj => subj==="Math"?MATH_SKILLS:(subj==="Physics"?PHYS_SKILLS:(subj==="Science"?SCI_SKILLS:(subj==="Chemistry"?CHEM_SKILLS:(subj==="Biology"&&typeof BIO_SKILLS!=="undefined"?BIO_SKILLS:ENG_SKILLS))));
 function subjChip(s){return '<span class="subj '+(s==="Math"?"math":"eng")+'">'+subjLabelLong(s)+'</span>';}
 function levelFromPct(p){ if(p>=80)return{name:"On Track / Advanced",cls:"green"}; if(p>=60)return{name:"Approaching",cls:"amber"}; if(p>=40)return{name:"Developing",cls:"amber"}; return{name:"Needs Intensive Support",cls:"red"}; }
 function rag(p){ return p>=80?"green":p>=55?"amber":"red"; }
@@ -1021,7 +1024,7 @@ function viewQuestionBank(){
   var head='<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><h2 style="margin:0">🗂 Question bank</h2></div>'
     +'<p class="sub">Every diagnostic question for a grade &amp; subject, grouped Easy → Medium → Hard, with its skill, sub-skill and correct answer. Use “Edit as my own test” to delete or add questions and save a version you can assign to a class.</p>'
     +'<div class="row"><div class="col"><label>Grade</label><select onchange="setBank(\'grade\',this.value)">'+gopts+'</select></div>'
-    +'<div class="col"><label>Subject</label><select onchange="setBank(\'subj\',this.value)"><option value="English" '+(subj==="English"?"selected":"")+'>English</option><option value="Math" '+(subj==="Math"?"selected":"")+'>Mathematics</option><option value="Physics" '+(subj==="Physics"?"selected":"")+'>Physics</option><option value="Science" '+(subj==="Science"?"selected":"")+'>Science</option><option value="Chemistry" '+(subj==="Chemistry"?"selected":"")+'>Chemistry</option></select></div></div>';
+    +'<div class="col"><label>Subject</label><select onchange="setBank(\'subj\',this.value)"><option value="English" '+(subj==="English"?"selected":"")+'>English</option><option value="Math" '+(subj==="Math"?"selected":"")+'>Mathematics</option><option value="Physics" '+(subj==="Physics"?"selected":"")+'>Physics</option><option value="Science" '+(subj==="Science"?"selected":"")+'>Science</option><option value="Chemistry" '+(subj==="Chemistry"?"selected":"")+'>Chemistry</option><option value="Biology" '+(subj==="Biology"?"selected":"")+'>Biology</option></select></div></div>';
   var pool=bankPool();
   if(S.bankMode==="edit") return head+'</div>'+editorHtml();
   if(!pool.length) return head+'<p class="muted" style="font-size:13px;margin-top:8px">No built-in questions for this grade &amp; subject.</p></div>';
@@ -1180,6 +1183,7 @@ var SKILL_STRATEGIES={
    "<b>Data Detective</b> — interpret real graphs from news/sport and draw conclusions.",
    "<b>Mean/Median/Range Stations</b> — rotate through mini data sets and compare."]}
 };
+if(typeof BIO_STRATEGIES!=="undefined"){ Object.keys(BIO_STRATEGIES).forEach(function(k){ SKILL_STRATEGIES[k]=BIO_STRATEGIES[k]; }); }
 var TIER_STRATEGIES={
  Low:{title:"Low achiever — build the foundations",items:[
    "Target the foundational gaps first; keep tasks short and achievable to build confidence.",
@@ -1651,7 +1655,7 @@ function viewTeacher(){
     +`<button class="btn ${sec==='settings'?'':'ghost'} sm" onclick="setTSection('settings')">⚙️ Backup &amp; reset</button>`
     +`</div>`;
   const studentsBody=`<div class="card"><h2>👁 Preview a diagnostic</h2><p class="sub">See exactly what students will get — including the reading passage — before you assign it.</p>
-    <div class="row"><div class="col"><label>Subject</label><select id="pv_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option></select></div>
+    <div class="row"><div class="col"><label>Subject</label><select id="pv_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option><option value="Biology">Biology</option></select></div>
       <div class="col"><label>Class</label><select id="pv_grade">${CLASS_PRESETS.map(p=>`<option value="${p.grade}|${p.label}">${p.label}</option>`).join("")}</select></div>
       <div class="col"><label>Language</label><select id="pv_lang"><option value="English">English</option><option value="Arabic">العربية · Arabic</option></select></div>
       <div class="col"><label>Test</label><select id="pv_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
@@ -1670,7 +1674,7 @@ function viewTeacher(){
   <div class="card"><h2>Assign &amp; share a diagnostic</h2><p class="sub">Pick a student and the test — it appears on their dashboard the moment they log in.</p>
     ${roster.length?`<div class="row">
       <div class="col"><label>Student</label><select id="as_student">${studentOpts}</select></div>
-      <div class="col"><label>Subject</label><select id="as_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option></select></div>
+      <div class="col"><label>Subject</label><select id="as_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option><option value="Biology">Biology</option></select></div>
       <div class="col"><label>Diagnostic test</label><select id="as_test"><option value="">Built-in (by grade)</option>${teacherTests().map(t=>`<option value="${t.id}">${(t.title||"Untitled")} · ${t.subject==="Math"?"Math":"Eng"} · ${(t.questions||[]).length}Q</option>`).join("")}</select></div></div>
     <div class="row" style="margin-top:10px">
       <div class="col"><label>Diagnostic grade (previous)</label><select id="as_prev">${grades}</select></div>
@@ -2363,7 +2367,7 @@ function importCard(){
     + list
     + '<h3 style="font-size:14px;margin:18px 0 6px">Import a new test</h3>'
     + '<div class="row"><div class="col"><label>Test name</label><input id="imp_title" placeholder="e.g. Grade 7 Algebra check"></div>'
-    + '<div class="col"><label>Subject</label><select id="imp_subject" onchange="reparseImport(this.value)"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option></select></div>'
+    + '<div class="col"><label>Subject</label><select id="imp_subject" onchange="reparseImport(this.value)"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option><option value="Biology">Biology</option></select></div>'
     + '<div class="col"><label>Grade it tests</label><select id="imp_grade">'+grades+'</select></div></div>'
     + '<label style="margin-top:10px">Upload your test file (PDF or Word .docx)</label>'
     + '<input type="file" id="imp_file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="handleImportFile(this)" style="width:100%;padding:14px;border:1px dashed var(--green);border-radius:10px;font-size:13px;background:#f3f4ff;cursor:pointer">'
@@ -2607,12 +2611,12 @@ function classCard(){
     return `<tr><td><b>${c.name}</b><div class="muted" style="font-size:11px">Join code <b style="letter-spacing:1px">${c.joinCode}</b></div></td><td>${subjChip(c.subject)}${isArabic(c.language)?` <span class="pill amber" style="font-size:10px">العربية</span>`:""}</td><td style="font-size:11px;line-height:1.6">${sched}</td><td>${students} students · ${done.length} done</td><td>${avg!=null?avg+"%":"—"}</td><td>${flagged?`<span class="pill red">${flagged} flagged</span>`:(done.length?`<span class="pill green">All on track</span>`:`<span class="muted">—</span>`)}</td><td>${classRiskCell(done)}</td><td><button class="btn sm" onclick="openClass('${c.id}')">Open →</button> <button class="btn ghost sm" onclick="deleteClass('${c.id}')">Delete</button></td></tr>`;
   }).join(""):`<tr><td colspan="8" class="muted">${fSub?"No classes for this subject.":((typeof schoolEmptyHint==="function"&&schoolEmptyHint())||"No classes yet. Create one below.")}</td></tr>`;
   return `<div class="card"><div class="flex-between"><h2 style="margin:0">My classes${(typeof schoolsEnabled==="function"&&schoolsEnabled()&&mySchools().length>1)?` <span class="pill green" style="font-size:12px;vertical-align:middle">🏫 ${esc(schoolShort(curSchool()))}</span>`:""}</h2>
-      <div><label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setFilterSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${fSub==="Physics"?"selected":""}>Physics</option><option value="Science" ${fSub==="Science"?"selected":""}>Science</option><option value="Chemistry" ${fSub==="Chemistry"?"selected":""}>Chemistry</option></select></div></div>
+      <div><label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setFilterSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${fSub==="Physics"?"selected":""}>Physics</option><option value="Science" ${fSub==="Science"?"selected":""}>Science</option><option value="Chemistry" ${fSub==="Chemistry"?"selected":""}>Chemistry</option><option value="Biology" ${fSub==="Biology"?"selected":""}>Biology</option></select></div></div>
     <p class="sub">Create a class, set when each term's diagnostic publishes, and share the join code. The class takes one diagnostic per term; Adeptly flags who needs skill development.</p>
     <table><thead><tr><th>Class</th><th>Subject</th><th>Term schedule</th><th>Enrolment</th><th>Avg</th><th>Flagged</th><th title="MOE risk levels from each student’s latest diagnostic">At risk</th><th></th></tr></thead><tbody>${rows}</tbody></table>
     <h3 style="font-size:14px;margin:18px 0 6px">Create a class</h3>
     <div class="row"><div class="col"><label>Class</label><select id="c_preset">${CLASS_PRESETS.map(p=>`<option value="${p.grade}|${p.label}">${p.label}</option>`).join("")}</select></div>
-      <div class="col"><label>Subject</label><select id="c_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option></select></div>
+      <div class="col"><label>Subject</label><select id="c_subject"><option value="English">English</option><option value="Math">Mathematics</option><option value="Physics">Physics</option><option value="Science">Science</option><option value="Chemistry">Chemistry</option><option value="Biology">Biology</option></select></div>
       <div class="col"><label>Test language</label><select id="c_language"><option value="English">English</option><option value="Arabic">العربية · Arabic</option></select></div></div>
     <p class="muted" style="font-size:11px;margin:2px 0 0">The class is diagnosed on the <b>previous grade</b> so you get a readiness Gap Analysis — e.g. a Grade 7 class is tested on Grade 6 content and compared to Grade 7 expectations. (Grade 3 is the lowest, so it is tested on Grade 3.) Arabic delivers the diagnostic right-to-left with an Arabic Mathematics question bank.</p>
     <label style="margin-top:12px">Publish dates — pick when each term's diagnostic opens (calendar)</label>
@@ -2920,7 +2924,7 @@ function viewHome(){
   </div>
   <div class="card"><div class="flex-between"><h2 style="margin:0">My diagnostics</h2>
       <div><label style="display:inline;margin-right:6px">Term</label><select style="width:auto;display:inline-block;margin-right:10px" onchange="setSTerm(this.value)"><option value="" ${!fTerm?"selected":""}>All</option>${[1,2,3].map(t=>`<option value="${t}" ${fTerm===String(t)?"selected":""}>Term ${t}</option>`).join("")}</select>
-      <label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setSSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${fSub==="Physics"?"selected":""}>Physics</option><option value="Science" ${fSub==="Science"?"selected":""}>Science</option><option value="Chemistry" ${fSub==="Chemistry"?"selected":""}>Chemistry</option></select></div></div>
+      <label style="display:inline;margin-right:6px">Subject</label><select style="width:auto;display:inline-block" onchange="setSSubject(this.value)"><option value="" ${!fSub?"selected":""}>All</option><option value="English" ${fSub==="English"?"selected":""}>English</option><option value="Math" ${fSub==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${fSub==="Physics"?"selected":""}>Physics</option><option value="Science" ${fSub==="Science"?"selected":""}>Science</option><option value="Chemistry" ${fSub==="Chemistry"?"selected":""}>Chemistry</option><option value="Biology" ${fSub==="Biology"?"selected":""}>Biology</option></select></div></div>
     <p class="sub">Every term's diagnostic, with its term and publish date. Open any completed one to review that term's results, goals, plan and activities.</p>
     <table><thead><tr><th>Subject / term</th><th>Diagnostic</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>
   </div>`;
@@ -2967,7 +2971,7 @@ function viewSetup(){
     <div class="row">
       <div class="col"><label>Student name</label><input id="f_name" value="${s.name||""}" placeholder="e.g. Ahmed Al Mansoori"></div>
       <div class="col"><label>Subject</label>
-        <select id="f_subject"><option value="English" ${s.subject==="English"?"selected":""}>English</option><option value="Math" ${s.subject==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${s.subject==="Physics"?"selected":""}>Physics</option><option value="Science" ${s.subject==="Science"?"selected":""}>Science</option><option value="Chemistry" ${s.subject==="Chemistry"?"selected":""}>Chemistry</option></select>
+        <select id="f_subject"><option value="English" ${s.subject==="English"?"selected":""}>English</option><option value="Math" ${s.subject==="Math"?"selected":""}>Mathematics</option><option value="Physics" ${s.subject==="Physics"?"selected":""}>Physics</option><option value="Science" ${s.subject==="Science"?"selected":""}>Science</option><option value="Chemistry" ${s.subject==="Chemistry"?"selected":""}>Chemistry</option><option value="Biology" ${s.subject==="Biology"?"selected":""}>Biology</option></select>
       </div>
     </div>
     <div class="row" style="margin-top:14px">
@@ -3129,7 +3133,7 @@ function studentNonce(){ return (S.student&&S.student.genNonce)||0; }
 // the subject has an Arabic bank — Mathematics and Science (lower grades) are Arabic-medium.
 function diagnosticIsArabic(){ return !!(S.student && isArabic(S.student.language) && AR_SUBJECTS.indexOf(S.student.subject)>=0 && bankFor(S.student.prevGrade,S.student.subject,true)); }
 var AR_SKILL={"Number & Operations":"الأعداد والعمليات","Algebra":"الجبر","Geometry":"الهندسة","Data & Probability":"البيانات والاحتمالات","Reading":"القراءة","Writing":"الكتابة","Vocabulary":"المفردات","Grammar":"القواعد","Life Science":"علوم الحياة","Physical Science":"العلوم الفيزيائية","Earth & Space Science":"علوم الأرض والفضاء","Scientific Inquiry & Technology":"الاستقصاء العلمي والتقنية","Matter & Atomic Structure":"المادة وتركيب الذرة","Bonding & Compounds":"الترابط والمركبات","Reactions & Stoichiometry":"التفاعلات والحسابات الكيميائية","States, Solutions & Organic":"الحالات والمحاليل والكيمياء العضوية","Measurement & Units":"القياس والوحدات","Motion & Forces":"الحركة والقوى","Waves & Sound":"الموجات والصوت","Light & Optics":"الضوء والبصريات"};
-var AR_SUBJ_NAME={"Math":"الرياضيات","Science":"العلوم","Chemistry":"الكيمياء","Physics":"الفيزياء","English":"اللغة الإنجليزية"};
+var AR_SUBJ_NAME={"Math":"الرياضيات","Science":"العلوم","Chemistry":"الكيمياء","Biology":"الأحياء","Physics":"الفيزياء","English":"اللغة الإنجليزية"};
 function skillLabel(s,ar){ return ar?(AR_SKILL[s]||s):s; }
 var _GQ_MEMO={k:null,v:null};
 function diagOptSeed(email,assignmentId,nonce){ return "opt2|"+String(email||"").toLowerCase()+"|"+(assignmentId||"")+"|"+(nonce||0); }
@@ -3754,6 +3758,23 @@ function viewTracker(){
 
 function curState(){ S.curView=S.curView||{grade:(S.student?S.student.curGrade:"6"),subject:(S.student?S.student.subject:"English")}; return S.curView; }
 function setCur(k,v){ const c=curState(); c[k]=v; save(); render(); }
+// Biology: full lesson-level detail (units → modules → lessons → SLO codes, priority, KPIs, CCG prior knowledge).
+function bioDetailHtml(grade,t){
+  var g=String(grade), D=(typeof BIO_DETAIL!=="undefined")&&(BIO_DETAIL[g]||BIO_DETAIL[g.replace(/G$/,"A")]);
+  var mods=D&&D[t]; if(!mods||!mods.length) return "";
+  var pc={Power:"green",Basic:"amber",Supplementary:"grey"};
+  return '<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px"><div style="font-weight:700;font-size:14px;margin-bottom:6px">📘 Lessons, learning outcomes &amp; KPIs</div>'
+   + mods.map(function(m){
+      var diag=m.diagnose?('<div class="notice" style="font-size:12px;margin:6px 0"><b>Diagnose — prior knowledge (CCG):</b><ul style="margin:4px 0;padding-left:18px">'+m.diagnose.prior.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'+(m.diagnose.mis.length?('<b>Possible misconceptions:</b><ul style="margin:4px 0;padding-left:18px">'+m.diagnose.mis.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'):'')+'</div>'):'';
+      return '<details style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px"><summary style="cursor:pointer"><b>'+esc(m.moduleNo)+' · '+esc(m.module)+'</b> <span class="muted" style="font-size:12px">· '+esc(m.unit)+' · weeks '+esc(m.weeks)+' · '+m.lessons.length+' lesson(s)</span></summary>'+diag
+       + m.lessons.map(function(L,i){
+          return '<div style="margin:8px 0 4px"><b>Lesson '+(i+1)+': '+esc(L.name)+'</b> <span class="pill" style="font-size:10px">'+esc(L.strand)+'</span></div>'
+           + (L.slos.length? L.slos.map(function(o){ return '<div style="margin:4px 0 6px 12px;font-size:13px"><span class="pill '+(pc[o.priority]||"grey")+'" style="font-size:10px">'+esc(o.priority)+'</span> <b style="font-family:monospace;font-size:12px">'+esc(o.code)+'</b> '+esc(o.text)
+              + (o.kpis.length?('<ul style="margin:3px 0 0;padding-left:18px;font-size:12px;color:var(--muted)">'+o.kpis.map(function(k){return '<li>'+esc(k)+'</li>';}).join("")+'</ul>'):'')+'</div>'; }).join("")
+             : '<div class="muted" style="margin-left:12px;font-size:12px">'+(t==="1"?"Enrichment lesson — no assessed outcomes listed.":"Outcomes for this term will appear when the Term "+t+" planner is uploaded.")+'</div>');
+        }).join("")+'</details>';
+    }).join("")+'</div>';
+}
 function viewCurriculum(){
   const c=curState();
   const gopts=GRADES.map(g=>`<option value="${g.id}" ${c.grade===g.id?"selected":""}>${g.label}</option>`).join("");
@@ -3775,17 +3796,18 @@ function viewCurriculum(){
       return `<div style="margin-bottom:12px"${arCurr?' dir="rtl" style="margin-bottom:12px;text-align:right"':''}><div style="font-weight:700;font-size:14px;margin-bottom:4px">${st}${arCurr?" — "+(AR_SKILL[st]||""):""}</div>
         <ul style="margin:4px 0;${arCurr?'padding-right:18px':'padding-left:18px'};font-size:13px;color:${real?'var(--ink)':'var(--muted)'}">${(items.length?items:["—"]).map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
     }).join("");
-    body+=`<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${strands.length} ${c.subject==="Math"?"unit(s)/strand(s)":"skill(s)"}</span></div>${inner||'<p class="muted" style="font-size:13px">No data yet.</p>'}</div>`;
+    body+=`<div class="card"><div class="flex-between"><h2>Term ${t}</h2><span class="tag">${strands.length} ${c.subject==="Math"?"unit(s)/strand(s)":"skill(s)"}</span></div>${inner||'<p class="muted" style="font-size:13px">No data yet.</p>'}${c.subject==="Biology"?bioDetailHtml(c.grade,t):""}</div>`;
   });
   const yrSel = chemYearOn ? `<div class="col"><label>Academic year</label><select onchange="setCur('chemYear',this.value)">${(CHEM_YEARS||["2026-2027","2025-2026"]).map(y=>`<option value="${y}" ${chemYear===y?"selected":""}>${y}</option>`).join("")}</select></div>` : "";
   return `<div class="card"><h2>Curriculum Browser</h2>
     <p class="sub">Official MOE outcomes embedded in the app — ${loadedTerms} of 3 terms loaded for ${gLabel(c.grade)} ${subjLabelLong(c.subject)}${chemYearOn?(" · "+chemYear):""}.</p>
     <div class="row">
       <div class="col"><label>Grade</label><select onchange="setCur('grade',this.value)">${gopts}</select></div>
-      <div class="col"><label>Subject</label><select onchange="setCur('subject',this.value)"><option value="English" ${c.subject==='English'?'selected':''}>English</option><option value="Math" ${c.subject==='Math'?'selected':''}>Mathematics</option><option value="Physics" ${c.subject==='Physics'?'selected':''}>Physics</option><option value="Science" ${c.subject==='Science'?'selected':''}>Science</option><option value="Chemistry" ${c.subject==='Chemistry'?'selected':''}>Chemistry</option></select></div>
+      <div class="col"><label>Subject</label><select onchange="setCur('subject',this.value)"><option value="English" ${c.subject==='English'?'selected':''}>English</option><option value="Math" ${c.subject==='Math'?'selected':''}>Mathematics</option><option value="Physics" ${c.subject==='Physics'?'selected':''}>Physics</option><option value="Science" ${c.subject==='Science'?'selected':''}>Science</option><option value="Chemistry" ${c.subject==='Chemistry'?'selected':''}>Chemistry</option><option value="Biology" ${c.subject==='Biology'?'selected':''}>Biology</option></select></div>
       ${yrSel}
     </div>
     ${chemYearOn?`<p class="muted" style="font-size:12px;margin-top:8px">Chemistry is embedded for two academic years. <b>2026-2027:</b> G10 Advanced, G11 Advanced, G11 General, G12 General (Scenario 1). <b>2025-2026:</b> G10 Advanced, G11 Advanced (Scenario 1), G11 General (Scenario 2). Pick a year above; other grades show “No data yet”.</p>`:""}
+    ${c.subject==="Biology"?`<p class="muted" style="font-size:12px;margin-top:8px">Biology (AY 2026-2027) is embedded for <b>Grade 9 Advanced</b>, <b>Grade 11 Advanced</b> and <b>Grade 12 Advanced (ADV.BIO.C.101)</b>: all three terms from the Scope &amp; Sequence, plus Term 1 lessons with SLO codes, priority and KPIs, and the CCG prior-knowledge notes. Diagnostics: a Grade 9 class is tested on prior (Grade 8) knowledge, Grade 10 and 11 classes on Grade 9 Biology, and Grade 12 on Grade 11 Biology.</p>`:""}
     <p class="muted" style="font-size:12px;margin-top:12px">English: Reading, Writing, Vocabulary, Grammar (Terms 1–3). Mathematics: Grades 9–12 organised by unit; Grades 6–8 translated from the official Arabic guides and grouped by domain (Terms 1–3).</p>
   </div>${body}`;
 }
@@ -4021,7 +4043,7 @@ function _buildExerciseRaw(skill,taskText,seed){
   // Physics / Science / Chemistry practice: pull real MCQs of THIS skill from that subject's question
   // pool (previously these fell through to the maths generator, which is why Physics showed a single
   // off-topic maths question). Weak sub-skills first, then a seeded set so each week differs.
-  var sciSubj = (PHYS_SKILLS.indexOf(skill)>=0)?"Physics":(SCI_SKILLS.indexOf(skill)>=0)?"Science":(CHEM_SKILLS.indexOf(skill)>=0)?"Chemistry":null;
+  var sciSubj = (PHYS_SKILLS.indexOf(skill)>=0)?"Physics":(SCI_SKILLS.indexOf(skill)>=0)?"Science":(CHEM_SKILLS.indexOf(skill)>=0)?"Chemistry":((typeof BIO_SKILLS!=="undefined"&&BIO_SKILLS.indexOf(skill)>=0)?"Biology":null);
   if(sciSubj){
     var pitems=sciPracticeItems(sciSubj,skill,taskText,seed);
     if(pitems.length){ pitems=pitems.map(function(q,i){return _shuffleQ(q,(seed+i*97)>>>0);});
