@@ -6,7 +6,7 @@
    Until the admin presses "Set up schools", the app behaves exactly as before (single school). */
 var DEFAULT_SCHOOL = "noaimiyah";
 var SCHOOL_SEED = [
-  { id: "noaimiyah", name: "Al Noaimiyah Girls School – Cycle 1, 2 & 3", prefix: "NOAIM" },
+  { id: "noaimiyah", name: "Al Noaimiyah Girls School-Cycle 1,2&3", prefix: "NOAIM" },
   { id: "ibnhazm",   name: "Ibn Hazm Boys School",                       prefix: "IBNHZ" }
 ];
 
@@ -291,4 +291,35 @@ function runSplit(){
   ops.reduce(function(p,f){ return p.then(f); }, Promise.resolve())
     .then(function(){ alert("✅ Moved "+P.moving.length+" diagnostic(s) for "+P.students.length+" student(s) to "+schoolName(P.target)+"."+(newCodes.length?"\n\nNew class code(s) for the moved students:\n"+newCodes.join("\n")+"\n\n(The original classes keep their old codes for the students who stayed.)":"")); render(); })
     .catch(function(e){ if(msg){ msg.style.color="var(--red)"; msg.textContent="Couldn’t finish: "+fbErr(e); } });
+}
+
+/* ===== Report settings (per school): the name printed on reports + who approves them =====
+   Stored on the school's document (admin-only write). Al Noaimiyah has built-in defaults. */
+var REPORT_DEFAULTS={
+  noaimiyah:{reportName:"Al Noaimiyah Girls School-Cycle 1,2&3", principal:"Fanda Salem Ahmed Helais Alkaabi", approver:"Bhawna Sharma"}
+};
+function reportSettings(sid){
+  sid=sid||DEFAULT_SCHOOL;
+  var d=REPORT_DEFAULTS[sid]||{}, doc=schoolList().filter(function(x){return x.id===sid;})[0]||{};
+  return {reportName:(doc.reportName||d.reportName||schoolName(sid)||"School"),
+          principal:(doc.principal!=null&&doc.principal!==""?doc.principal:(d.principal||"")),
+          approver:(doc.approver!=null&&doc.approver!==""?doc.approver:(d.approver||""))};
+}
+function adminReportSettingsView(){
+  var list=schoolsEnabled()?schoolList():SCHOOL_SEED.filter(function(s){return s.id===DEFAULT_SCHOOL;});
+  var rows=list.map(function(s){ var r=reportSettings(s.id), k=esc(s.id);
+    return '<div class="card" style="margin:10px 0;border:1px solid var(--line)"><h3 style="margin:0 0 8px;font-size:15px">🏫 '+esc(s.name)+'</h3>'
+      +'<div class="row"><div class="col"><label>School name on reports</label><input id="rs_name_'+k+'" value="'+esc(r.reportName)+'"></div></div>'
+      +'<div class="row"><div class="col"><label>School Principal (approves reports)</label><input id="rs_pr_'+k+'" value="'+esc(r.principal)+'" placeholder="Principal’s full name"></div>'
+      +'<div class="col"><label>Academic Approver</label><input id="rs_ap_'+k+'" value="'+esc(r.approver)+'" placeholder="Academic approver’s full name"></div></div>'
+      +'<button class="btn sm" onclick="saveReportSettings(\''+k+'\')">Save</button> <span id="rs_msg_'+k+'" style="font-size:12px;margin-left:8px"></span></div>'; }).join("");
+  return '<div class="card"><h2 style="margin:0 0 4px">🖋 Report settings</h2><p class="sub">The school name and the names printed on the approval lines of every report (Annex 3, Annex 4 and the Enhanced report). Each school has its own — teachers of that school get these automatically.</p>'
+    +(schoolsEnabled()?'':'<div class="notice">Set up schools first (🏫 Schools) to save changes.</div>')+rows+'</div>';
+}
+function saveReportSettings(id){
+  var g=function(p){ return ((document.getElementById(p+id)||{}).value||"").trim(); }, m=document.getElementById("rs_msg_"+id);
+  var data={reportName:g("rs_name_"), principal:g("rs_pr_"), approver:g("rs_ap_")};
+  if(!data.reportName){ if(m){ m.style.color="var(--red)"; m.textContent="The school name can’t be empty."; } return; }
+  db.collection("schools").doc(id).set(data,{merge:true}).then(function(){ if(m){ m.style.color="var(--ok)"; m.textContent="Saved ✓"; } })
+    .catch(function(e){ if(m){ m.style.color="var(--red)"; m.textContent="Couldn’t save: "+fbErr(e); } });
 }
