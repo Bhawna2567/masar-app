@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-05b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-05c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1694,7 +1694,7 @@ function viewTeacher(){
   <div class="card"><h2>Assigned diagnostics</h2><table><thead><tr><th>Student</th><th>Subject</th><th>Grades</th><th>Status</th><th></th></tr></thead><tbody>${assignRows}</tbody></table></div>`;
   const settingsBody=`<div class="card"><h2>Back up your data</h2><p class="sub">Download all your classes and diagnostics as a file you can keep safe. Good to do before any big change.</p><button class="btn ghost" onclick="exportBackup()">⬇ Download my data (JSON)</button></div>
   <div class="card" style="border:1px solid #f3c8cc"><h2>Reset dashboard</h2><p class="sub">Permanently delete all your students, classes and diagnostics to start fresh. This cannot be undone.</p><button class="btn" style="background:var(--red)" onclick="resetDashboard()">Reset everything</button></div>`;
-  const body = sec==="classes"?(classCard()+allMyClassesCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
+  const body = sec==="classes"?(classCard()+combinedReportCardHtml()+allMyClassesCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
   return `<div class="card"><h2>Teacher Dashboard</h2><p class="sub">${me.name} · ${me.email}${schoolsEnabled()?" · 🏫 <b>"+esc(schoolName(curSchool()))+"</b>":""}</p></div>${nav}${body}`;
 }
 function setTSection(s){ S.tSection=s; render(); }
@@ -2897,29 +2897,42 @@ function _annexSlide(pptx,H,annexNo,title,subLine,head,headColor,rows,colW,fs){
   s.addText(_apprLine("School Principal Approval:",H.principal),{x:0.5,y:5.3,w:9,h:0.25,fontSize:9,color:"000000",fontFace:"Calibri",margin:0});
   return s;
 }
+function monthList(v){ return String(v)==="all"?[1,2,3,4]:[Math.max(1,Math.min(4,Number(v)||1))]; }
+function monthLabel(v){ return String(v)==="all"?"All Months":ANNEX_MONTHS[monthList(v)[0]-1]; }
+function annexClsLabel(D){ return (String(D.c.name||"").toLowerCase().indexOf(String(gLabel(D.grade)).toLowerCase())>=0)?D.c.name:(D.c.name+" ("+gLabel(D.grade)+")"); }
+function annexBands(D){ return "Cycle "+(D.cycle===1?"1 (Cycle 2 bands)":D.cycle)+" · pass mark "+D.pass+"% · Proficient ≥ "+(D.pass+10)+"% · Level 2 = BF/BP "+(D.pass-10)+"–"+(D.pass+9.9).toFixed(1)+"% · Level 3 = F < "+(D.pass-10)+"%"; }
+// Builds Annex 3 or Annex 4 for one class (Ds = [D]) or for several classes combined.
+function buildAnnexFromData(Ds,which,month,combined){
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.author=(Ds[0].c.teacherName||ownerName()||"Adeptly");
+  var H=annexSchoolHeader(Ds[0].c), term=Ds[0].term;
+  var one=Ds.length===1&&!combined, D0=Ds[0];
+  var scope=one?(subjLabelLong(D0.c.subject)+" · "+annexClsLabel(D0)):("All classes ("+Ds.length+")");
+  if(String(which)==="3"){
+    var colW=[0.9,1.05,1.25,0.7,0.8,0.85,1.0,0.85,2.0];
+    var rows=[]; Ds.forEach(function(D){ var subj=subjLabelLong(D.c.subject), cls=annexClsLabel(D);
+      D.rows.forEach(function(r,i){ rows.push([subj, cls, r.skill, r.n, r.P.length, r.profPct+"%", r.L2.length+"\n(BP "+r.BP.length+" · BF "+r.BF.length+")", r.L3.length+"\n(F)", annexSuggestedAction(r,i)]); }); });
+    var head=["Subject","Grade/Section","Skill","No. of Students","Proficient","Proficiency %","Level 2","Level 3","Suggested Action"];
+    var sub3=one?("Term "+term+" diagnostic · "+annexBands(D0)):("Term "+term+" diagnostic · all classes · levels use each class's MOE pass mark (Cycle 3: 60%, Cycle 2: 50%)");
+    _paginate(rows,colW,8,1.75).forEach(function(pg){ _annexSlide(pptx,H,3,"Skills Analysis and Student Classification",sub3,head,"4472C4",pg,colW,8); });
+    var nW=one?[1.6,2.6,2.6,2.6]:[2.0,2.45,2.45,2.5];
+    var nrows=[]; Ds.forEach(function(D){ D.rows.forEach(function(r){ nrows.push([(one?"":annexClsLabel(D)+" — ")+r.skill, r.P.length?_names(r.P,40):"—", r.L2.length?_names(r.L2,40):"—", r.L3.length?_names(r.L3,40):"—"]); }); });
+    _paginate(nrows,nW,7,1.75).forEach(function(pg){ _annexSlide(pptx,H,3,"Skills Analysis and Student Classification — students by level",scope+" · Term "+term,[one?"Skill":"Class — Skill","Proficient","Level 2 (BF/BP)","Level 3 (F)"],"4472C4",pg,nW,7); });
+  } else {
+    var colW4=[1.05,1.6,0.8,1.6,0.9,1.0,1.25,1.2];
+    var head4=["Target Skill","Category/Students","Baseline","Strategy","Responsible Person","Sessions & Timing","Progress Indicator","Follow-up Decision"];
+    monthList(month).forEach(function(m){
+      var prow=[]; Ds.forEach(function(D){ annexPlanRows(D,m).forEach(function(r){ if(!one) r[0]=annexClsLabel(D)+" — "+r[0]; prow.push(r); }); });
+      _paginate(prow,colW4,7,1.75).forEach(function(pg){ _annexSlide(pptx,H,4,"Intervention and Enrichment Plan",ANNEX_MONTHS[m-1]+"  ·  "+scope+" · Term "+term,head4,"70AD47",pg,colW4,7); });
+    });
+  }
+  var nm=(one?(D0.c.name+" - "+subjLabelLong(D0.c.subject)):"All classes")+" - Term "+term+(String(which)==="4"?(" - "+monthLabel(month)):"");
+  pptx.title="Annex "+which+" — "+nm;
+  return {pptx:pptx, fileName:safeName((one?"":"Combined ")+"Annex "+which+" - "+nm)+".pptx"};
+}
 function buildAnnexPptx(classId,term,which,month,quiet){
   var D=annexData(classId,term);
   if(!D||!D.rows.length){ if(quiet) return null; alert("No completed diagnostics in Term "+term+" for this class yet, so there is nothing to report."); return null; }
-  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.author=(D.c.teacherName||ownerName()||"Adeptly"); pptx.title="Annex "+which+" — "+D.c.name;
-  var H=annexSchoolHeader(D.c), subj=subjLabelLong(D.c.subject), cls=(String(D.c.name||"").toLowerCase().indexOf(String(gLabel(D.grade)).toLowerCase())>=0)?D.c.name:(D.c.name+" ("+gLabel(D.grade)+")");
-  var bands="Cycle "+(D.cycle===1?"1 (Cycle 2 bands)":D.cycle)+" · pass mark "+D.pass+"% · Proficient ≥ "+(D.pass+10)+"% · Level 2 = BF/BP "+(D.pass-10)+"–"+(D.pass+9.9).toFixed(1)+"% · Level 3 = F < "+(D.pass-10)+"%";
-  if(String(which)==="3"){
-    var colW=[0.9,1.05,1.25,0.7,0.8,0.85,1.0,0.85,2.0];
-    var rows=D.rows.map(function(r,i){ return [subj, cls, r.skill, r.n, r.P.length, r.profPct+"%", r.L2.length+"\n(BP "+r.BP.length+" · BF "+r.BF.length+")", r.L3.length+"\n(F)", annexSuggestedAction(r,i)]; });
-    var head=["Subject","Grade/Section","Skill","No. of Students","Proficient","Proficiency %","Level 2","Level 3","Suggested Action"];
-    _paginate(rows,colW,8,1.75).forEach(function(pg){ _annexSlide(pptx,H,3,"Skills Analysis and Student Classification","Term "+D.term+" diagnostic · "+bands,head,"4472C4",pg,colW,8); });
-    // Names by level (continuation slides, same layout)
-    var nW=[1.6,2.6,2.6,2.6];
-    var nrows=D.rows.map(function(r){ return [r.skill, r.P.length?_names(r.P,40):"—", r.L2.length?_names(r.L2,40):"—", r.L3.length?_names(r.L3,40):"—"]; });
-    _paginate(nrows,nW,7,1.75).forEach(function(pg){ _annexSlide(pptx,H,3,"Skills Analysis and Student Classification — students by level",subj+" · "+cls+" · Term "+D.term,["Skill","Proficient","Level 2 (BF/BP)","Level 3 (F)"],"4472C4",pg,nW,7); });
-  } else {
-    var m=Math.max(1,Math.min(4,Number(month)||1));
-    var colW4=[1.05,1.6,0.8,1.6,0.9,1.0,1.25,1.2];
-    var prow=annexPlanRows(D,m);
-    var head4=["Target Skill","Category/Students","Baseline","Strategy","Responsible Person","Sessions & Timing","Progress Indicator","Follow-up Decision"];
-    _paginate(prow,colW4,7,1.75).forEach(function(pg){ _annexSlide(pptx,H,4,"Intervention and Enrichment Plan",ANNEX_MONTHS[m-1]+"  ·  "+subj+" · "+cls+" · Term "+D.term,head4,"70AD47",pg,colW4,7); });
-  }
-  return {pptx:pptx, fileName:safeName("Annex "+which+" - "+D.c.name+" - "+subj+" - Term "+D.term+(String(which)==="4"?(" - "+ANNEX_MONTHS[(Number(month)||1)-1]):""))+".pptx"};
+  return buildAnnexFromData([D],which,month,false);
 }
 async function downloadAnnex(classId,which){
   try{
@@ -2934,7 +2947,7 @@ function annexCardHtml(c,done){
   var term=String(S.classTerm||"1"), H=annexSchoolHeader(c), D=annexData(c.id,term);
   return '<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:flex-start"><div><h2 style="margin:0 0 2px">📑 Reports for leadership (PowerPoint)</h2><p class="sub" style="margin:0">Term '+term+' diagnostic · '+esc(H.title)+'</p>'
     +'<p class="muted" style="font-size:12px;margin:4px 0 0">Approvals printed on the reports: Academic — <b>'+esc(H.approver||"(blank)")+'</b> · Principal — <b>'+esc(H.principal||"(blank)")+'</b></p></div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Plan month</label><select id="annex_month" style="width:auto">'+ANNEX_MONTHS.map(function(m,i){return '<option value="'+(i+1)+'">'+m+'</option>';}).join("")+'</select>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Plan month</label><select id="annex_month" style="width:auto">'+monthOptionsHtml()+'</select>'
     +'<button class="btn gold sm" id="pack_btn" onclick="downloadReportPack(\''+c.id+'\')">⬇ Report pack (.zip) — both versions</button></div></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center"><span class="muted" style="font-size:12px">Or one file:</span>'
     +'<button class="btn ghost sm" onclick="downloadAnnex(\''+c.id+'\',3)">Annex 3 — Skills Analysis</button>'
@@ -2969,88 +2982,34 @@ function _enhHeader(s,H,title,sub){
 function _enhFooter(s,n){ s.addText("Adeptly · Diagnostic Skills Report & Intervention Plan",{x:0.35,y:5.3,w:6,h:0.22,fontSize:7.5,color:ENH.muted,fontFace:"Calibri",margin:0}); s.addText(String(n),{x:9.0,y:5.3,w:0.65,h:0.22,fontSize:7.5,color:ENH.muted,align:"right",fontFace:"Calibri",margin:0}); }
 function _lvlColor(l){ return l==="P"?ENH.P:(l==="BP"?ENH.BP:(l==="BF"?ENH.BF:ENH.F)); }
 function _lvlFill(l){ return l==="P"?"DCFCE7":(l==="BP"?"FEF9C3":(l==="BF"?"FFEDD5":"FEE2E2")); }
-function buildEnhancedPptx(classId,term,month){
-  var D=annexData(classId,term); if(!D||!D.rows.length) return null;
-  var m=Math.max(1,Math.min(4,Number(month)||1)), w1=(m-1)*4+1, w2=m*4;
-  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Enhanced report — "+D.c.name;
-  var H=annexSchoolHeader(D.c), subj=subjLabelLong(D.c.subject), teacher=D.c.teacherName||ownerName()||"Class teacher";
-  var cls=(String(D.c.name||"").toLowerCase().indexOf(String(gLabel(D.grade)).toLowerCase())>=0)?D.c.name:(D.c.name+" ("+gLabel(D.grade)+")");
-  var tag=subj+" · "+cls+" · Term "+D.term, pg=1, today=new Date().toLocaleDateString("en-GB");
-  var studs=D.list, overall=studs.map(function(a){ return {a:a,name:a.studentName||a.studentEmail,score:Number(a.score)||0,lvl:annexLevelOf(Number(a.score)||0,D.grade)}; }).sort(function(x,y){return y.score-x.score;});
-  var cnt={P:0,BP:0,BF:0,F:0}; overall.forEach(function(o){cnt[o.lvl]++;});
-  var avg=overall.length?Math.round(overall.reduce(function(s,o){return s+o.score;},0)/overall.length):0;
-  var bands="Pass mark "+D.pass+"% (Cycle "+(D.cycle===1?"1 → C2 bands":D.cycle)+") · Proficient ≥ "+(D.pass+10)+"% · BP "+D.pass+"–"+(D.pass+9.9).toFixed(1)+"% · BF "+(D.pass-10)+"–"+(D.pass-0.1).toFixed(1)+"% · F < "+(D.pass-10)+"%";
-  // 1 · Cover
+function _th(t,color){ return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:color||ENH.navy},fontSize:8.5,align:"center",valign:"middle"}}; }
+function _enhPaged(pptx,H,title,tag,head,rows,colW,next){
+  _paginate(rows.map(function(r){return r.map(function(c){return c.text;});}),colW,7.5,3.6).forEach(function(page,pi,arr){
+    var start=0; for(var k=0;k<pi;k++) start+=arr[k].length;
+    var s=pptx.addSlide(); _enhHeader(s,H,title+(arr.length>1?(" ("+(pi+1)+"/"+arr.length+")"):""),tag);
+    s.addTable([head].concat(rows.slice(start,start+page.length)),{x:0.35,y:1.3,w:9.3,colW:colW,border:{type:"solid",pt:0.5,color:"CBD5E1"},fontFace:"Calibri",margin:0.05,valign:"middle"});
+    _enhFooter(s,next());
+  });
+}
+function _enhCover(pptx,H,mainTitle,tag,teacher,period,today,note){
   var s=pptx.addSlide(); s.background={color:ENH.navy};
   s.addShape("rect",{x:0,y:0,w:0.18,h:5.625,fill:{color:ENH.gold},line:{color:ENH.gold}});
   s.addText(H.title,{x:0.6,y:0.55,w:8.8,h:0.5,fontSize:20,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,fit:"shrink"});
-  s.addText("Diagnostic Skills Report & Intervention Plan",{x:0.6,y:1.25,w:8.8,h:0.7,fontSize:32,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0});
-  s.addText(tag,{x:0.6,y:2.0,w:8.8,h:0.4,fontSize:16,color:"DCC48E",fontFace:"Calibri",margin:0});
-  s.addText([{text:"Teacher: ",options:{color:"9CA3AF"}},{text:teacher,options:{color:"FFFFFF",bold:true}},{text:"     Plan period: ",options:{color:"9CA3AF"}},{text:ANNEX_MONTHS[m-1]+" (weeks "+w1+"–"+w2+")",options:{color:"FFFFFF",bold:true}},{text:"     Date: ",options:{color:"9CA3AF"}},{text:today,options:{color:"FFFFFF",bold:true}}],{x:0.6,y:2.6,w:8.8,h:0.35,fontSize:11,fontFace:"Calibri",margin:0});
+  s.addText(mainTitle,{x:0.6,y:1.2,w:8.8,h:0.75,fontSize:30,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,fit:"shrink"});
+  s.addText(tag,{x:0.6,y:2.0,w:8.8,h:0.4,fontSize:16,color:"DCC48E",fontFace:"Calibri",margin:0,fit:"shrink"});
+  s.addText([{text:"Teacher: ",options:{color:"9CA3AF"}},{text:teacher,options:{color:"FFFFFF",bold:true}},{text:"     Plan period: ",options:{color:"9CA3AF"}},{text:period,options:{color:"FFFFFF",bold:true}},{text:"     Date: ",options:{color:"9CA3AF"}},{text:today,options:{color:"FFFFFF",bold:true}}],{x:0.6,y:2.6,w:8.8,h:0.35,fontSize:11,fontFace:"Calibri",margin:0});
   s.addShape("line",{x:0.6,y:3.35,w:8.8,h:0,line:{color:"334155",width:1}});
   s.addText([{text:"Academic Approver: ",options:{color:"9CA3AF"}},{text:(H.approver||"—"),options:{color:"FFFFFF",bold:true,breakLine:true}},{text:"School Principal: ",options:{color:"9CA3AF"}},{text:(H.principal||"—"),options:{color:"FFFFFF",bold:true}}],{x:0.6,y:3.55,w:8.8,h:0.7,fontSize:12,fontFace:"Calibri",margin:0,paraSpaceAfter:4});
-  s.addText(bands,{x:0.6,y:4.85,w:8.8,h:0.3,fontSize:9,color:"9CA3AF",fontFace:"Calibri",margin:0});
-  // 2 · Class at a glance
-  s=pptx.addSlide(); _enhHeader(s,H,"Class at a glance",tag);
-  var tiles=[["Students tested",String(overall.length),ENH.navy],["Class average",avg+"%",ENH.teal],["Proficient (≥ "+(D.pass+10)+"%)",cnt.P+" · "+(overall.length?Math.round(cnt.P/overall.length*100):0)+"%",ENH.P],["Borderline (BP + BF)",String(cnt.BP+cnt.BF),ENH.BF],["Failing (F)",String(cnt.F),ENH.F]];
+  if(note) s.addText(note,{x:0.6,y:4.85,w:8.8,h:0.3,fontSize:9,color:"9CA3AF",fontFace:"Calibri",margin:0});
+}
+function _enhTiles(s,tiles){
   tiles.forEach(function(t,i){ var x=0.35+i*1.88; s.addShape("roundRect",{x:x,y:1.3,w:1.76,h:0.95,fill:{color:ENH.bg},line:{color:ENH.line},rectRadius:0.08});
     s.addShape("rect",{x:x,y:1.3,w:0.07,h:0.95,fill:{color:t[2]},line:{color:t[2]}});
-    s.addText(t[1],{x:x+0.15,y:1.36,w:1.55,h:0.5,fontSize:22,bold:true,color:t[2],fontFace:"Calibri",margin:0});
+    s.addText(t[1],{x:x+0.15,y:1.36,w:1.55,h:0.5,fontSize:22,bold:true,color:t[2],fontFace:"Calibri",margin:0,fit:"shrink"});
     s.addText(t[0],{x:x+0.15,y:1.86,w:1.55,h:0.32,fontSize:9,color:ENH.muted,fontFace:"Calibri",margin:0}); });
-  var sk=D.rows.map(function(r){return r.skill;});
-  s.addChart(pptx.ChartType.bar,[{name:"Class average %",labels:sk,values:D.rows.map(function(r){return r.avg||0;})}],{x:0.35,y:2.45,w:5.6,h:2.8,barDir:"bar",chartColors:[ENH.teal],valAxisMaxVal:100,valAxisMinVal:0,showValue:true,dataLabelFontSize:8,dataLabelColor:ENH.ink,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showTitle:true,title:"Average by skill (pass mark "+D.pass+"%)",titleFontSize:10,titleColor:ENH.navy,valGridLine:{color:ENH.line,size:0.5},showLegend:false});
-  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:["Proficient","BP","BF","F"],values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:6.15,y:2.45,w:3.5,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showPercent:false,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:"Overall level of students",titleFontSize:10,titleColor:ENH.navy});
-  _enhFooter(s,++pg);
-  // 3 · Skills analysis (Annex 3, improved)
-  s=pptx.addSlide(); _enhHeader(s,H,"Skills analysis & classification",tag);
-  s.addChart(pptx.ChartType.bar,[{name:"Proficient",labels:sk,values:D.rows.map(function(r){return r.P.length;})},{name:"Level 2 (BP/BF)",labels:sk,values:D.rows.map(function(r){return r.L2.length;})},{name:"Level 3 (F)",labels:sk,values:D.rows.map(function(r){return r.L3.length;})}],
-    {x:0.35,y:1.3,w:4.3,h:3.9,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:8,valGridLine:{color:ENH.line,size:0.5}});
-  var ranked=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;}), rank={}; ranked.forEach(function(r,i){rank[r.skill]=i+1;});
-  var th=function(t){return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:ENH.navy},fontSize:8.5,align:"center",valign:"middle"}};};
-  var trows=[[th("Skill"),th("Avg"),th("Prof. %"),th("P"),th("L2"),th("L3"),th("Priority"),th("Action")]].concat(D.rows.map(function(r){
-    var st=r.profPct>=80?["Secure","DCFCE7",ENH.P]:(r.profPct>=50?["Developing","FEF9C3",ENH.BP]:["Priority","FEE2E2",ENH.F]);
-    var act=r.profPct>=80?"Enrich":(r.profPct>=50?"Small groups":"Re-teach all");
-    return [{text:r.skill,options:{fontSize:8,bold:true,color:ENH.ink}},{text:(r.avg||0)+"%",options:{fontSize:8,align:"center"}},{text:r.profPct+"%",options:{fontSize:8,align:"center",bold:true,color:st[2]}},{text:String(r.P.length),options:{fontSize:8,align:"center"}},{text:String(r.L2.length),options:{fontSize:8,align:"center"}},{text:String(r.L3.length),options:{fontSize:8,align:"center"}},{text:"#"+rank[r.skill],options:{fontSize:8,align:"center",bold:true,fill:{color:st[1]},color:st[2]}},{text:act,options:{fontSize:8,align:"center"}}];
-  }));
-  s.addTable(trows,{x:4.8,y:1.35,w:4.85,colW:[1.45,0.45,0.55,0.35,0.35,0.35,0.6,0.75],border:{type:"solid",pt:0.5,color:ENH.line},fontFace:"Calibri",margin:0.04,rowH:0.34,valign:"middle"});
-  var top=ranked[0];
-  s.addText([{text:"Key finding: ",options:{bold:true,color:ENH.navy}},{text:top.skill+" is the top priority ("+top.profPct+"% proficient, "+top.L3.length+" at F). "+(ranked.length>1?("Strongest: "+ranked[ranked.length-1].skill+" ("+ranked[ranked.length-1].profPct+"%)."):""),options:{color:ENH.ink}}],{x:4.8,y:4.55,w:4.85,h:0.6,fontSize:9,fontFace:"Calibri",margin:0.06,fill:{color:"FFF7E6"},line:{color:ENH.gold}});
-  _enhFooter(s,++pg);
-  // 4 · Student heatmap
-  var hs=["Student"].concat(sk).concat(["Overall","Level"]);
-  var perPage=12;
-  for(var i0=0;i0<overall.length;i0+=perPage){
-    s=pptx.addSlide(); _enhHeader(s,H,"Student skill map"+(overall.length>perPage?(" ("+(i0/perPage+1)+"/"+Math.ceil(overall.length/perPage)+")"):""),tag);
-    var nameW=2.0, lastW=0.7+0.6, skW=(9.3-nameW-lastW)/sk.length;
-    var hrow=hs.map(function(t,i){return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:ENH.navy},fontSize:7.5,align:"center",valign:"middle"}};});
-    var body=overall.slice(i0,i0+perPage).map(function(o){
-      var cells=[{text:o.name,options:{fontSize:8,color:ENH.ink}}];
-      sk.forEach(function(k){ var v=o.a.skillPct&&o.a.skillPct[k]; if(v==null){ cells.push({text:"—",options:{fontSize:8,align:"center",color:ENH.muted}}); return; } var l=annexLevelOf(Number(v),D.grade); cells.push({text:Math.round(v)+"%",options:{fontSize:8,align:"center",bold:true,color:_lvlColor(l),fill:{color:_lvlFill(l)}}}); });
-      cells.push({text:o.score+"%",options:{fontSize:8,align:"center",bold:true}});
-      cells.push({text:o.lvl==="P"?"Proficient":o.lvl,options:{fontSize:8,align:"center",bold:true,color:"FFFFFF",fill:{color:_lvlColor(o.lvl)}}});
-      return cells; });
-    s.addTable([hrow].concat(body),{x:0.35,y:1.3,w:9.3,colW:[nameW].concat(sk.map(function(){return skW;})).concat([0.7,0.6]),border:{type:"solid",pt:0.5,color:ENH.line},fontFace:"Calibri",margin:0.03,rowH:0.27,valign:"middle"});
-    s.addText(bands,{x:0.35,y:5.05,w:9.3,h:0.22,fontSize:7.5,color:ENH.muted,fontFace:"Calibri",margin:0});
-    _enhFooter(s,++pg);
-  }
-  // 5 · Intervention groups (Levels 3 & 2) with suggested strategies
-  var groups=[]; ranked.forEach(function(r,ri){
-    if(r.L3.length) groups.push({skill:r.skill,label:"Level 3 · intensive",color:ENH.F,g:r.L3,str:strategyList(r.skill,"support").slice((m-1)%2,(m-1)%2+2),freq:"3 × 30 min / week",target:"≥ "+(D.pass-10)+"% on re-check (out of F)"});
-    if(r.L2.length) groups.push({skill:r.skill,label:"Level 2 · targeted",color:ENH.BF,g:r.L2,str:strategyList(r.skill,"support").slice(2+((m-1)%2),4+((m-1)%2)).concat(strategyList(r.skill,"support")).slice(0,2),freq:"2 × 30 min / week",target:"≥ "+(D.pass+10)+"% on re-check"});
-  });
-  var gcols=[1.25,1.05,2.0,3.2,0.85,0.95];
-  var ghead=["Skill","Group","Students","Suggested strategies","Frequency","Success target"].map(function(t){return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:ENH.F},fontSize:8.5,align:"center",valign:"middle"}};});
-  var grows=groups.map(function(G){ return [{text:G.skill,options:{fontSize:8,bold:true}},{text:G.label,options:{fontSize:8,bold:true,color:G.color}},{text:G.g.length+": "+_names(G.g,12),options:{fontSize:7}},{text:G.str.map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),options:{fontSize:7}},{text:G.freq,options:{fontSize:7.5,align:"center"}},{text:G.target,options:{fontSize:7.5,align:"center"}}]; });
-  if(!grows.length) grows=[[{text:"No student is below the proficient level — no intervention group needed.",options:{fontSize:9,colspan:6,align:"center"}}]];
-  _enhPaged(pptx,H,"Intervention groups — "+ANNEX_MONTHS[m-1],tag,ghead,grows,gcols,function(){return ++pg;});
-  // 6 · Enrichment plan
-  var erows=ranked.slice().reverse().filter(function(r){return r.P.length;}).map(function(r){ var ex=strategyList(r.skill,"extend"); return [{text:r.skill,options:{fontSize:8,bold:true}},{text:r.P.length+": "+_names(r.P,14),options:{fontSize:7}},{text:[ex[(m-1)%ex.length],ex[m%ex.length]].map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),options:{fontSize:7}},{text:"1 × 40 min / week",options:{fontSize:7.5,align:"center"}},{text:"Keeps ≥ "+(D.pass+20)+"%; one extension product per week",options:{fontSize:7.5,align:"center"}}]; });
-  if(!erows.length) erows=[[{text:"No student is proficient yet — focus on the intervention groups first.",options:{fontSize:9,colspan:5,align:"center"}}]];
-  var ehead=["Skill","Proficient students","Suggested enrichment","Frequency","Success target"].map(function(t){return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:ENH.P},fontSize:8.5,align:"center",valign:"middle"}};});
-  _enhPaged(pptx,H,"Enrichment plan — "+ANNEX_MONTHS[m-1],tag,ehead,erows,[1.35,2.6,3.45,0.9,1.0],function(){return ++pg;});
-  // 7 · 4-week action timeline + decision rules
-  s=pptx.addSlide(); _enhHeader(s,H,"Action timeline — "+ANNEX_MONTHS[m-1]+" (weeks "+w1+"–"+w2+")",tag);
-  var focus=ranked.filter(function(r){return r.L2.length||r.L3.length;}).slice(0,2).map(function(r){return r.skill;}).join(" & ")||ranked[0].skill;
+}
+function _enhTimeline(pptx,H,tag,m,focus,next){
+  var w1=(m-1)*4+1, w2=m*4, s=pptx.addSlide(); _enhHeader(s,H,"Action timeline — "+ANNEX_MONTHS[m-1]+" (weeks "+w1+"–"+w2+")",tag);
   var wk=[["Week "+w1,"Regroup & re-teach","Form the Level 3 / Level 2 groups. Re-teach "+focus+" with worked examples. Quick entry check."],
           ["Week "+(w1+1),"Targeted practice","Group sessions as scheduled. Students complete their Adeptly weekly folder. Enrichment group starts extension task."],
           ["Week "+(w1+2),"Check & adjust","Short formative check (exit ticket / 5-question quiz). Move students between groups based on results."],
@@ -3059,14 +3018,14 @@ function buildEnhancedPptx(classId,term,month){
     s.addShape("rect",{x:x,y:1.35,w:2.22,h:0.42,fill:{color:i===3?ENH.gold:ENH.teal},line:{color:i===3?ENH.gold:ENH.teal}});
     s.addText(w[0],{x:x+0.1,y:1.38,w:2.0,h:0.36,fontSize:11,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,valign:"middle"});
     s.addText(w[1],{x:x+0.12,y:1.85,w:2.0,h:0.3,fontSize:10,bold:true,color:ENH.navy,fontFace:"Calibri",margin:0});
-    s.addText(w[2],{x:x+0.12,y:2.15,w:2.0,h:1.35,fontSize:8.5,color:ENH.ink,fontFace:"Calibri",margin:0,valign:"top"}); });
-  var rules=[["Exit / move up",ENH.P,"Reaches the success target on the re-check and completes ≥ 80% of weekly practice."],["Continue",ENH.BP,"Improves but is still below target — keep in the group, adjust the strategy."],["Escalate",ENH.F,"No progress or < 40% practice completed — parent contact, extra session, refer to counsellor / SEN team if needed."]];
-  rules.forEach(function(r,i){ var x=0.35+i*3.12; s.addShape("roundRect",{x:x,y:3.75,w:3.0,h:1.35,fill:{color:"FFFFFF"},line:{color:r[1],width:1.5},rectRadius:0.08});
+    s.addText(w[2],{x:x+0.12,y:2.15,w:2.0,h:1.35,fontSize:8.5,color:ENH.ink,fontFace:"Calibri",margin:0,valign:"top",fit:"shrink"}); });
+  [["Exit / move up",ENH.P,"Reaches the success target on the re-check and completes ≥ 80% of weekly practice."],["Continue",ENH.BP,"Improves but is still below target — keep in the group, adjust the strategy."],["Escalate",ENH.F,"No progress or < 40% practice completed — parent contact, extra session, refer to counsellor / SEN team if needed."]].forEach(function(r,i){ var x=0.35+i*3.12; s.addShape("roundRect",{x:x,y:3.75,w:3.0,h:1.35,fill:{color:"FFFFFF"},line:{color:r[1],width:1.5},rectRadius:0.08});
     s.addText(r[0],{x:x+0.12,y:3.82,w:2.8,h:0.3,fontSize:11,bold:true,color:r[1],fontFace:"Calibri",margin:0});
     s.addText(r[2],{x:x+0.12,y:4.12,w:2.8,h:0.9,fontSize:8.5,color:ENH.ink,fontFace:"Calibri",margin:0,valign:"top"}); });
-  _enhFooter(s,++pg);
-  // 8 · Approvals
-  s=pptx.addSlide(); _enhHeader(s,H,"Review & approval",tag);
+  _enhFooter(s,next());
+}
+function _enhApproval(pptx,H,tag,teacher,today,next){
+  var s=pptx.addSlide(); _enhHeader(s,H,"Review & approval",tag);
   s.addText("Prepared by: "+teacher+"   ·   "+today,{x:0.35,y:1.3,w:9.3,h:0.3,fontSize:11,color:ENH.muted,fontFace:"Calibri",margin:0});
   [["Academic Approval",H.approver],["School Principal Approval",H.principal]].forEach(function(a,i){ var x=0.35+i*4.75;
     s.addShape("roundRect",{x:x,y:1.8,w:4.55,h:2.6,fill:{color:ENH.bg},line:{color:ENH.line},rectRadius:0.1});
@@ -3077,18 +3036,128 @@ function buildEnhancedPptx(classId,term,month){
     s.addText("Date:",{x:x+0.2,y:3.6,w:1.2,h:0.35,fontSize:12,color:ENH.muted,fontFace:"Calibri",margin:0});
     s.addShape("line",{x:x+1.3,y:3.9,w:2.9,h:0,line:{color:"94A3B8",width:1}}); });
   s.addText("Comments / follow-up notes: ______________________________________________________________________________",{x:0.35,y:4.6,w:9.3,h:0.35,fontSize:10,color:ENH.muted,fontFace:"Calibri",margin:0});
-  _enhFooter(s,++pg);
-  return {pptx:pptx,fileName:safeName("Enhanced Report - "+D.c.name+" - "+subj+" - Term "+D.term+" - "+ANNEX_MONTHS[m-1])+".pptx"};
+  _enhFooter(s,next());
 }
-function _enhPaged(pptx,H,title,tag,head,rows,colW,next){
-  _paginate(rows.map(function(r){return r.map(function(c){return c.text;});}),colW,7.5,3.6).forEach(function(page,pi,arr){
-    var start=0; for(var k=0;k<pi;k++) start+=arr[k].length;
-    var s=pptx.addSlide(); _enhHeader(s,H,title+(arr.length>1?(" ("+(pi+1)+"/"+arr.length+")"):""),tag);
-    s.addTable([head].concat(rows.slice(start,start+page.length)),{x:0.35,y:1.3,w:9.3,colW:colW,border:{type:"solid",pt:0.5,color:"CBD5E1"},fontFace:"Calibri",margin:0.05,valign:"middle"});
-    _enhFooter(s,next());
+function _periodText(month){ var ms=monthList(month); return ms.length>1?"All months (weeks 1–16)":(ANNEX_MONTHS[ms[0]-1]+" (weeks "+((ms[0]-1)*4+1)+"–"+(ms[0]*4)+")"); }
+function _overallOf(D){ return D.list.map(function(a){ var sc=Number(a.score)||0; return {a:a,name:a.studentName||a.studentEmail,score:sc,lvl:annexLevelOf(sc,D.grade)}; }); }
+// Intervention/enrichment group rows for one class and one month (used by the per-class and combined reports).
+function _groupRows(D,m,prefix){
+  var ranked=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;}), out=[];
+  ranked.forEach(function(r){
+    var sup=strategyList(r.skill,"support");
+    if(r.L3.length) out.push({skill:r.skill,label:"Level 3 · intensive",color:ENH.F,g:r.L3,str:[sup[(m-1)%sup.length],sup[m%sup.length]],freq:"3 × 30 min / week",target:"≥ "+(D.pass-10)+"% on re-check (out of F)"});
+    if(r.L2.length) out.push({skill:r.skill,label:"Level 2 · targeted",color:ENH.BF,g:r.L2,str:[sup[(m+1)%sup.length],sup[(m+2)%sup.length]],freq:"2 × 30 min / week",target:"≥ "+(D.pass+10)+"% on re-check"});
   });
+  return out.map(function(G){ return [{text:(prefix||"")+G.skill,options:{fontSize:8,bold:true}},{text:G.label,options:{fontSize:8,bold:true,color:G.color}},{text:G.g.length+": "+_names(G.g,12),options:{fontSize:7}},{text:G.str.map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),options:{fontSize:7}},{text:G.freq,options:{fontSize:7.5,align:"center"}},{text:G.target,options:{fontSize:7.5,align:"center"}}]; });
 }
-/* ===== ZIP pack: the school-template version (Annex 3 + Annex 4) and the Enhanced version ===== */
+function _enrichRows(D,m,prefix){
+  return D.rows.slice().sort(function(a,b){return b.profPct-a.profPct;}).filter(function(r){return r.P.length;}).map(function(r){ var ex=strategyList(r.skill,"extend");
+    return [{text:(prefix||"")+r.skill,options:{fontSize:8,bold:true}},{text:r.P.length+": "+_names(r.P,14),options:{fontSize:7}},{text:[ex[(m-1)%ex.length],ex[m%ex.length]].map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),options:{fontSize:7}},{text:"1 × 40 min / week",options:{fontSize:7.5,align:"center"}},{text:"Keeps ≥ "+(D.pass+20)+"%; one extension product per week",options:{fontSize:7.5,align:"center"}}]; });
+}
+var GHEAD=["Skill","Group","Students","Suggested strategies","Frequency","Success target"], GCOLS=[1.25,1.05,2.0,3.2,0.85,0.95];
+var EHEAD=["Skill","Proficient students","Suggested enrichment","Frequency","Success target"], ECOLS=[1.35,2.6,3.45,0.9,1.0];
+function buildEnhancedPptx(classId,term,month){
+  var D=annexData(classId,term); if(!D||!D.rows.length) return null;
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Enhanced report — "+D.c.name;
+  var H=annexSchoolHeader(D.c), subj=subjLabelLong(D.c.subject), teacher=D.c.teacherName||ownerName()||"Class teacher", cls=annexClsLabel(D);
+  var tag=subj+" · "+cls+" · Term "+D.term, pg=1, next=function(){return ++pg;}, today=new Date().toLocaleDateString("en-GB");
+  var overall=_overallOf(D).sort(function(x,y){return y.score-x.score;});
+  var cnt={P:0,BP:0,BF:0,F:0}; overall.forEach(function(o){cnt[o.lvl]++;});
+  var avg=overall.length?Math.round(overall.reduce(function(s,o){return s+o.score;},0)/overall.length):0;
+  var bands="Pass mark "+D.pass+"% (Cycle "+(D.cycle===1?"1 → C2 bands":D.cycle)+") · Proficient ≥ "+(D.pass+10)+"% · BP "+D.pass+"–"+(D.pass+9.9).toFixed(1)+"% · BF "+(D.pass-10)+"–"+(D.pass-0.1).toFixed(1)+"% · F < "+(D.pass-10)+"%";
+  _enhCover(pptx,H,"Diagnostic Skills Report & Intervention Plan",tag,teacher,_periodText(month),today,bands);
+  // Class at a glance
+  var s=pptx.addSlide(); _enhHeader(s,H,"Class at a glance",tag);
+  _enhTiles(s,[["Students tested",String(overall.length),ENH.navy],["Class average",avg+"%",ENH.teal],["Proficient (≥ "+(D.pass+10)+"%)",cnt.P+" · "+(overall.length?Math.round(cnt.P/overall.length*100):0)+"%",ENH.P],["Borderline (BP + BF)",String(cnt.BP+cnt.BF),ENH.BF],["Failing (F)",String(cnt.F),ENH.F]]);
+  var sk=D.rows.map(function(r){return r.skill;});
+  s.addChart(pptx.ChartType.bar,[{name:"Class average %",labels:sk,values:D.rows.map(function(r){return r.avg||0;})}],{x:0.35,y:2.45,w:5.6,h:2.8,barDir:"bar",chartColors:[ENH.teal],valAxisMaxVal:100,valAxisMinVal:0,showValue:true,dataLabelFontSize:8,dataLabelColor:ENH.ink,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showTitle:true,title:"Average by skill (pass mark "+D.pass+"%)",titleFontSize:10,titleColor:ENH.navy,valGridLine:{color:ENH.line,size:0.5},showLegend:false});
+  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:["Proficient","BP","BF","F"],values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:6.15,y:2.45,w:3.5,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showPercent:false,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:"Overall level of students",titleFontSize:10,titleColor:ENH.navy});
+  _enhFooter(s,next());
+  // Skills analysis
+  s=pptx.addSlide(); _enhHeader(s,H,"Skills analysis & classification",tag);
+  s.addChart(pptx.ChartType.bar,[{name:"Proficient",labels:sk,values:D.rows.map(function(r){return r.P.length;})},{name:"Level 2 (BP/BF)",labels:sk,values:D.rows.map(function(r){return r.L2.length;})},{name:"Level 3 (F)",labels:sk,values:D.rows.map(function(r){return r.L3.length;})}],
+    {x:0.35,y:1.3,w:4.3,h:3.9,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:8,valGridLine:{color:ENH.line,size:0.5}});
+  var ranked=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;}), rank={}; ranked.forEach(function(r,i){rank[r.skill]=i+1;});
+  s.addTable([["Skill","Avg","Prof. %","P","L2","L3","Priority","Action"].map(function(t){return _th(t);})].concat(D.rows.map(function(r){ return _skillRow(r,"#"+rank[r.skill]).slice(0,1).concat(_skillRow(r,"#"+rank[r.skill]).slice(1)); })),{x:4.8,y:1.35,w:4.85,colW:[1.45,0.45,0.55,0.35,0.35,0.35,0.6,0.75],border:{type:"solid",pt:0.5,color:ENH.line},fontFace:"Calibri",margin:0.04,rowH:0.34,valign:"middle"});
+  var top=ranked[0];
+  s.addText([{text:"Key finding: ",options:{bold:true,color:ENH.navy}},{text:top.skill+" is the top priority ("+top.profPct+"% proficient, "+top.L3.length+" at F). "+(ranked.length>1?("Strongest: "+ranked[ranked.length-1].skill+" ("+ranked[ranked.length-1].profPct+"%)."):""),options:{color:ENH.ink}}],{x:4.8,y:4.55,w:4.85,h:0.6,fontSize:9,fontFace:"Calibri",margin:0.06,fill:{color:"FFF7E6"},line:{color:ENH.gold}});
+  _enhFooter(s,next());
+  // Student heatmap
+  var hs=["Student"].concat(sk).concat(["Overall","Level"]), perPage=12;
+  for(var i0=0;i0<overall.length;i0+=perPage){
+    s=pptx.addSlide(); _enhHeader(s,H,"Student skill map"+(overall.length>perPage?(" ("+(i0/perPage+1)+"/"+Math.ceil(overall.length/perPage)+")"):""),tag);
+    var nameW=2.0, skW=(9.3-nameW-1.3)/sk.length;
+    var body=overall.slice(i0,i0+perPage).map(function(o){
+      var cells=[{text:o.name,options:{fontSize:8,color:ENH.ink}}];
+      sk.forEach(function(k){ var v=o.a.skillPct&&o.a.skillPct[k]; if(v==null){ cells.push({text:"—",options:{fontSize:8,align:"center",color:ENH.muted}}); return; } var l=annexLevelOf(Number(v),D.grade); cells.push({text:Math.round(v)+"%",options:{fontSize:8,align:"center",bold:true,color:_lvlColor(l),fill:{color:_lvlFill(l)}}}); });
+      cells.push({text:o.score+"%",options:{fontSize:8,align:"center",bold:true}});
+      cells.push({text:o.lvl==="P"?"Proficient":o.lvl,options:{fontSize:8,align:"center",bold:true,color:"FFFFFF",fill:{color:_lvlColor(o.lvl)}}});
+      return cells; });
+    s.addTable([hs.map(function(t){return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:ENH.navy},fontSize:7.5,align:"center",valign:"middle"}};})].concat(body),{x:0.35,y:1.3,w:9.3,colW:[nameW].concat(sk.map(function(){return skW;})).concat([0.7,0.6]),border:{type:"solid",pt:0.5,color:ENH.line},fontFace:"Calibri",margin:0.03,rowH:0.27,valign:"middle"});
+    s.addText(bands,{x:0.35,y:5.05,w:9.3,h:0.22,fontSize:7.5,color:ENH.muted,fontFace:"Calibri",margin:0});
+    _enhFooter(s,next());
+  }
+  // For each chosen month: intervention groups, enrichment, timeline
+  monthList(month).forEach(function(m){
+    var g=_groupRows(D,m); if(!g.length) g=[[{text:"No student is below the proficient level — no intervention group needed.",options:{fontSize:9,colspan:6,align:"center"}}]];
+    _enhPaged(pptx,H,"Intervention groups — "+ANNEX_MONTHS[m-1],tag,GHEAD.map(function(t){return _th(t,ENH.F);}),g,GCOLS,next);
+    var e=_enrichRows(D,m); if(!e.length) e=[[{text:"No student is proficient yet — focus on the intervention groups first.",options:{fontSize:9,colspan:5,align:"center"}}]];
+    _enhPaged(pptx,H,"Enrichment plan — "+ANNEX_MONTHS[m-1],tag,EHEAD.map(function(t){return _th(t,ENH.P);}),e,ECOLS,next);
+    var focus=ranked.filter(function(r){return r.L2.length||r.L3.length;}).slice(0,2).map(function(r){return r.skill;}).join(" & ")||ranked[0].skill;
+    _enhTimeline(pptx,H,tag,m,focus,next);
+  });
+  _enhApproval(pptx,H,tag,teacher,today,next);
+  return {pptx:pptx,fileName:safeName("Enhanced Report - "+D.c.name+" - "+subj+" - Term "+D.term+" - "+monthLabel(month))+".pptx"};
+}
+function _skillRow(r,prio){
+  var st=r.profPct>=80?["DCFCE7",ENH.P]:(r.profPct>=50?["FEF9C3",ENH.BP]:["FEE2E2",ENH.F]);
+  var act=r.profPct>=80?"Enrich":(r.profPct>=50?"Small groups":"Re-teach all");
+  return [{text:r.skill,options:{fontSize:8,bold:true,color:ENH.ink}},{text:(r.avg||0)+"%",options:{fontSize:8,align:"center"}},{text:r.profPct+"%",options:{fontSize:8,align:"center",bold:true,color:st[1]}},{text:String(r.P.length),options:{fontSize:8,align:"center"}},{text:String(r.L2.length),options:{fontSize:8,align:"center"}},{text:String(r.L3.length),options:{fontSize:8,align:"center"}},{text:prio,options:{fontSize:8,align:"center",bold:true,fill:{color:st[0]},color:st[1]}},{text:act,options:{fontSize:8,align:"center"}}];
+}
+/* ===== Combined report for ALL classes (current school) ===== */
+function combinedData(term){ return classesList().map(function(c){ return annexData(c.id,term); }).filter(function(D){ return D&&D.rows.length; }); }
+function buildCombinedEnhancedPptx(Ds,term,month){
+  if(!Ds.length) return null;
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Combined report — all classes";
+  var H=annexSchoolHeader(Ds[0].c), teacher=Ds[0].c.teacherName||ownerName()||"Teacher", today=new Date().toLocaleDateString("en-GB");
+  var tag="All classes ("+Ds.length+") · Term "+term, pg=1, next=function(){return ++pg;};
+  var all=[], cnt={P:0,BP:0,BF:0,F:0}; Ds.forEach(function(D){ _overallOf(D).forEach(function(o){ all.push(o); cnt[o.lvl]++; }); });
+  var avg=all.length?Math.round(all.reduce(function(s,o){return s+o.score;},0)/all.length):0;
+  _enhCover(pptx,H,"Combined Diagnostic Report — All Classes",tag+" · "+Array.from(new Set(Ds.map(function(D){return subjLabelLong(D.c.subject);}))).join(", "),teacher,_periodText(month),today,"Levels use each class's MOE pass mark — Cycle 3: 60% (Proficient ≥ 70%), Cycle 2: 50% (Proficient ≥ 60%).");
+  // Overview
+  var s=pptx.addSlide(); _enhHeader(s,H,"All classes at a glance",tag);
+  _enhTiles(s,[["Classes · students",Ds.length+" · "+all.length,ENH.navy],["Overall average",avg+"%",ENH.teal],["Proficient",cnt.P+" · "+(all.length?Math.round(cnt.P/all.length*100):0)+"%",ENH.P],["Borderline (BP + BF)",String(cnt.BP+cnt.BF),ENH.BF],["Failing (F)",String(cnt.F),ENH.F]]);
+  var labs=Ds.map(function(D){ return _clip(D.c.name,22)+" · "+subjLabel(D.c.subject); });
+  var lv=function(D,l){ return _overallOf(D).filter(function(o){return o.lvl===l;}).length; };
+  s.addChart(pptx.ChartType.bar,[{name:"Proficient",labels:labs,values:Ds.map(function(D){return lv(D,"P");})},{name:"BP",labels:labs,values:Ds.map(function(D){return lv(D,"BP");})},{name:"BF",labels:labs,values:Ds.map(function(D){return lv(D,"BF");})},{name:"F",labels:labs,values:Ds.map(function(D){return lv(D,"F");})}],
+    {x:0.35,y:2.45,w:5.9,h:2.8,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:7,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:7,showTitle:true,title:"Students by level in each class",titleFontSize:10,titleColor:ENH.navy,valGridLine:{color:ENH.line,size:0.5}});
+  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:["Proficient","BP","BF","F"],values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:6.4,y:2.45,w:3.25,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:"All students",titleFontSize:10,titleColor:ENH.navy});
+  _enhFooter(s,next());
+  // Class summary table
+  var crow=Ds.map(function(D){ var o=_overallOf(D), a=o.length?Math.round(o.reduce(function(s,x){return s+x.score;},0)/o.length):0, p=o.filter(function(x){return x.lvl==="P";}).length;
+    var weak=D.rows.slice().sort(function(x,y){return x.profPct-y.profPct;})[0];
+    var c=function(t,opt){ return {text:String(t),options:Object.assign({fontSize:8,align:"center"},opt||{})}; };
+    return [c(annexClsLabel(D),{bold:true,align:"left"}),c(subjLabelLong(D.c.subject)),c(o.length),c(a+"%",{bold:true}),c((o.length?Math.round(p/o.length*100):0)+"%",{color:ENH.P,bold:true}),c(lv(D,"BP"),{color:ENH.BP}),c(lv(D,"BF"),{color:ENH.BF}),c(lv(D,"F"),{color:ENH.F,bold:true}),c(weak.skill+" ("+weak.profPct+"%)",{align:"left"})]; });
+  _enhPaged(pptx,H,"Class summary",tag,["Class","Subject","Students","Average","Proficient %","BP","BF","F","Weakest skill (prof. %)"].map(function(t){return _th(t);}),crow,[1.7,0.95,0.7,0.75,0.9,0.5,0.5,0.5,2.8],next);
+  // Skills priority list across all classes
+  var prio=[]; Ds.forEach(function(D){ D.rows.forEach(function(r){ prio.push({D:D,r:r}); }); });
+  prio.sort(function(a,b){return a.r.profPct-b.r.profPct;});
+  var prow=prio.map(function(x,i){ var row=_skillRow(x.r,"#"+(i+1)); row[0]={text:annexClsLabel(x.D)+" — "+x.r.skill,options:{fontSize:8,bold:true,color:ENH.ink}}; return row; });
+  _enhPaged(pptx,H,"Skill priorities across all classes",tag,["Class — Skill","Avg","Prof. %","P","L2","L3","Priority","Action"].map(function(t){return _th(t);}),prow,[3.2,0.7,0.8,0.55,0.55,0.55,0.9,2.05],next);
+  // Per month: intervention + enrichment for every class, and one timeline
+  monthList(month).forEach(function(m){
+    var g=[]; Ds.forEach(function(D){ g=g.concat(_groupRows(D,m,annexClsLabel(D)+" — ")); });
+    if(!g.length) g=[[{text:"No student is below the proficient level — no intervention group needed.",options:{fontSize:9,colspan:6,align:"center"}}]];
+    _enhPaged(pptx,H,"Intervention groups — "+ANNEX_MONTHS[m-1],tag,GHEAD.map(function(t,i){return _th(i===0?"Class — Skill":t,ENH.F);}),g,[1.6,0.95,1.85,3.1,0.85,0.95],next);
+    var e=[]; Ds.forEach(function(D){ e=e.concat(_enrichRows(D,m,annexClsLabel(D)+" — ")); });
+    if(!e.length) e=[[{text:"No student is proficient yet — focus on the intervention groups first.",options:{fontSize:9,colspan:5,align:"center"}}]];
+    _enhPaged(pptx,H,"Enrichment plan — "+ANNEX_MONTHS[m-1],tag,EHEAD.map(function(t,i){return _th(i===0?"Class — Skill":t,ENH.P);}),e,[1.7,2.45,3.3,0.85,1.0],next);
+    _enhTimeline(pptx,H,tag,m,"each class's top-priority skill",next);
+  });
+  _enhApproval(pptx,H,tag,teacher,today,next);
+  return {pptx:pptx,fileName:safeName("Combined Enhanced Report - All classes - Term "+term+" - "+monthLabel(month))+".pptx"};
+}
+/* ===== ZIP packs ===== */
 function ensureZipLib(){
   return new Promise(function(resolve,reject){
     if(window.JSZip) return resolve();
@@ -3098,35 +3167,55 @@ function ensureZipLib(){
     document.head.appendChild(s);
   });
 }
+async function _zipAdd(zip,path,r){ if(r) zip.file(path+r.fileName, await r.pptx.write({outputType:"arraybuffer"})); }
 async function buildReportPackZip(classId,term,month){
   var D=annexData(classId,term); if(!D||!D.rows.length) return null;
-  var a3=buildAnnexPptx(classId,term,"3",month,true), a4=buildAnnexPptx(classId,term,"4",month,true), en=buildEnhancedPptx(classId,term,month);
   var zip=new JSZip();
-  zip.file("1 - School template version/"+a3.fileName, await a3.pptx.write({outputType:"arraybuffer"}));
-  zip.file("1 - School template version/"+a4.fileName, await a4.pptx.write({outputType:"arraybuffer"}));
-  zip.file("2 - Enhanced version/"+en.fileName, await en.pptx.write({outputType:"arraybuffer"}));
-  var m=Math.max(1,Math.min(4,Number(month)||1));
-  return {zip:zip,fileName:safeName("Report pack - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+" - "+ANNEX_MONTHS[m-1])+".zip"};
+  await _zipAdd(zip,"1 - School template version/",buildAnnexFromData([D],"3",month,false));
+  await _zipAdd(zip,"1 - School template version/",buildAnnexFromData([D],"4",month,false));
+  await _zipAdd(zip,"2 - Enhanced version/",buildEnhancedPptx(classId,term,month));
+  return {zip:zip,fileName:safeName("Report pack - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+" - "+monthLabel(month))+".zip"};
 }
-async function downloadReportPack(classId){
-  var btn=document.getElementById("pack_btn"), old=btn&&btn.textContent;
-  try{
-    if(btn){ btn.disabled=true; btn.textContent="Preparing…"; }
-    var term=String(S.classTerm||"1"), month=(document.getElementById("annex_month")||{}).value||"1";
+async function buildCombinedPackZip(term,month){
+  var Ds=combinedData(term); if(!Ds.length) return null;
+  var zip=new JSZip();
+  await _zipAdd(zip,"1 - School template version (all classes)/",buildAnnexFromData(Ds,"3",month,true));
+  await _zipAdd(zip,"1 - School template version (all classes)/",buildAnnexFromData(Ds,"4",month,true));
+  await _zipAdd(zip,"2 - Enhanced version (all classes)/",buildCombinedEnhancedPptx(Ds,term,month));
+  for(var i=0;i<Ds.length;i++){ var D=Ds[i], f="3 - Each class/"+safeName(D.c.name+" - "+subjLabelLong(D.c.subject))+"/";
+    await _zipAdd(zip,f,buildAnnexFromData([D],"3",month,false)); await _zipAdd(zip,f,buildAnnexFromData([D],"4",month,false)); await _zipAdd(zip,f,buildEnhancedPptx(D.c.id,term,month)); }
+  return {zip:zip,classes:Ds.length,fileName:safeName("Combined report pack - All classes - Term "+term+" - "+monthLabel(month))+".zip"};
+}
+async function _runZip(btnId,maker,emptyMsg){
+  var btn=document.getElementById(btnId), old=btn&&btn.textContent;
+  try{ if(btn){ btn.disabled=true; btn.textContent="Preparing…"; }
     await ensurePptxLib(); await ensureZipLib();
-    var r=await buildReportPackZip(classId,term,month);
-    if(!r){ alert("No completed diagnostics in Term "+term+" for this class yet, so there is nothing to report."); return; }
-    var blob=await r.zip.generateAsync({type:"blob"});
-    downloadBlob(blob,r.fileName,"application/zip");
+    var r=await maker(); if(!r){ alert(emptyMsg); return; }
+    downloadBlob(await r.zip.generateAsync({type:"blob"}),r.fileName,"application/zip");
   }catch(e){ alert("Couldn't create the report pack: "+((e&&e.message)||e)); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
 }
+function downloadReportPack(classId){ var term=String(S.classTerm||"1"), month=(document.getElementById("annex_month")||{}).value||"1";
+  return _runZip("pack_btn",function(){ return buildReportPackZip(classId,term,month); },"No completed diagnostics in Term "+term+" for this class yet, so there is nothing to report."); }
+function downloadCombinedPack(){ var term=(document.getElementById("comb_term")||{}).value||"1", month=(document.getElementById("comb_month")||{}).value||"1";
+  return _runZip("comb_btn",function(){ return buildCombinedPackZip(term,month); },"None of your classes has a completed Term "+term+" diagnostic yet, so there is nothing to report."); }
 async function downloadEnhanced(classId){
   try{ var term=String(S.classTerm||"1"), month=(document.getElementById("annex_month")||{}).value||"1";
     await ensurePptxLib(); var r=buildEnhancedPptx(classId,term,month);
     if(!r){ alert("No completed diagnostics in Term "+term+" for this class yet."); return; }
     await r.pptx.writeFile({fileName:r.fileName});
   }catch(e){ alert("Couldn't create the PowerPoint: "+((e&&e.message)||e)); }
+}
+function monthOptionsHtml(){ return ANNEX_MONTHS.map(function(m,i){return '<option value="'+(i+1)+'">'+m+'</option>';}).join("")+'<option value="all">All Months</option>'; }
+function combinedReportCardHtml(){
+  var cls=classesList(); if(!cls.length) return "";
+  var any=["1","2","3"].filter(function(t){ return cls.some(function(c){ return classCompletedForTerm(c.id,t).length; }); });
+  if(!any.length) return "";
+  var t0=any.indexOf(String(S.classTerm||"1"))>=0?String(S.classTerm||"1"):any[0];
+  return '<div class="card" style="border-left:4px solid var(--gold,#C9A55A)"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:center"><div><h2 style="margin:0 0 2px">📚 Combined report — all classes</h2><p class="sub" style="margin:0">One report pack for every class'+(typeof curSchool==="function"&&schoolsEnabled()?' in '+esc(schoolShort(curSchool())):'')+' with a completed diagnostic: combined Annex 3 + Annex 4, a combined Enhanced report, and each class’s own reports.</p></div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Term</label><select id="comb_term" style="width:auto">'+["1","2","3"].map(function(t){return '<option value="'+t+'"'+(t===t0?" selected":"")+'>Term '+t+(any.indexOf(t)<0?" (no results)":"")+'</option>';}).join("")+'</select>'
+   +'<label style="display:inline;margin:0;font-size:12px">Plan month</label><select id="comb_month" style="width:auto">'+monthOptionsHtml()+'</select>'
+   +'<button class="btn gold sm" id="comb_btn" onclick="downloadCombinedPack()">⬇ Combined report pack (.zip)</button></div></div></div>';
 }
 function viewClass(id){
   const c=classesList().find(x=>x.id===id);
