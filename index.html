@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-05c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-05d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2794,14 +2794,15 @@ function changeStudentEmail(oldEmail){
    Levels per skill follow the MOE pass marks (same as the F/BF/BP risk levels):
      Proficient = pass mark + 10 and above · Level 2 = BF + BP (pass − 10 … pass + 9.9) · Level 3 = F (below pass − 10). */
 var ANNEX_MONTHS=["First Month","Second Month","Third Month","Fourth Month"];
+function _loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement("script"); s.src=src; s.onload=function(){res();}; s.onerror=function(){ s.remove(); rej(new Error("load failed: "+src)); }; document.head.appendChild(s); }); }
+// The PowerPoint library ships WITH the app (pptxgen.bundle.js, which also contains JSZip);
+// a public CDN copy is only a fallback.
 function ensurePptxLib(){
-  return new Promise(function(resolve,reject){
-    if(window.PptxGenJS) return resolve();
-    var s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js";
-    s.onload=function(){ window.PptxGenJS?resolve():reject(new Error("PowerPoint library didn't load")); };
-    s.onerror=function(){ reject(new Error("Couldn't load the PowerPoint library — check the internet connection.")); };
-    document.head.appendChild(s);
-  });
+  if(window.PptxGenJS) return Promise.resolve();
+  var srcs=["pptxgen.bundle.js?v="+APP_BUILD,"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"];
+  function tryAt(i){ if(i>=srcs.length) return Promise.reject(new Error("Couldn't load the PowerPoint library. Please refresh the page (Cmd/Ctrl+Shift+R) and try again."));
+    return _loadScript(srcs[i]).then(function(){ if(!window.PptxGenJS) return tryAt(i+1); }, function(){ return tryAt(i+1); }); }
+  return tryAt(0);
 }
 function annexSchoolHeader(c){
   var id=(typeof sidOf==="function")?sidOf(c):"noaimiyah";
@@ -3159,13 +3160,10 @@ function buildCombinedEnhancedPptx(Ds,term,month){
 }
 /* ===== ZIP packs ===== */
 function ensureZipLib(){
-  return new Promise(function(resolve,reject){
-    if(window.JSZip) return resolve();
-    var s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-    s.onload=function(){ window.JSZip?resolve():reject(new Error("ZIP library didn't load")); };
-    s.onerror=function(){ reject(new Error("Couldn't load the ZIP library — check the internet connection.")); };
-    document.head.appendChild(s);
-  });
+  if(window.JSZip) return Promise.resolve();
+  return ensurePptxLib().then(function(){ if(window.JSZip) return;   // the PowerPoint bundle includes JSZip
+    return _loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js").catch(function(){ return _loadScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"); })
+      .then(function(){ if(!window.JSZip) throw new Error("Couldn't load the ZIP library. Please refresh and try again."); }); });
 }
 async function _zipAdd(zip,path,r){ if(r) zip.file(path+r.fileName, await r.pptx.write({outputType:"arraybuffer"})); }
 async function buildReportPackZip(classId,term,month){
