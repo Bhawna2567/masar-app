@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-05d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-05e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -2789,42 +2789,64 @@ function changeStudentEmail(oldEmail){
   Promise.all(ops).then(function(){ alert("✅ Moved "+mine.length+" diagnostic(s) from "+old+" to "+nv+".\nThe student will see them as soon as they sign in with "+nv+"."); })
     .catch(function(e){ alert("Couldn't update the email: "+fbErr(e)+((e&&e.code)?" ("+e.code+")":"")); });
 }
-/* ===== School report templates: Annex 3 (Skills Analysis & Student Classification) and
-   Annex 4 (Intervention & Enrichment Plan) as editable PowerPoint, matching the school's templates.
-   Levels per skill follow the MOE pass marks (same as the F/BF/BP risk levels):
+/* ===== Leadership reports: Annex 3 (Skills Analysis & Student Classification), Annex 4 (Intervention &
+   Enrichment Plan), the Enhanced report and the Combined report — editable PowerPoint, in ENGLISH or ARABIC.
+   Styled in the school's report format: UAE Ministry of Education logo, school name in gold capitals,
+   gold / cream colour scheme. Levels per skill follow the MOE pass marks (same as the F/BF/BP risk levels):
      Proficient = pass mark + 10 and above · Level 2 = BF + BP (pass − 10 … pass + 9.9) · Level 3 = F (below pass − 10). */
 var ANNEX_MONTHS=["First Month","Second Month","Third Month","Fourth Month"];
+var ANNEX_MONTHS_AR=["الشهر الأول","الشهر الثاني","الشهر الثالث","الشهر الرابع"];
+var RL="en";                                   // language of the report being built ("en" | "ar")
+function _ar(){ return RL==="ar"; }
+function tr(en,ar){ return _ar()?ar:en; }
+function mName(m){ return (_ar()?ANNEX_MONTHS_AR:ANNEX_MONTHS)[m-1]; }
+function skN(k){ if(!_ar()) return k; return (typeof REPORT_SKILL_AR!=="undefined"&&REPORT_SKILL_AR[k])||(typeof AR_SKILL!=="undefined"&&AR_SKILL[k])||k; }
+function subjN(s){ return _ar()?((typeof AR_SUBJ_NAME!=="undefined"&&AR_SUBJ_NAME[s])||subjLabelLong(s)):subjLabelLong(s); }
+function clsN(name){ name=String(name||""); return _ar()?name.replace(/Grade/gi,"الصف").replace(/Advanced/gi,"المتقدم").replace(/General/gi,"العام"):name; }
+var RPT={gold:"B38A39",cream:"F7F1E4",ink:"16110F",muted:"6B6255",red:"C01C35",line:"D8C9A6",P:"16A34A",BP:"CA8A04",BF:"EA580C",F:"DC2626"};
+function _font(){ return _ar()?"Arial":"Calibri"; }
 function _loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement("script"); s.src=src; s.onload=function(){res();}; s.onerror=function(){ s.remove(); rej(new Error("load failed: "+src)); }; document.head.appendChild(s); }); }
-// The PowerPoint library ships WITH the app (pptxgen.bundle.js, which also contains JSZip);
-// a public CDN copy is only a fallback.
+// The PowerPoint library ships WITH the app (pptxgen.bundle.js, which also contains JSZip); a public CDN copy is
+// only a fallback. report-assets.js holds the MOE logo and the Arabic strategy texts.
 function ensurePptxLib(){
-  if(window.PptxGenJS) return Promise.resolve();
-  var srcs=["pptxgen.bundle.js?v="+APP_BUILD,"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"];
-  function tryAt(i){ if(i>=srcs.length) return Promise.reject(new Error("Couldn't load the PowerPoint library. Please refresh the page (Cmd/Ctrl+Shift+R) and try again."));
-    return _loadScript(srcs[i]).then(function(){ if(!window.PptxGenJS) return tryAt(i+1); }, function(){ return tryAt(i+1); }); }
-  return tryAt(0);
+  var assets = (typeof MOE_LOGO!=="undefined") ? Promise.resolve() : _loadScript("report-assets.js?v="+APP_BUILD).catch(function(){});
+  return assets.then(function(){
+    if(window.PptxGenJS) return;
+    var srcs=["pptxgen.bundle.js?v="+APP_BUILD,"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"];
+    function tryAt(i){ if(i>=srcs.length) return Promise.reject(new Error("Couldn't load the PowerPoint library. Please refresh the page (Cmd/Ctrl+Shift+R) and try again."));
+      return _loadScript(srcs[i]).then(function(){ if(!window.PptxGenJS) return tryAt(i+1); }, function(){ return tryAt(i+1); }); }
+    return tryAt(0);
+  });
 }
+function academicYear(){ var d=new Date(), y=d.getFullYear(); return d.getMonth()>=7?(y+" – "+(y+1)):((y-1)+" – "+y); }
+// School header for reports, from 🖋 Report settings. English is shown in capitals like the school's format.
 function annexSchoolHeader(c){
   var id=(typeof sidOf==="function")?sidOf(c):"noaimiyah";
   var rs=(typeof reportSettings==="function")?reportSettings(id):{reportName:"Al Noaimiyah Girls School-Cycle 1,2&3",principal:"Fanda Salem Ahmed Helais Alkaabi",approver:"Bhawna Sharma"};
-  return {title:rs.reportName, sub:"", principal:rs.principal||"", approver:rs.approver||""};
+  var en=String(rs.reportName||"School").toUpperCase().replace(/\s*[-–]\s*CYCLES?\s*/," – CYCLE ").replace(/(\d)\s*,\s*(\d)\s*&\s*(\d)/,"$1, $2 & $3");
+  var ar=rs.reportNameAr||rs.reportName||"";
+  return {title:_ar()?ar:en, sub:"", principal:(_ar()&&rs.principalAr)?rs.principalAr:(rs.principal||""), approver:(_ar()&&rs.approverAr)?rs.approverAr:(rs.approver||"")};
 }
-function _apprLine(label,name){ var pad=label.length<20?"          ":"    "; return label+pad+"Name: "+(name||"____________")+"    Signature: ____________    Date: ____________"; }
+function _apprLine(label,name){ return label+"     "+tr("Name: ","الاسم: ")+(name||"____________")+"     "+tr("Signature: ","التوقيع: ")+"____________     "+tr("Date: ","التاريخ: ")+"____________"; }
 function annexLevelOf(pct,grade){ var p=passMarkFor(grade); if(pct>=p+10) return "P"; if(pct>=p-10) return (pct>=p?"BP":"BF"); return "F"; }
 function _stripTags(h){ return String(h||"").replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/\s+/g," ").trim(); }
 function _clip(t,n){ t=String(t||""); if(t.length<=n) return t; var c=t.slice(0,n); c=c.slice(0,c.lastIndexOf(" ")>n*0.6?c.lastIndexOf(" "):n); return c.replace(/[,;:\s—-]+$/,"")+"…"; }
+var GEN_STRAT={en:{support:["Re-teach with worked examples, then guided practice in small groups","Visual organisers and step-by-step modelling, with quick checks for understanding","Peer tutoring with targeted practice sheets and daily exit tickets","Hands-on activity, then the weekly practice in Adeptly with teacher feedback"],
+                   extend:["Challenge problems and real-world application tasks","Inquiry or research mini-project presented to the class","Peer-mentor role plus higher-order questions","Extension practice beyond grade level with self-assessment"]},
+               ar:{support:["إعادة التدريس بأمثلة محلولة، ثم تدريب موجَّه في مجموعات صغيرة","منظِّمات بصرية ونمذجة خطوة بخطوة مع أسئلة تحقق سريعة من الفهم","تعلّم بالأقران مع أوراق تدريب موجَّهة وبطاقات خروج يومية","نشاط عملي، ثم التدريب الأسبوعي في Adeptly مع تغذية راجعة من المعلّم"],
+                   extend:["مسائل تحدٍّ ومهام تطبيقية من الحياة الواقعية","مشروع استقصائي أو بحثي مصغّر يُعرض على الصف","دور القرين المرشد مع أسئلة تفكير عليا","تدريبات إثرائية أعلى من مستوى الصف مع تقييم ذاتي"]}};
+var GEN_SHORT={en:{support:["Worked examples & guided practice","Visual organisers & modelling","Peer tutoring & exit tickets","Hands-on task + Adeptly practice"],extend:["Challenge & real-world tasks","Inquiry mini-project","Peer mentoring","Beyond-grade extension"]},
+               ar:{support:["أمثلة محلولة وتدريب موجَّه","منظِّمات بصرية ونمذجة","تعلّم بالأقران وبطاقات خروج","نشاط عملي + تدريب Adeptly"],extend:["مهام تحدٍّ وتطبيق واقعي","مشروع استقصائي مصغّر","القرين المرشد","إثراء أعلى من مستوى الصف"]}};
+// The strategy list for a skill in the report's language (falls back to general strategies).
+function strategyList(skill,kind){
+  var k=kind==="extend"?"extend":"support";
+  var src=_ar()?(typeof STRATEGIES_AR!=="undefined"&&STRATEGIES_AR[skill]):((typeof SKILL_STRATEGIES!=="undefined")&&SKILL_STRATEGIES[skill]);
+  var a=src&&src[k]; return (a&&a.length)?a.slice():GEN_STRAT[_ar()?"ar":"en"][k].slice();
+}
 function annexStrategy(skill,kind,i,short){
-  var st=(typeof SKILL_STRATEGIES!=="undefined")&&SKILL_STRATEGIES[skill];
-  var arr=st&&(kind==="extend"?st.extend:st.support);
-  if(short){
-    if(arr&&arr.length){ var m=String(arr[i%arr.length]).match(/<b>([^<]+)<\/b>/); if(m) return _stripTags(m[1]); }
-    var sh={support:["Worked examples & guided practice","Visual organisers & modelling","Peer tutoring & exit tickets","Hands-on task + Adeptly practice"],extend:["Challenge & real-world tasks","Inquiry mini-project","Peer mentoring","Beyond-grade extension"]};
-    var a=sh[kind==="extend"?"extend":"support"]; return a[i%a.length];
-  }
-  if(arr&&arr.length) return _clip(_stripTags(arr[i%arr.length]),95);
-  var gen={support:["Re-teach with worked examples, then guided practice in small groups","Visual organisers and step-by-step modelling, with quick checks for understanding","Peer tutoring with targeted practice sheets and daily exit tickets","Hands-on activity, then the weekly practice in Adeptly with teacher feedback"],
-           extend:["Challenge problems and real-world application tasks","Inquiry or research mini-project presented to the class","Peer-mentor role plus higher-order questions","Extension practice beyond grade level with self-assessment"]};
-  var g=gen[kind==="extend"?"extend":"support"]; return g[i%g.length];
+  var arr=strategyList(skill,kind);
+  if(short){ var m=String(arr[i%arr.length]).match(/<b>([^<]+)<\/b>/); if(m) return _stripTags(m[1]); var g=GEN_SHORT[_ar()?"ar":"en"][kind==="extend"?"extend":"support"]; return g[i%g.length]; }
+  return _clip(_stripTags(arr[i%arr.length]),95);
 }
 // Per-class, per-skill classification for one term (latest completed attempt per student).
 function annexData(classId,term){
@@ -2840,13 +2862,12 @@ function annexData(classId,term){
   return {c:c,grade:grade,term:String(term),pass:passMarkFor(grade),cycle:cycleOfGrade(grade),students:list.length,list:list,rows:rows};
 }
 function annexSuggestedAction(r,i){
-  var act = r.profPct>=80 ? "Enrich most; support the few below target."
-          : r.profPct>=50 ? "Small-group support for Levels 2 & 3."
-          : "Re-teach to the whole class, then re-check.";
-  if(r.L3.length) act+=" Level 3: intensive plan (Annex 4).";
-  return act+" Strategy: "+annexStrategy(r.skill, r.profPct>=80?"extend":"support", i, true)+".";
+  var act = r.profPct>=80 ? tr("Enrich most; support the few below target.","إثراء معظم الطلبة ودعم القلة دون الهدف.")
+          : r.profPct>=50 ? tr("Small-group support for Levels 2 & 3.","دعم في مجموعات صغيرة للمستويين 2 و3.")
+          : tr("Re-teach to the whole class, then re-check.","إعادة تدريس المهارة للصف كاملًا ثم إعادة التحقق.");
+  if(r.L3.length) act+=tr(" Level 3: intensive plan (Annex 4)."," المستوى 3: خطة مكثّفة (الملحق 4).");
+  return act+tr(" Strategy: "," الاستراتيجية: ")+annexStrategy(r.skill, r.profPct>=80?"extend":"support", i, true)+".";
 }
-// Practice engagement for a group of students on one skill during a range of plan weeks.
 function annexPracticeRate(group,skill,term,w1,w2){
   var done=0,tot=0;
   group.forEach(function(x){ var snap=x.a&&x.a.snapshot; var plan=snap&&snap.plan, td=(snap&&snap.taskDone)||{};
@@ -2854,101 +2875,112 @@ function annexPracticeRate(group,skill,term,w1,w2){
     T.weeks.forEach(function(w){ if(w.skill!==skill||w.week<w1||w.week>w2) return; (w.tasks||[]).forEach(function(_,i){ tot++; if(td[term+"-"+w.week+"-"+i]) done++; }); }); });
   return tot?Math.round(done/tot*100):null;
 }
-function _names(g,max){ var s=g.slice().sort(function(a,b){return a.pct-b.pct;}).map(function(x){return x.name;}); return s.length>max?(s.slice(0,max).join(", ")+" +"+(s.length-max)+" more"):s.join(", "); }
+function _names(g,max){ var s=g.slice().sort(function(a,b){return a.pct-b.pct;}).map(function(x){return x.name;}); var sep=_ar()?"، ":", "; return s.length>max?(s.slice(0,max).join(sep)+" +"+(s.length-max)+tr(" more"," آخرين")):s.join(sep); }
 function annexPlanRows(D,month){
-  var w1=(month-1)*4+1, w2=month*4, out=[], who=(D.c.teacherName||ownerName()||"Class teacher");
+  var w1=(month-1)*4+1, w2=month*4, out=[], who=(D.c.teacherName||ownerName()||tr("Class teacher","معلّم الصف"));
   var sorted=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;});
-  sorted.forEach(function(r,si){
-    [["L3","Level 3 (F)","support",3,30,"≥ "+(D.pass-10)+"% on the skill re-check (out of F)"],
-     ["L2","Level 2 (BF/BP)","support",2,30,"≥ "+(D.pass+10)+"% on the skill re-check"],
-     ["P","Proficient — enrichment","extend",1,40,"Keeps ≥ "+(D.pass+20)+"%; 1 extension task / week"]].forEach(function(cfg,ci){
+  sorted.forEach(function(r){
+    [["L3",tr("Level 3 (F)","المستوى 3 (F)"),"support",3,30,tr("≥ "+(D.pass-10)+"% on the skill re-check (out of F)","≥ "+(D.pass-10)+"% في إعادة اختبار المهارة (الخروج من F)")],
+     ["L2",tr("Level 2 (BF/BP)","المستوى 2 (BF/BP)"),"support",2,30,tr("≥ "+(D.pass+10)+"% on the skill re-check","≥ "+(D.pass+10)+"% في إعادة اختبار المهارة")],
+     ["P",tr("Proficient — enrichment","متقن — إثراء"),"extend",1,40,tr("Keeps ≥ "+(D.pass+20)+"%; 1 extension task / week","يحافظ على ≥ "+(D.pass+20)+"%؛ مهمة إثرائية واحدة أسبوعيًا")]].forEach(function(cfg,ci){
       var grp=r[cfg[0]]; if(!grp.length) return;
-      var base=Math.round(grp.reduce(function(s,x){return s+x.pct;},0)/grp.length);
-      var follow;
-      if(month===1) follow="End of month review: exit students who reach the target, continue the rest, escalate no progress";
+      var base=Math.round(grp.reduce(function(s,x){return s+x.pct;},0)/grp.length), follow;
+      if(month===1) follow=tr("End of month review: exit students who reach the target, continue the rest, escalate no progress","مراجعة نهاية الشهر: خروج من يحقق الهدف، استمرار البقية، وتصعيد حالات عدم التقدم");
       else { var rate=annexPracticeRate(grp,r.skill,D.term,w1-4,w1-1);
-        follow = rate==null ? "No practice data for last month yet — teacher review"
-          : rate>=75 ? ("Practice done "+rate+"% last month → continue; exit those at target")
-          : rate>=40 ? ("Practice done "+rate+"% last month → continue + weekly check-ins")
-          : ("Practice done "+rate+"% last month → escalate: parent contact + extra session"); }
-      out.push([r.skill, cfg[1]+" — "+grp.length+": "+_names(grp,8), "Avg "+base+"% (n="+grp.length+")",
-        annexStrategy(r.skill,cfg[2],(month-1)+ci), who, cfg[3]+" × "+cfg[4]+" min / week · Weeks "+w1+"–"+w2,
-        cfg[5]+"; ≥ 80% of weekly practice done", follow]);
+        follow = rate==null ? tr("No practice data for last month yet — teacher review","لا توجد بيانات تدريب للشهر الماضي بعد — مراجعة المعلّم")
+          : rate>=75 ? tr("Practice done "+rate+"% last month → continue; exit those at target","نسبة إنجاز التدريب "+rate+"% الشهر الماضي ← الاستمرار وخروج من حقق الهدف")
+          : rate>=40 ? tr("Practice done "+rate+"% last month → continue + weekly check-ins","نسبة إنجاز التدريب "+rate+"% الشهر الماضي ← الاستمرار مع متابعة أسبوعية")
+          : tr("Practice done "+rate+"% last month → escalate: parent contact + extra session","نسبة إنجاز التدريب "+rate+"% الشهر الماضي ← تصعيد: تواصل مع ولي الأمر وحصة إضافية"); }
+      out.push([skN(r.skill), cfg[1]+" — "+grp.length+": "+_names(grp,8), tr("Avg ","المتوسط ")+base+"% ("+tr("n=","ن=")+grp.length+")",
+        annexStrategy(r.skill,cfg[2],(month-1)+ci), who, cfg[3]+" × "+cfg[4]+tr(" min / week · Weeks "," دقيقة / أسبوع · الأسابيع ")+w1+"–"+w2,
+        cfg[5]+tr("; ≥ 80% of weekly practice done","؛ إنجاز ≥ 80% من التدريب الأسبوعي"), follow]);
     });
   });
   return out;
 }
-// Split rows into slides so each table fits the template's table area.
+// Split rows into slides so each table fits the table area.
 function _paginate(rows,colW,fs,budget){
-  function h(row){ var m=1; row.forEach(function(cell,i){ var cpl=Math.max(6,Math.floor((colW[i]-0.08)*72/(fs*0.43))); var l=String(cell).split("\n").reduce(function(s,p){return s+Math.max(1,Math.ceil(p.length/cpl));},0); m=Math.max(m,l); }); return m*fs*1.15/72+0.06; }
+  function h(row){ var m=1; row.forEach(function(cell,i){ var cpl=Math.max(6,Math.floor((colW[i]-0.08)*72/(fs*(_ar()?0.52:0.43)))); var l=String(cell).split("\n").reduce(function(s,p){return s+Math.max(1,Math.ceil(p.length/cpl));},0); m=Math.max(m,l); }); return m*fs*1.15/72+0.06; }
   var pages=[[]], used=0; rows.forEach(function(r){ var rh=Math.max(0.3,h(r)); if(pages[pages.length-1].length && used+rh>budget){ pages.push([]); used=0; } pages[pages.length-1].push(r); used+=rh; });
   return pages;
 }
-function _annexSlide(pptx,H,annexNo,title,subLine,head,headColor,rows,colW,fs){
+// Table helpers: Arabic reports mirror the column order (first column on the right) and use RTL text.
+function _rtlRow(r){ return _ar()?r.slice().reverse():r; }
+function _cellOpts(o){ o=Object.assign({fontFace:_font()},o||{}); if(_ar()){ o.rtlMode=true; o.lang="ar-AE"; if(!o.align||o.align==="left") o.align="right"; } return o; }
+function _txtOpts(o){ o=Object.assign({fontFace:_font(),margin:0},o||{}); if(_ar()){ o.rtlMode=true; o.lang="ar-AE"; if(!o.align||o.align==="left") o.align="right"; } return o; }
+function _logoAt(s,x,y,w){ if(typeof MOE_LOGO==="undefined") return; s.addImage({data:MOE_LOGO,x:x,y:y,w:w,h:w*MOE_LOGO_H/MOE_LOGO_W}); }
+// School-format header used on every Annex slide: MOE logo, school name (gold), department / year line.
+function _schoolHead(s,H,dept){
+  _logoAt(s,3.55,0.1,2.9);
+  s.addText(H.title,_txtOpts({x:0.4,y:0.66,w:9.2,h:0.3,fontSize:13,bold:true,color:RPT.gold,align:"center",fit:"shrink"}));
+  s.addShape("line",{x:0.4,y:0.98,w:9.2,h:0,line:{color:RPT.gold,width:1.25}});
+  s.addText((dept?dept+"  ·  ":"")+tr("Academic Year ","العام الأكاديمي ")+academicYear(),_txtOpts({x:0.4,y:1.0,w:9.2,h:0.22,fontSize:8.5,color:RPT.muted,align:"center"}));
+  s.addShape("line",{x:0.4,y:1.24,w:9.2,h:0,line:{color:RPT.red,width:0.75}});
+}
+function _annexSlide(pptx,H,annexNo,title,subLine,head,headColor,rows,colW,fs,dept){
   var s=pptx.addSlide(); s.background={color:"FFFFFF"};
-  s.addText(H.title,{x:0.5,y:0.3,w:9,h:0.45,fontSize:H.title.length>34?24:28,bold:true,color:"1F497D",fontFace:"Calibri",margin:0,fit:"shrink"});
-  if(H.sub) s.addText(H.sub,{x:0.5,y:0.75,w:8.5,h:0.3,fontSize:16,color:"595959",fontFace:"Calibri",margin:0});
-  s.addText("Annex "+annexNo+":",{x:0.5,y:1.3,w:8.5,h:0.35,fontSize:20,bold:true,color:"1F497D",fontFace:"Calibri",margin:0});
-  s.addText(title,{x:0.5,y:annexNo===3?1.75:1.65,w:8.5,h:0.35,fontSize:18,color:"000000",fontFace:"Calibri",margin:0});
-  if(subLine) s.addText(subLine,{x:0.5,y:annexNo===3?2.15:2.05,w:9,h:0.35,fontSize:annexNo===3?11:16,italic:true,color:"595959",fontFace:"Calibri",margin:0});
-  var hdr=head.map(function(t){ return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:headColor},fontSize:9,align:"center",valign:"middle"}}; });
-  var body=rows.map(function(r){ return r.map(function(t,i){ return {text:String(t),options:{fontSize:fs,color:"000000",align:i===0?"left":"center",valign:"middle"}}; }); });
-  s.addTable([hdr].concat(body),{x:0.3,y:2.8,w:9.4,colW:colW,border:{type:"solid",pt:0.75,color:"999999"},fontFace:"Calibri",margin:0.04,rowH:0.3});
-  s.addText(_apprLine("Academic Approval:",H.approver),{x:0.5,y:5.0,w:9,h:0.25,fontSize:9,color:"000000",fontFace:"Calibri",margin:0});
-  s.addText(_apprLine("School Principal Approval:",H.principal),{x:0.5,y:5.3,w:9,h:0.25,fontSize:9,color:"000000",fontFace:"Calibri",margin:0});
+  _schoolHead(s,H,dept);
+  s.addText(tr("Annex "+annexNo+":","الملحق "+annexNo+":"),_txtOpts({x:0.4,y:1.32,w:9.2,h:0.3,fontSize:16,bold:true,color:RPT.gold}));
+  s.addText(title,_txtOpts({x:0.4,y:1.62,w:9.2,h:0.32,fontSize:15,bold:true,color:RPT.ink}));
+  if(subLine) s.addText(subLine,_txtOpts({x:0.4,y:1.95,w:9.2,h:0.26,fontSize:9,italic:true,color:RPT.muted,fit:"shrink"}));
+  var hdr=_rtlRow(head.map(function(t){ return {text:t,options:_cellOpts({bold:true,color:"FFFFFF",fill:{color:RPT.gold},fontSize:9,align:"center",valign:"middle"})}; }));
+  var body=rows.map(function(r){ return _rtlRow(r.map(function(t,i){ return {text:String(t),options:_cellOpts(i===0?{fontSize:fs,color:RPT.ink,bold:true,fill:{color:RPT.cream},align:"left",valign:"middle"}:{fontSize:fs,color:RPT.ink,align:"center",valign:"middle"})}; })); });
+  s.addTable([hdr].concat(body),{x:0.3,y:2.3,w:9.4,colW:_rtlRow(colW),border:{type:"solid",pt:0.75,color:RPT.line},margin:0.04,rowH:0.3});
+  s.addText(_apprLine(tr("Academic Approval:","اعتماد الشؤون الأكاديمية:"),H.approver),_txtOpts({x:0.4,y:5.0,w:9.2,h:0.25,fontSize:9,color:RPT.ink}));
+  s.addText(_apprLine(tr("School Principal Approval:","اعتماد مدير/ة المدرسة:"),H.principal),_txtOpts({x:0.4,y:5.3,w:9.2,h:0.25,fontSize:9,color:RPT.ink}));
   return s;
 }
 function monthList(v){ return String(v)==="all"?[1,2,3,4]:[Math.max(1,Math.min(4,Number(v)||1))]; }
-function monthLabel(v){ return String(v)==="all"?"All Months":ANNEX_MONTHS[monthList(v)[0]-1]; }
-function annexClsLabel(D){ return (String(D.c.name||"").toLowerCase().indexOf(String(gLabel(D.grade)).toLowerCase())>=0)?D.c.name:(D.c.name+" ("+gLabel(D.grade)+")"); }
-function annexBands(D){ return "Cycle "+(D.cycle===1?"1 (Cycle 2 bands)":D.cycle)+" · pass mark "+D.pass+"% · Proficient ≥ "+(D.pass+10)+"% · Level 2 = BF/BP "+(D.pass-10)+"–"+(D.pass+9.9).toFixed(1)+"% · Level 3 = F < "+(D.pass-10)+"%"; }
-// Builds Annex 3 or Annex 4 for one class (Ds = [D]) or for several classes combined.
-function buildAnnexFromData(Ds,which,month,combined){
-  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.author=(Ds[0].c.teacherName||ownerName()||"Adeptly");
-  var H=annexSchoolHeader(Ds[0].c), term=Ds[0].term;
+function monthLabel(v){ return String(v)==="all"?tr("All Months","جميع الأشهر"):mName(monthList(v)[0]); }
+function annexClsLabel(D){ var n=(String(D.c.name||"").toLowerCase().indexOf(String(gLabel(D.grade)).toLowerCase())>=0)?D.c.name:(D.c.name+" ("+gLabel(D.grade)+")"); return clsN(n); }
+function annexBands(D){ var p=D.pass; return tr("Cycle "+(D.cycle===1?"1 (Cycle 2 bands)":D.cycle)+" · pass mark "+p+"% · Proficient ≥ "+(p+10)+"% · Level 2 = BF/BP "+(p-10)+"–"+(p+9.9).toFixed(1)+"% · Level 3 = F < "+(p-10)+"%",
+  "الحلقة "+(D.cycle===1?"1 (بنطاقات الحلقة 2)":D.cycle)+" · درجة النجاح "+p+"% · متقن ≥ "+(p+10)+"% · المستوى 2 = BF/BP ‏"+(p-10)+"–"+(p+9.9).toFixed(1)+"% · المستوى 3 = F أقل من "+(p-10)+"%"); }
+function _deptOf(Ds){ var subs=Array.from(new Set(Ds.map(function(D){return D.c.subject;}))); return subs.length===1?tr("Department of "+subjLabelLong(subs[0]),"قسم "+subjN(subs[0])):""; }
+// Builds Annex 3 or Annex 4 for one class (Ds = [D]) or for several classes combined, in the language `lang`.
+function buildAnnexFromData(Ds,which,month,combined,lang){
+  RL=lang==="ar"?"ar":"en";
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.author=(Ds[0].c.teacherName||ownerName()||"Adeptly"); if(_ar()) pptx.rtlMode=true;
+  var H=annexSchoolHeader(Ds[0].c), term=Ds[0].term, dept=_deptOf(Ds);
   var one=Ds.length===1&&!combined, D0=Ds[0];
-  var scope=one?(subjLabelLong(D0.c.subject)+" · "+annexClsLabel(D0)):("All classes ("+Ds.length+")");
+  var scope=one?(subjN(D0.c.subject)+" · "+annexClsLabel(D0)):tr("All classes ("+Ds.length+")","جميع الصفوف ("+Ds.length+")");
+  var termTxt=tr("Term ","الفصل ")+term;
   if(String(which)==="3"){
     var colW=[0.9,1.05,1.25,0.7,0.8,0.85,1.0,0.85,2.0];
-    var rows=[]; Ds.forEach(function(D){ var subj=subjLabelLong(D.c.subject), cls=annexClsLabel(D);
-      D.rows.forEach(function(r,i){ rows.push([subj, cls, r.skill, r.n, r.P.length, r.profPct+"%", r.L2.length+"\n(BP "+r.BP.length+" · BF "+r.BF.length+")", r.L3.length+"\n(F)", annexSuggestedAction(r,i)]); }); });
-    var head=["Subject","Grade/Section","Skill","No. of Students","Proficient","Proficiency %","Level 2","Level 3","Suggested Action"];
-    var sub3=one?("Term "+term+" diagnostic · "+annexBands(D0)):("Term "+term+" diagnostic · all classes · levels use each class's MOE pass mark (Cycle 3: 60%, Cycle 2: 50%)");
-    _paginate(rows,colW,8,1.75).forEach(function(pg){ _annexSlide(pptx,H,3,"Skills Analysis and Student Classification",sub3,head,"4472C4",pg,colW,8); });
+    var rows=[]; Ds.forEach(function(D){ var subj=subjN(D.c.subject), cls=annexClsLabel(D);
+      D.rows.forEach(function(r,i){ rows.push([subj, cls, skN(r.skill), r.n, r.P.length, r.profPct+"%", r.L2.length+"\n(BP "+r.BP.length+" · BF "+r.BF.length+")", r.L3.length+"\n(F)", annexSuggestedAction(r,i)]); }); });
+    var head=tr(["Subject","Grade/Section","Skill","No. of Students","Proficient","Proficiency %","Level 2","Level 3","Suggested Action"],["المادة","الصف/الشعبة","المهارة","عدد الطلبة","المتقنون","نسبة الإتقان","المستوى 2","المستوى 3","الإجراء المقترح"]);
+    var sub3=one?(tr("Term "+term+" diagnostic · ","التقييم التشخيصي للفصل "+term+" · ")+annexBands(D0)):tr("Term "+term+" diagnostic · all classes · levels use each class's MOE pass mark (Cycle 3: 60%, Cycle 2: 50%)","التقييم التشخيصي للفصل "+term+" · جميع الصفوف · المستويات حسب درجة النجاح لكل صف (الحلقة 3: 60%، الحلقة 2: 50%)");
+    var t3=tr("Skills Analysis and Student Classification","تحليل المهارات وتصنيف الطلبة");
+    _paginate(rows,colW,8,2.2).forEach(function(pg){ _annexSlide(pptx,H,3,t3,sub3,head,RPT.gold,pg,colW,8,dept); });
     var nW=one?[1.6,2.6,2.6,2.6]:[2.0,2.45,2.45,2.5];
-    var nrows=[]; Ds.forEach(function(D){ D.rows.forEach(function(r){ nrows.push([(one?"":annexClsLabel(D)+" — ")+r.skill, r.P.length?_names(r.P,40):"—", r.L2.length?_names(r.L2,40):"—", r.L3.length?_names(r.L3,40):"—"]); }); });
-    _paginate(nrows,nW,7,1.75).forEach(function(pg){ _annexSlide(pptx,H,3,"Skills Analysis and Student Classification — students by level",scope+" · Term "+term,[one?"Skill":"Class — Skill","Proficient","Level 2 (BF/BP)","Level 3 (F)"],"4472C4",pg,nW,7); });
+    var nrows=[]; Ds.forEach(function(D){ D.rows.forEach(function(r){ nrows.push([(one?"":annexClsLabel(D)+" — ")+skN(r.skill), r.P.length?_names(r.P,40):"—", r.L2.length?_names(r.L2,40):"—", r.L3.length?_names(r.L3,40):"—"]); }); });
+    _paginate(nrows,nW,7,2.2).forEach(function(pg){ _annexSlide(pptx,H,3,t3+tr(" — students by level"," — الطلبة حسب المستوى"),scope+" · "+termTxt,tr([one?"Skill":"Class — Skill","Proficient","Level 2 (BF/BP)","Level 3 (F)"],[one?"المهارة":"الصف — المهارة","المتقنون","المستوى 2 (BF/BP)","المستوى 3 (F)"]),RPT.gold,pg,nW,7,dept); });
   } else {
     var colW4=[1.05,1.6,0.8,1.6,0.9,1.0,1.25,1.2];
-    var head4=["Target Skill","Category/Students","Baseline","Strategy","Responsible Person","Sessions & Timing","Progress Indicator","Follow-up Decision"];
+    var head4=tr(["Target Skill","Category/Students","Baseline","Strategy","Responsible Person","Sessions & Timing","Progress Indicator","Follow-up Decision"],["المهارة المستهدفة","الفئة/الطلبة","خط الأساس","الاستراتيجية","المسؤول","عدد الحصص والتوقيت","مؤشر التقدم","قرار المتابعة"]);
     monthList(month).forEach(function(m){
       var prow=[]; Ds.forEach(function(D){ annexPlanRows(D,m).forEach(function(r){ if(!one) r[0]=annexClsLabel(D)+" — "+r[0]; prow.push(r); }); });
-      _paginate(prow,colW4,7,1.75).forEach(function(pg){ _annexSlide(pptx,H,4,"Intervention and Enrichment Plan",ANNEX_MONTHS[m-1]+"  ·  "+scope+" · Term "+term,head4,"70AD47",pg,colW4,7); });
+      _paginate(prow,colW4,7,2.2).forEach(function(pg){ _annexSlide(pptx,H,4,tr("Intervention and Enrichment Plan","خطة التدخل والإثراء"),mName(m)+"  ·  "+scope+" · "+termTxt,head4,RPT.gold,pg,colW4,7,dept); });
     });
   }
-  var nm=(one?(D0.c.name+" - "+subjLabelLong(D0.c.subject)):"All classes")+" - Term "+term+(String(which)==="4"?(" - "+monthLabel(month)):"");
+  var nm=(one?(D0.c.name+" - "+subjLabelLong(D0.c.subject)):"All classes")+" - Term "+term+(String(which)==="4"?(" - "+(String(month)==="all"?"All Months":ANNEX_MONTHS[monthList(month)[0]-1])):"");
   pptx.title="Annex "+which+" — "+nm;
-  return {pptx:pptx, fileName:safeName((one?"":"Combined ")+"Annex "+which+" - "+nm)+".pptx"};
+  var r={pptx:pptx, fileName:safeName((one?"":"Combined ")+"Annex "+which+" - "+nm+(_ar()?" - Arabic":""))+".pptx"};
+  RL="en"; return r;
 }
-function buildAnnexPptx(classId,term,which,month,quiet){
+function buildAnnexPptx(classId,term,which,month,quiet,lang){
   var D=annexData(classId,term);
   if(!D||!D.rows.length){ if(quiet) return null; alert("No completed diagnostics in Term "+term+" for this class yet, so there is nothing to report."); return null; }
-  return buildAnnexFromData([D],which,month,false);
+  return buildAnnexFromData([D],which,month,false,lang);
 }
-async function downloadAnnex(classId,which){
-  try{
-    var term=String(S.classTerm||"1"), month=(document.getElementById("annex_month")||{}).value||"1";
-    await ensurePptxLib();
-    var r=buildAnnexPptx(classId,term,String(which),month); if(!r) return;
-    await r.pptx.writeFile({fileName:r.fileName});
-  }catch(e){ alert("Couldn't create the PowerPoint: "+((e&&e.message)||e)); }
-}
+function langOptionsHtml(id){ return '<select id="'+id+'" style="width:auto"><option value="en">English</option><option value="ar">العربية (Arabic)</option><option value="both">English + العربية</option></select>'; }
 function annexCardHtml(c,done){
   if(!done||!done.length) return "";
   var term=String(S.classTerm||"1"), H=annexSchoolHeader(c), D=annexData(c.id,term);
   return '<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:flex-start"><div><h2 style="margin:0 0 2px">📑 Reports for leadership (PowerPoint)</h2><p class="sub" style="margin:0">Term '+term+' diagnostic · '+esc(H.title)+'</p>'
     +'<p class="muted" style="font-size:12px;margin:4px 0 0">Approvals printed on the reports: Academic — <b>'+esc(H.approver||"(blank)")+'</b> · Principal — <b>'+esc(H.principal||"(blank)")+'</b></p></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Plan month</label><select id="annex_month" style="width:auto">'+monthOptionsHtml()+'</select>'
+    +'<label style="display:inline;margin:0;font-size:12px">Language</label>'+langOptionsHtml("annex_lang")
     +'<button class="btn gold sm" id="pack_btn" onclick="downloadReportPack(\''+c.id+'\')">⬇ Report pack (.zip) — both versions</button></div></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center"><span class="muted" style="font-size:12px">Or one file:</span>'
     +'<button class="btn ghost sm" onclick="downloadAnnex(\''+c.id+'\',3)">Annex 3 — Skills Analysis</button>'
@@ -2956,8 +2988,6 @@ function annexCardHtml(c,done){
     +'<button class="btn ghost sm" onclick="downloadEnhanced(\''+c.id+'\')">✨ Enhanced report</button></div>'
     +strategiesPanelHtml(D)+'</div>';
 }
-/* ===== Suggested intervention & enrichment strategies (class page) ===== */
-function strategyList(skill,kind){ var st=(typeof SKILL_STRATEGIES!=="undefined")&&SKILL_STRATEGIES[skill]; var a=st&&(kind==="extend"?st.extend:st.support); return (a&&a.length)?a.slice():[0,1,2,3].map(function(i){ return annexStrategy(skill,kind,i); }); }
 function strategiesPanelHtml(D){
   if(!D||!D.rows.length) return "";
   var rows=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;});
@@ -2969,220 +2999,235 @@ function strategiesPanelHtml(D){
        +'<div class="col"><div style="font-size:12px;font-weight:700;color:var(--ok)">Enrichment (Proficient)</div><ul style="margin:4px 0;padding-left:18px;font-size:13px">'+ext.map(function(x){return '<li>'+x+'</li>';}).join("")+'</ul></div></div></div>';
     }).join("")+'</details>';
 }
-
-/* ===== Enhanced report (Adeptly's improved version of Annex 3 + 4) ===== */
-var ENH={navy:"1F3A5F",teal:"0F766E",gold:"C9A55A",ink:"0F172A",muted:"64748B",line:"E2E8F0",bg:"F8FAFC",P:"16A34A",BP:"CA8A04",BF:"EA580C",F:"DC2626"};
+/* ===== Enhanced report (Adeptly's improved version of Annex 3 + 4), in the school's colours ===== */
+var ENH={navy:RPT.ink,teal:RPT.gold,gold:RPT.gold,ink:RPT.ink,muted:RPT.muted,line:RPT.line,bg:"FBF8F1",P:RPT.P,BP:RPT.BP,BF:RPT.BF,F:RPT.F};
 function _enhHeader(s,H,title,sub){
   s.background={color:"FFFFFF"};
-  s.addShape("rect",{x:0,y:0,w:10,h:0.62,fill:{color:ENH.navy},line:{color:ENH.navy}});
-  s.addShape("rect",{x:0,y:0.62,w:10,h:0.04,fill:{color:ENH.gold},line:{color:ENH.gold}});
-  s.addText(H.title,{x:0.35,y:0.08,w:6.2,h:0.46,fontSize:13,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,fit:"shrink",valign:"middle"});
-  s.addText(sub||"",{x:6.4,y:0.08,w:3.3,h:0.46,fontSize:9,color:"E2E8F0",fontFace:"Calibri",margin:0,align:"right",valign:"middle",fit:"shrink"});
-  s.addText(title,{x:0.35,y:0.78,w:9.3,h:0.42,fontSize:20,bold:true,color:ENH.navy,fontFace:"Calibri",margin:0});
+  _logoAt(s,_ar()?7.45:0.3,0.08,2.25);
+  s.addText(H.title,_txtOpts({x:_ar()?0.3:2.8,y:0.08,w:6.9,h:0.26,fontSize:11,bold:true,color:RPT.gold,align:_ar()?"left":"right",fit:"shrink"}));
+  s.addText(sub||"",_txtOpts({x:_ar()?0.3:2.8,y:0.32,w:6.9,h:0.2,fontSize:8.5,color:RPT.muted,align:_ar()?"left":"right",fit:"shrink"}));
+  s.addShape("line",{x:0.3,y:0.56,w:9.4,h:0,line:{color:RPT.gold,width:1.25}});
+  s.addShape("line",{x:0.3,y:0.6,w:9.4,h:0,line:{color:RPT.red,width:0.5}});
+  s.addText(title,_txtOpts({x:0.35,y:0.72,w:9.3,h:0.42,fontSize:19,bold:true,color:RPT.ink}));
 }
-function _enhFooter(s,n){ s.addText("Adeptly · Diagnostic Skills Report & Intervention Plan",{x:0.35,y:5.3,w:6,h:0.22,fontSize:7.5,color:ENH.muted,fontFace:"Calibri",margin:0}); s.addText(String(n),{x:9.0,y:5.3,w:0.65,h:0.22,fontSize:7.5,color:ENH.muted,align:"right",fontFace:"Calibri",margin:0}); }
+function _enhFooter(s,n){ s.addText(tr("Adeptly · Diagnostic Skills Report & Intervention Plan","Adeptly · تقرير المهارات التشخيصي وخطة التدخل"),_txtOpts({x:0.35,y:5.3,w:6,h:0.22,fontSize:7.5,color:RPT.muted,align:_ar()?"right":"left",x:_ar()?3.65:0.35})); s.addText(String(n),_txtOpts({x:_ar()?0.35:9.0,y:5.3,w:0.65,h:0.22,fontSize:7.5,color:RPT.muted,align:_ar()?"left":"right"})); }
 function _lvlColor(l){ return l==="P"?ENH.P:(l==="BP"?ENH.BP:(l==="BF"?ENH.BF:ENH.F)); }
 function _lvlFill(l){ return l==="P"?"DCFCE7":(l==="BP"?"FEF9C3":(l==="BF"?"FFEDD5":"FEE2E2")); }
-function _th(t,color){ return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:color||ENH.navy},fontSize:8.5,align:"center",valign:"middle"}}; }
+function _lvlName(l){ return l==="P"?tr("Proficient","متقن"):l; }
+function _th(t,color){ return {text:t,options:_cellOpts({bold:true,color:"FFFFFF",fill:{color:color||RPT.gold},fontSize:8.5,align:"center",valign:"middle"})}; }
+function _c(t,o){ return {text:String(t),options:_cellOpts(Object.assign({fontSize:8,align:"center",color:RPT.ink},o||{}))}; }
+function _addTable(s,rows,opts){ s.addTable(rows.map(_rtlRow),Object.assign({},opts,{colW:_rtlRow(opts.colW)})); }
 function _enhPaged(pptx,H,title,tag,head,rows,colW,next){
   _paginate(rows.map(function(r){return r.map(function(c){return c.text;});}),colW,7.5,3.6).forEach(function(page,pi,arr){
     var start=0; for(var k=0;k<pi;k++) start+=arr[k].length;
     var s=pptx.addSlide(); _enhHeader(s,H,title+(arr.length>1?(" ("+(pi+1)+"/"+arr.length+")"):""),tag);
-    s.addTable([head].concat(rows.slice(start,start+page.length)),{x:0.35,y:1.3,w:9.3,colW:colW,border:{type:"solid",pt:0.5,color:"CBD5E1"},fontFace:"Calibri",margin:0.05,valign:"middle"});
+    _addTable(s,[head].concat(rows.slice(start,start+page.length)),{x:0.35,y:1.3,w:9.3,colW:colW,border:{type:"solid",pt:0.5,color:RPT.line},margin:0.05,valign:"middle"});
     _enhFooter(s,next());
   });
 }
 function _enhCover(pptx,H,mainTitle,tag,teacher,period,today,note){
-  var s=pptx.addSlide(); s.background={color:ENH.navy};
-  s.addShape("rect",{x:0,y:0,w:0.18,h:5.625,fill:{color:ENH.gold},line:{color:ENH.gold}});
-  s.addText(H.title,{x:0.6,y:0.55,w:8.8,h:0.5,fontSize:20,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,fit:"shrink"});
-  s.addText(mainTitle,{x:0.6,y:1.2,w:8.8,h:0.75,fontSize:30,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,fit:"shrink"});
-  s.addText(tag,{x:0.6,y:2.0,w:8.8,h:0.4,fontSize:16,color:"DCC48E",fontFace:"Calibri",margin:0,fit:"shrink"});
-  s.addText([{text:"Teacher: ",options:{color:"9CA3AF"}},{text:teacher,options:{color:"FFFFFF",bold:true}},{text:"     Plan period: ",options:{color:"9CA3AF"}},{text:period,options:{color:"FFFFFF",bold:true}},{text:"     Date: ",options:{color:"9CA3AF"}},{text:today,options:{color:"FFFFFF",bold:true}}],{x:0.6,y:2.6,w:8.8,h:0.35,fontSize:11,fontFace:"Calibri",margin:0});
-  s.addShape("line",{x:0.6,y:3.35,w:8.8,h:0,line:{color:"334155",width:1}});
-  s.addText([{text:"Academic Approver: ",options:{color:"9CA3AF"}},{text:(H.approver||"—"),options:{color:"FFFFFF",bold:true,breakLine:true}},{text:"School Principal: ",options:{color:"9CA3AF"}},{text:(H.principal||"—"),options:{color:"FFFFFF",bold:true}}],{x:0.6,y:3.55,w:8.8,h:0.7,fontSize:12,fontFace:"Calibri",margin:0,paraSpaceAfter:4});
-  if(note) s.addText(note,{x:0.6,y:4.85,w:8.8,h:0.3,fontSize:9,color:"9CA3AF",fontFace:"Calibri",margin:0});
+  var s=pptx.addSlide(); s.background={color:RPT.cream};
+  s.addShape("rect",{x:0,y:0,w:10,h:0.12,fill:{color:RPT.gold},line:{color:RPT.gold}});
+  _logoAt(s,3.0,0.35,4.0);
+  s.addText(H.title,_txtOpts({x:0.6,y:1.2,w:8.8,h:0.35,fontSize:15,bold:true,color:RPT.gold,align:"center",fit:"shrink"}));
+  s.addShape("line",{x:2.0,y:1.6,w:6.0,h:0,line:{color:RPT.gold,width:1.25}});
+  s.addText(mainTitle,_txtOpts({x:0.6,y:1.8,w:8.8,h:0.65,fontSize:28,bold:true,color:RPT.ink,align:"center",fit:"shrink"}));
+  s.addText(tag,_txtOpts({x:0.6,y:2.45,w:8.8,h:0.35,fontSize:15,color:RPT.gold,align:"center",fit:"shrink"}));
+  s.addText([{text:tr("Teacher: ","المعلّم/ة: "),options:{color:RPT.muted}},{text:teacher,options:{color:RPT.ink,bold:true}},{text:tr("     Plan period: ","     فترة الخطة: "),options:{color:RPT.muted}},{text:period,options:{color:RPT.ink,bold:true}},{text:tr("     Date: ","     التاريخ: "),options:{color:RPT.muted}},{text:today,options:{color:RPT.ink,bold:true}}],_txtOpts({x:0.6,y:2.95,w:8.8,h:0.32,fontSize:11,align:"center"}));
+  s.addShape("line",{x:2.0,y:3.45,w:6.0,h:0,line:{color:RPT.red,width:0.75}});
+  s.addText([{text:tr("Academic Approver: ","اعتماد الشؤون الأكاديمية: "),options:{color:RPT.muted}},{text:(H.approver||"—"),options:{color:RPT.ink,bold:true,breakLine:true}},{text:tr("School Principal: ","مدير/ة المدرسة: "),options:{color:RPT.muted}},{text:(H.principal||"—"),options:{color:RPT.ink,bold:true}}],_txtOpts({x:0.6,y:3.6,w:8.8,h:0.7,fontSize:12,align:"center",paraSpaceAfter:4}));
+  if(note) s.addText(note,_txtOpts({x:0.6,y:4.85,w:8.8,h:0.3,fontSize:9,color:RPT.muted,align:"center",fit:"shrink"}));
+  s.addShape("rect",{x:0,y:5.505,w:10,h:0.12,fill:{color:RPT.gold},line:{color:RPT.gold}});
 }
 function _enhTiles(s,tiles){
+  if(_ar()) tiles=tiles.slice().reverse();
   tiles.forEach(function(t,i){ var x=0.35+i*1.88; s.addShape("roundRect",{x:x,y:1.3,w:1.76,h:0.95,fill:{color:ENH.bg},line:{color:ENH.line},rectRadius:0.08});
-    s.addShape("rect",{x:x,y:1.3,w:0.07,h:0.95,fill:{color:t[2]},line:{color:t[2]}});
-    s.addText(t[1],{x:x+0.15,y:1.36,w:1.55,h:0.5,fontSize:22,bold:true,color:t[2],fontFace:"Calibri",margin:0,fit:"shrink"});
-    s.addText(t[0],{x:x+0.15,y:1.86,w:1.55,h:0.32,fontSize:9,color:ENH.muted,fontFace:"Calibri",margin:0}); });
+    s.addShape("rect",{x:_ar()?x+1.69:x,y:1.3,w:0.07,h:0.95,fill:{color:t[2]},line:{color:t[2]}});
+    s.addText(t[1],_txtOpts({x:x+0.12,y:1.36,w:1.55,h:0.5,fontSize:22,bold:true,color:t[2],fit:"shrink"}));
+    s.addText(t[0],_txtOpts({x:x+0.12,y:1.86,w:1.55,h:0.32,fontSize:9,color:RPT.muted})); });
 }
 function _enhTimeline(pptx,H,tag,m,focus,next){
-  var w1=(m-1)*4+1, w2=m*4, s=pptx.addSlide(); _enhHeader(s,H,"Action timeline — "+ANNEX_MONTHS[m-1]+" (weeks "+w1+"–"+w2+")",tag);
-  var wk=[["Week "+w1,"Regroup & re-teach","Form the Level 3 / Level 2 groups. Re-teach "+focus+" with worked examples. Quick entry check."],
-          ["Week "+(w1+1),"Targeted practice","Group sessions as scheduled. Students complete their Adeptly weekly folder. Enrichment group starts extension task."],
-          ["Week "+(w1+2),"Check & adjust","Short formative check (exit ticket / 5-question quiz). Move students between groups based on results."],
-          ["Week "+w2,"Re-check & decide","Skill re-check. Apply the decision rules below and record outcomes for the next month's plan."]];
-  wk.forEach(function(w,i){ var x=0.35+i*2.34; s.addShape("roundRect",{x:x,y:1.35,w:2.22,h:2.2,fill:{color:ENH.bg},line:{color:ENH.line},rectRadius:0.08});
-    s.addShape("rect",{x:x,y:1.35,w:2.22,h:0.42,fill:{color:i===3?ENH.gold:ENH.teal},line:{color:i===3?ENH.gold:ENH.teal}});
-    s.addText(w[0],{x:x+0.1,y:1.38,w:2.0,h:0.36,fontSize:11,bold:true,color:"FFFFFF",fontFace:"Calibri",margin:0,valign:"middle"});
-    s.addText(w[1],{x:x+0.12,y:1.85,w:2.0,h:0.3,fontSize:10,bold:true,color:ENH.navy,fontFace:"Calibri",margin:0});
-    s.addText(w[2],{x:x+0.12,y:2.15,w:2.0,h:1.35,fontSize:8.5,color:ENH.ink,fontFace:"Calibri",margin:0,valign:"top",fit:"shrink"}); });
-  [["Exit / move up",ENH.P,"Reaches the success target on the re-check and completes ≥ 80% of weekly practice."],["Continue",ENH.BP,"Improves but is still below target — keep in the group, adjust the strategy."],["Escalate",ENH.F,"No progress or < 40% practice completed — parent contact, extra session, refer to counsellor / SEN team if needed."]].forEach(function(r,i){ var x=0.35+i*3.12; s.addShape("roundRect",{x:x,y:3.75,w:3.0,h:1.35,fill:{color:"FFFFFF"},line:{color:r[1],width:1.5},rectRadius:0.08});
-    s.addText(r[0],{x:x+0.12,y:3.82,w:2.8,h:0.3,fontSize:11,bold:true,color:r[1],fontFace:"Calibri",margin:0});
-    s.addText(r[2],{x:x+0.12,y:4.12,w:2.8,h:0.9,fontSize:8.5,color:ENH.ink,fontFace:"Calibri",margin:0,valign:"top"}); });
+  var w1=(m-1)*4+1, w2=m*4, s=pptx.addSlide(); _enhHeader(s,H,tr("Action timeline — ","الجدول الزمني للتنفيذ — ")+mName(m)+tr(" (weeks "+w1+"–"+w2+")"," (الأسابيع "+w1+"–"+w2+")"),tag);
+  var W=tr("Week ","الأسبوع ");
+  var wk=[[W+w1,tr("Regroup & re-teach","إعادة التجميع وإعادة التدريس"),tr("Form the Level 3 / Level 2 groups. Re-teach "+focus+" with worked examples. Quick entry check.","تشكيل مجموعات المستوى 3 والمستوى 2. إعادة تدريس "+focus+" بأمثلة محلولة. اختبار قصير للبداية.")],
+          [W+(w1+1),tr("Targeted practice","تدريب موجَّه"),tr("Group sessions as scheduled. Students complete their Adeptly weekly folder. Enrichment group starts extension task.","حصص المجموعات حسب الجدول. يُكمل الطلبة ملف التدريب الأسبوعي في Adeptly. تبدأ مجموعة الإثراء المهمة الإثرائية.")],
+          [W+(w1+2),tr("Check & adjust","التحقق والتعديل"),tr("Short formative check (exit ticket / 5-question quiz). Move students between groups based on results.","تقييم تكويني قصير (بطاقة خروج / اختبار من 5 أسئلة). نقل الطلبة بين المجموعات حسب النتائج.")],
+          [W+w2,tr("Re-check & decide","إعادة الاختبار واتخاذ القرار"),tr("Skill re-check. Apply the decision rules below and record outcomes for the next month's plan.","إعادة اختبار المهارة. تطبيق قواعد القرار أدناه وتسجيل النتائج لخطة الشهر التالي.")]];
+  if(_ar()) wk=wk.slice().reverse();
+  wk.forEach(function(w,i){ var x=0.35+i*2.34, last=_ar()?(i===0):(i===3); s.addShape("roundRect",{x:x,y:1.35,w:2.22,h:2.2,fill:{color:ENH.bg},line:{color:ENH.line},rectRadius:0.08});
+    s.addShape("rect",{x:x,y:1.35,w:2.22,h:0.42,fill:{color:last?RPT.red:RPT.gold},line:{color:last?RPT.red:RPT.gold}});
+    s.addText(w[0],_txtOpts({x:x+0.1,y:1.38,w:2.0,h:0.36,fontSize:11,bold:true,color:"FFFFFF",valign:"middle"}));
+    s.addText(w[1],_txtOpts({x:x+0.12,y:1.85,w:2.0,h:0.3,fontSize:10,bold:true,color:RPT.ink}));
+    s.addText(w[2],_txtOpts({x:x+0.12,y:2.15,w:2.0,h:1.35,fontSize:8.5,color:RPT.ink,valign:"top",fit:"shrink"})); });
+  var rules=[[tr("Exit / move up","الخروج / الانتقال لمستوى أعلى"),ENH.P,tr("Reaches the success target on the re-check and completes ≥ 80% of weekly practice.","يحقق هدف النجاح في إعادة الاختبار ويُنجز ≥ 80% من التدريب الأسبوعي.")],[tr("Continue","الاستمرار"),ENH.BP,tr("Improves but is still below target — keep in the group, adjust the strategy.","يتحسّن لكنه ما زال دون الهدف — يبقى في المجموعة مع تعديل الاستراتيجية.")],[tr("Escalate","التصعيد"),ENH.F,tr("No progress or < 40% practice completed — parent contact, extra session, refer to counsellor / SEN team if needed.","لا تقدّم أو إنجاز أقل من 40% من التدريب — تواصل مع ولي الأمر، حصة إضافية، وإحالة إلى الأخصائي / فريق أصحاب الهمم عند الحاجة.")]];
+  if(_ar()) rules=rules.slice().reverse();
+  rules.forEach(function(r,i){ var x=0.35+i*3.12; s.addShape("roundRect",{x:x,y:3.75,w:3.0,h:1.35,fill:{color:"FFFFFF"},line:{color:r[1],width:1.5},rectRadius:0.08});
+    s.addText(r[0],_txtOpts({x:x+0.12,y:3.82,w:2.8,h:0.3,fontSize:11,bold:true,color:r[1]}));
+    s.addText(r[2],_txtOpts({x:x+0.12,y:4.12,w:2.8,h:0.9,fontSize:8.5,color:RPT.ink,valign:"top",fit:"shrink"})); });
   _enhFooter(s,next());
 }
 function _enhApproval(pptx,H,tag,teacher,today,next){
-  var s=pptx.addSlide(); _enhHeader(s,H,"Review & approval",tag);
-  s.addText("Prepared by: "+teacher+"   ·   "+today,{x:0.35,y:1.3,w:9.3,h:0.3,fontSize:11,color:ENH.muted,fontFace:"Calibri",margin:0});
-  [["Academic Approval",H.approver],["School Principal Approval",H.principal]].forEach(function(a,i){ var x=0.35+i*4.75;
-    s.addShape("roundRect",{x:x,y:1.8,w:4.55,h:2.6,fill:{color:ENH.bg},line:{color:ENH.line},rectRadius:0.1});
-    s.addText(a[0],{x:x+0.2,y:1.95,w:4.2,h:0.35,fontSize:14,bold:true,color:ENH.navy,fontFace:"Calibri",margin:0});
-    s.addText([{text:"Name: ",options:{color:ENH.muted}},{text:(a[1]||"________________________"),options:{bold:true,color:ENH.ink}}],{x:x+0.2,y:2.5,w:4.2,h:0.35,fontSize:12,fontFace:"Calibri",margin:0});
-    s.addText("Signature:",{x:x+0.2,y:3.05,w:1.2,h:0.35,fontSize:12,color:ENH.muted,fontFace:"Calibri",margin:0});
-    s.addShape("line",{x:x+1.3,y:3.35,w:2.9,h:0,line:{color:"94A3B8",width:1}});
-    s.addText("Date:",{x:x+0.2,y:3.6,w:1.2,h:0.35,fontSize:12,color:ENH.muted,fontFace:"Calibri",margin:0});
-    s.addShape("line",{x:x+1.3,y:3.9,w:2.9,h:0,line:{color:"94A3B8",width:1}}); });
-  s.addText("Comments / follow-up notes: ______________________________________________________________________________",{x:0.35,y:4.6,w:9.3,h:0.35,fontSize:10,color:ENH.muted,fontFace:"Calibri",margin:0});
+  var s=pptx.addSlide(); _enhHeader(s,H,tr("Review & approval","المراجعة والاعتماد"),tag);
+  s.addText(tr("Prepared by: ","إعداد: ")+teacher+"   ·   "+today,_txtOpts({x:0.35,y:1.3,w:9.3,h:0.3,fontSize:11,color:RPT.muted}));
+  var boxes=[[tr("Academic Approval","اعتماد الشؤون الأكاديمية"),H.approver],[tr("School Principal Approval","اعتماد مدير/ة المدرسة"),H.principal]]; if(_ar()) boxes=boxes.reverse();
+  boxes.forEach(function(a,i){ var x=0.35+i*4.75;
+    s.addShape("roundRect",{x:x,y:1.8,w:4.55,h:2.6,fill:{color:ENH.bg},line:{color:RPT.gold},rectRadius:0.1});
+    s.addText(a[0],_txtOpts({x:x+0.2,y:1.95,w:4.15,h:0.35,fontSize:14,bold:true,color:RPT.gold}));
+    s.addText([{text:tr("Name: ","الاسم: "),options:{color:RPT.muted}},{text:(a[1]||"________________________"),options:{bold:true,color:RPT.ink}}],_txtOpts({x:x+0.2,y:2.5,w:4.15,h:0.35,fontSize:12}));
+    s.addText(tr("Signature:","التوقيع:"),_txtOpts({x:_ar()?x+3.15:x+0.2,y:3.05,w:1.2,h:0.35,fontSize:12,color:RPT.muted}));
+    s.addShape("line",{x:_ar()?x+0.2:x+1.3,y:3.35,w:2.9,h:0,line:{color:"A8A29E",width:1}});
+    s.addText(tr("Date:","التاريخ:"),_txtOpts({x:_ar()?x+3.15:x+0.2,y:3.6,w:1.2,h:0.35,fontSize:12,color:RPT.muted}));
+    s.addShape("line",{x:_ar()?x+0.2:x+1.3,y:3.9,w:2.9,h:0,line:{color:"A8A29E",width:1}}); });
+  s.addText(tr("Comments / follow-up notes: ","ملاحظات / متابعة: ")+"______________________________________________________________________________",_txtOpts({x:0.35,y:4.6,w:9.3,h:0.35,fontSize:10,color:RPT.muted}));
   _enhFooter(s,next());
 }
-function _periodText(month){ var ms=monthList(month); return ms.length>1?"All months (weeks 1–16)":(ANNEX_MONTHS[ms[0]-1]+" (weeks "+((ms[0]-1)*4+1)+"–"+(ms[0]*4)+")"); }
+function _periodText(month){ var ms=monthList(month); return ms.length>1?tr("All months (weeks 1–16)","جميع الأشهر (الأسابيع 1–16)"):(mName(ms[0])+tr(" (weeks "," (الأسابيع ")+((ms[0]-1)*4+1)+"–"+(ms[0]*4)+")"); }
 function _overallOf(D){ return D.list.map(function(a){ var sc=Number(a.score)||0; return {a:a,name:a.studentName||a.studentEmail,score:sc,lvl:annexLevelOf(sc,D.grade)}; }); }
-// Intervention/enrichment group rows for one class and one month (used by the per-class and combined reports).
 function _groupRows(D,m,prefix){
   var ranked=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;}), out=[];
   ranked.forEach(function(r){
     var sup=strategyList(r.skill,"support");
-    if(r.L3.length) out.push({skill:r.skill,label:"Level 3 · intensive",color:ENH.F,g:r.L3,str:[sup[(m-1)%sup.length],sup[m%sup.length]],freq:"3 × 30 min / week",target:"≥ "+(D.pass-10)+"% on re-check (out of F)"});
-    if(r.L2.length) out.push({skill:r.skill,label:"Level 2 · targeted",color:ENH.BF,g:r.L2,str:[sup[(m+1)%sup.length],sup[(m+2)%sup.length]],freq:"2 × 30 min / week",target:"≥ "+(D.pass+10)+"% on re-check"});
+    if(r.L3.length) out.push({skill:r.skill,label:tr("Level 3 · intensive","المستوى 3 · مكثّف"),color:ENH.F,g:r.L3,str:[sup[(m-1)%sup.length],sup[m%sup.length]],freq:tr("3 × 30 min / week","3 × 30 دقيقة / أسبوع"),target:tr("≥ "+(D.pass-10)+"% on re-check (out of F)","≥ "+(D.pass-10)+"% في إعادة الاختبار (الخروج من F)")});
+    if(r.L2.length) out.push({skill:r.skill,label:tr("Level 2 · targeted","المستوى 2 · موجَّه"),color:ENH.BF,g:r.L2,str:[sup[(m+1)%sup.length],sup[(m+2)%sup.length]],freq:tr("2 × 30 min / week","2 × 30 دقيقة / أسبوع"),target:tr("≥ "+(D.pass+10)+"% on re-check","≥ "+(D.pass+10)+"% في إعادة الاختبار")});
   });
-  return out.map(function(G){ return [{text:(prefix||"")+G.skill,options:{fontSize:8,bold:true}},{text:G.label,options:{fontSize:8,bold:true,color:G.color}},{text:G.g.length+": "+_names(G.g,12),options:{fontSize:7}},{text:G.str.map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),options:{fontSize:7}},{text:G.freq,options:{fontSize:7.5,align:"center"}},{text:G.target,options:{fontSize:7.5,align:"center"}}]; });
+  return out.map(function(G){ return [_c((prefix||"")+skN(G.skill),{bold:true,align:"left"}),_c(G.label,{bold:true,color:G.color}),_c(G.g.length+": "+_names(G.g,12),{fontSize:7,align:"left"}),_c(G.str.map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),{fontSize:7,align:"left"}),_c(G.freq,{fontSize:7.5}),_c(G.target,{fontSize:7.5})]; });
 }
 function _enrichRows(D,m,prefix){
   return D.rows.slice().sort(function(a,b){return b.profPct-a.profPct;}).filter(function(r){return r.P.length;}).map(function(r){ var ex=strategyList(r.skill,"extend");
-    return [{text:(prefix||"")+r.skill,options:{fontSize:8,bold:true}},{text:r.P.length+": "+_names(r.P,14),options:{fontSize:7}},{text:[ex[(m-1)%ex.length],ex[m%ex.length]].map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),options:{fontSize:7}},{text:"1 × 40 min / week",options:{fontSize:7.5,align:"center"}},{text:"Keeps ≥ "+(D.pass+20)+"%; one extension product per week",options:{fontSize:7.5,align:"center"}}]; });
+    return [_c((prefix||"")+skN(r.skill),{bold:true,align:"left"}),_c(r.P.length+": "+_names(r.P,14),{fontSize:7,align:"left"}),_c([ex[(m-1)%ex.length],ex[m%ex.length]].map(function(x){return "• "+_clip(_stripTags(x),170);}).join("\n"),{fontSize:7,align:"left"}),_c(tr("1 × 40 min / week","1 × 40 دقيقة / أسبوع"),{fontSize:7.5}),_c(tr("Keeps ≥ "+(D.pass+20)+"%; one extension product per week","يحافظ على ≥ "+(D.pass+20)+"%؛ ناتج إثرائي واحد أسبوعيًا"),{fontSize:7.5})]; });
 }
-var GHEAD=["Skill","Group","Students","Suggested strategies","Frequency","Success target"], GCOLS=[1.25,1.05,2.0,3.2,0.85,0.95];
-var EHEAD=["Skill","Proficient students","Suggested enrichment","Frequency","Success target"], ECOLS=[1.35,2.6,3.45,0.9,1.0];
-function buildEnhancedPptx(classId,term,month){
+function _gHead(first){ return tr([first||"Skill","Group","Students","Suggested strategies","Frequency","Success target"],[first||"المهارة","المجموعة","الطلبة","الاستراتيجيات المقترحة","التكرار","هدف النجاح"]); }
+function _eHead(first){ return tr([first||"Skill","Proficient students","Suggested enrichment","Frequency","Success target"],[first||"المهارة","الطلبة المتقنون","الإثراء المقترح","التكرار","هدف النجاح"]); }
+var GCOLS=[1.25,1.05,2.0,3.2,0.85,0.95], ECOLS=[1.35,2.6,3.45,0.9,1.0];
+function _skillRow(r,prio,label){
+  var st=r.profPct>=80?["DCFCE7",ENH.P]:(r.profPct>=50?["FEF9C3",ENH.BP]:["FEE2E2",ENH.F]);
+  var act=r.profPct>=80?tr("Enrich","إثراء"):(r.profPct>=50?tr("Small groups","مجموعات صغيرة"):tr("Re-teach all","إعادة تدريس للجميع"));
+  return [_c(label||skN(r.skill),{bold:true,align:"left",fill:{color:RPT.cream}}),_c((r.avg||0)+"%"),_c(r.profPct+"%",{bold:true,color:st[1]}),_c(r.P.length),_c(r.L2.length),_c(r.L3.length),_c(prio,{bold:true,fill:{color:st[0]},color:st[1]}),_c(act)];
+}
+function _skHead(first){ return tr([first||"Skill","Avg","Prof. %","P","L2","L3","Priority","Action"],[first||"المهارة","المتوسط","الإتقان %","م","م2","م3","الأولوية","الإجراء"]).map(function(t){return _th(t);}); }
+function _levelsNote(D){ var p=D.pass; return tr("Pass mark "+p+"% (Cycle "+(D.cycle===1?"1 → C2 bands":D.cycle)+") · Proficient ≥ "+(p+10)+"% · BP "+p+"–"+(p+9.9).toFixed(1)+"% · BF "+(p-10)+"–"+(p-0.1).toFixed(1)+"% · F < "+(p-10)+"%",
+  "درجة النجاح "+p+"% (الحلقة "+(D.cycle===1?"1 ← نطاقات الحلقة 2":D.cycle)+") · متقن ≥ "+(p+10)+"% · BP ‏"+p+"–"+(p+9.9).toFixed(1)+"% · BF ‏"+(p-10)+"–"+(p-0.1).toFixed(1)+"% · F أقل من "+(p-10)+"%"); }
+function buildEnhancedPptx(classId,term,month,lang){
   var D=annexData(classId,term); if(!D||!D.rows.length) return null;
-  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Enhanced report — "+D.c.name;
-  var H=annexSchoolHeader(D.c), subj=subjLabelLong(D.c.subject), teacher=D.c.teacherName||ownerName()||"Class teacher", cls=annexClsLabel(D);
-  var tag=subj+" · "+cls+" · Term "+D.term, pg=1, next=function(){return ++pg;}, today=new Date().toLocaleDateString("en-GB");
+  RL=lang==="ar"?"ar":"en";
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Enhanced report — "+D.c.name; if(_ar()) pptx.rtlMode=true;
+  var H=annexSchoolHeader(D.c), subj=subjN(D.c.subject), teacher=D.c.teacherName||ownerName()||tr("Class teacher","معلّم الصف"), cls=annexClsLabel(D);
+  var tag=subj+" · "+cls+" · "+tr("Term ","الفصل ")+D.term, pg=1, next=function(){return ++pg;}, today=new Date().toLocaleDateString("en-GB");
   var overall=_overallOf(D).sort(function(x,y){return y.score-x.score;});
   var cnt={P:0,BP:0,BF:0,F:0}; overall.forEach(function(o){cnt[o.lvl]++;});
-  var avg=overall.length?Math.round(overall.reduce(function(s,o){return s+o.score;},0)/overall.length):0;
-  var bands="Pass mark "+D.pass+"% (Cycle "+(D.cycle===1?"1 → C2 bands":D.cycle)+") · Proficient ≥ "+(D.pass+10)+"% · BP "+D.pass+"–"+(D.pass+9.9).toFixed(1)+"% · BF "+(D.pass-10)+"–"+(D.pass-0.1).toFixed(1)+"% · F < "+(D.pass-10)+"%";
-  _enhCover(pptx,H,"Diagnostic Skills Report & Intervention Plan",tag,teacher,_periodText(month),today,bands);
-  // Class at a glance
-  var s=pptx.addSlide(); _enhHeader(s,H,"Class at a glance",tag);
-  _enhTiles(s,[["Students tested",String(overall.length),ENH.navy],["Class average",avg+"%",ENH.teal],["Proficient (≥ "+(D.pass+10)+"%)",cnt.P+" · "+(overall.length?Math.round(cnt.P/overall.length*100):0)+"%",ENH.P],["Borderline (BP + BF)",String(cnt.BP+cnt.BF),ENH.BF],["Failing (F)",String(cnt.F),ENH.F]]);
-  var sk=D.rows.map(function(r){return r.skill;});
-  s.addChart(pptx.ChartType.bar,[{name:"Class average %",labels:sk,values:D.rows.map(function(r){return r.avg||0;})}],{x:0.35,y:2.45,w:5.6,h:2.8,barDir:"bar",chartColors:[ENH.teal],valAxisMaxVal:100,valAxisMinVal:0,showValue:true,dataLabelFontSize:8,dataLabelColor:ENH.ink,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showTitle:true,title:"Average by skill (pass mark "+D.pass+"%)",titleFontSize:10,titleColor:ENH.navy,valGridLine:{color:ENH.line,size:0.5},showLegend:false});
-  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:["Proficient","BP","BF","F"],values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:6.15,y:2.45,w:3.5,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showPercent:false,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:"Overall level of students",titleFontSize:10,titleColor:ENH.navy});
+  var avg=overall.length?Math.round(overall.reduce(function(s,o){return s+o.score;},0)/overall.length):0, bands=_levelsNote(D);
+  _enhCover(pptx,H,tr("Diagnostic Skills Report & Intervention Plan","تقرير المهارات التشخيصي وخطة التدخل"),tag,teacher,_periodText(month),today,bands);
+  var s=pptx.addSlide(); _enhHeader(s,H,tr("Class at a glance","نظرة عامة على الصف"),tag);
+  _enhTiles(s,[[tr("Students tested","عدد الطلبة المختبَرين"),String(overall.length),RPT.ink],[tr("Class average","متوسط الصف"),avg+"%",RPT.gold],[tr("Proficient (≥ ","متقن (≥ ")+(D.pass+10)+"%)",cnt.P+" · "+(overall.length?Math.round(cnt.P/overall.length*100):0)+"%",ENH.P],[tr("Borderline (BP + BF)","حدّي (BP + BF)"),String(cnt.BP+cnt.BF),ENH.BF],[tr("Failing (F)","راسب (F)"),String(cnt.F),ENH.F]]);
+  var sk=D.rows.map(function(r){return skN(r.skill);});
+  var LV=[tr("Proficient","متقن"),"BP","BF","F"];
+  s.addChart(pptx.ChartType.bar,[{name:tr("Class average %","متوسط الصف %"),labels:sk,values:D.rows.map(function(r){return r.avg||0;})}],{x:_ar()?4.1:0.35,y:2.45,w:5.6,h:2.8,barDir:"bar",chartColors:[RPT.gold],valAxisMaxVal:100,valAxisMinVal:0,showValue:true,dataLabelFontSize:8,dataLabelColor:RPT.ink,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showTitle:true,title:tr("Average by skill (pass mark ","المتوسط حسب المهارة (درجة النجاح ")+D.pass+"%)",titleFontSize:10,titleColor:RPT.ink,valGridLine:{color:RPT.line,size:0.5},showLegend:false,catAxisLabelFontFace:_font(),titleFontFace:_font()});
+  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:LV,values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:_ar()?0.35:6.15,y:2.45,w:3.5,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showPercent:false,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:tr("Overall level of students","المستوى العام للطلبة"),titleFontSize:10,titleColor:RPT.ink,legendFontFace:_font(),titleFontFace:_font()});
   _enhFooter(s,next());
-  // Skills analysis
-  s=pptx.addSlide(); _enhHeader(s,H,"Skills analysis & classification",tag);
-  s.addChart(pptx.ChartType.bar,[{name:"Proficient",labels:sk,values:D.rows.map(function(r){return r.P.length;})},{name:"Level 2 (BP/BF)",labels:sk,values:D.rows.map(function(r){return r.L2.length;})},{name:"Level 3 (F)",labels:sk,values:D.rows.map(function(r){return r.L3.length;})}],
-    {x:0.35,y:1.3,w:4.3,h:3.9,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:8,valGridLine:{color:ENH.line,size:0.5}});
+  s=pptx.addSlide(); _enhHeader(s,H,tr("Skills analysis & classification","تحليل المهارات والتصنيف"),tag);
+  s.addChart(pptx.ChartType.bar,[{name:LV[0],labels:sk,values:D.rows.map(function(r){return r.P.length;})},{name:tr("Level 2 (BP/BF)","المستوى 2 (BP/BF)"),labels:sk,values:D.rows.map(function(r){return r.L2.length;})},{name:tr("Level 3 (F)","المستوى 3 (F)"),labels:sk,values:D.rows.map(function(r){return r.L3.length;})}],
+    {x:_ar()?5.35:0.35,y:1.3,w:4.3,h:3.9,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:8,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:8,valGridLine:{color:RPT.line,size:0.5},catAxisLabelFontFace:_font(),legendFontFace:_font()});
   var ranked=D.rows.slice().sort(function(a,b){return a.profPct-b.profPct;}), rank={}; ranked.forEach(function(r,i){rank[r.skill]=i+1;});
-  s.addTable([["Skill","Avg","Prof. %","P","L2","L3","Priority","Action"].map(function(t){return _th(t);})].concat(D.rows.map(function(r){ return _skillRow(r,"#"+rank[r.skill]).slice(0,1).concat(_skillRow(r,"#"+rank[r.skill]).slice(1)); })),{x:4.8,y:1.35,w:4.85,colW:[1.45,0.45,0.55,0.35,0.35,0.35,0.6,0.75],border:{type:"solid",pt:0.5,color:ENH.line},fontFace:"Calibri",margin:0.04,rowH:0.34,valign:"middle"});
-  var top=ranked[0];
-  s.addText([{text:"Key finding: ",options:{bold:true,color:ENH.navy}},{text:top.skill+" is the top priority ("+top.profPct+"% proficient, "+top.L3.length+" at F). "+(ranked.length>1?("Strongest: "+ranked[ranked.length-1].skill+" ("+ranked[ranked.length-1].profPct+"%)."):""),options:{color:ENH.ink}}],{x:4.8,y:4.55,w:4.85,h:0.6,fontSize:9,fontFace:"Calibri",margin:0.06,fill:{color:"FFF7E6"},line:{color:ENH.gold}});
+  _addTable(s,[_skHead()].concat(D.rows.map(function(r){ return _skillRow(r,"#"+rank[r.skill]); })),{x:_ar()?0.35:4.8,y:1.35,w:4.85,colW:[1.45,0.45,0.55,0.35,0.35,0.35,0.6,0.75],border:{type:"solid",pt:0.5,color:RPT.line},margin:0.04,rowH:0.34,valign:"middle"});
+  var top=ranked[0], best=ranked[ranked.length-1];
+  s.addText([{text:tr("Key finding: ","أبرز نتيجة: "),options:{bold:true,color:RPT.gold}},{text:tr(skN(top.skill)+" is the top priority ("+top.profPct+"% proficient, "+top.L3.length+" at F). "+(ranked.length>1?("Strongest: "+skN(best.skill)+" ("+best.profPct+"%)."):""),"مهارة "+skN(top.skill)+" هي الأولوية القصوى (الإتقان "+top.profPct+"%، و"+top.L3.length+" في المستوى F). "+(ranked.length>1?("الأقوى: "+skN(best.skill)+" ("+best.profPct+"%)."):"")),options:{color:RPT.ink}}],_txtOpts({x:_ar()?0.35:4.8,y:4.55,w:4.85,h:0.6,fontSize:9,margin:0.06,fill:{color:RPT.cream},line:{color:RPT.gold}}));
   _enhFooter(s,next());
-  // Student heatmap
-  var hs=["Student"].concat(sk).concat(["Overall","Level"]), perPage=12;
+  var hs=[tr("Student","الطالب/ة")].concat(sk).concat([tr("Overall","الكلي"),tr("Level","المستوى")]), perPage=12;
   for(var i0=0;i0<overall.length;i0+=perPage){
-    s=pptx.addSlide(); _enhHeader(s,H,"Student skill map"+(overall.length>perPage?(" ("+(i0/perPage+1)+"/"+Math.ceil(overall.length/perPage)+")"):""),tag);
+    s=pptx.addSlide(); _enhHeader(s,H,tr("Student skill map","خريطة مهارات الطلبة")+(overall.length>perPage?(" ("+(i0/perPage+1)+"/"+Math.ceil(overall.length/perPage)+")"):""),tag);
     var nameW=2.0, skW=(9.3-nameW-1.3)/sk.length;
     var body=overall.slice(i0,i0+perPage).map(function(o){
-      var cells=[{text:o.name,options:{fontSize:8,color:ENH.ink}}];
-      sk.forEach(function(k){ var v=o.a.skillPct&&o.a.skillPct[k]; if(v==null){ cells.push({text:"—",options:{fontSize:8,align:"center",color:ENH.muted}}); return; } var l=annexLevelOf(Number(v),D.grade); cells.push({text:Math.round(v)+"%",options:{fontSize:8,align:"center",bold:true,color:_lvlColor(l),fill:{color:_lvlFill(l)}}}); });
-      cells.push({text:o.score+"%",options:{fontSize:8,align:"center",bold:true}});
-      cells.push({text:o.lvl==="P"?"Proficient":o.lvl,options:{fontSize:8,align:"center",bold:true,color:"FFFFFF",fill:{color:_lvlColor(o.lvl)}}});
+      var cells=[_c(o.name,{align:"left",fill:{color:RPT.cream}})];
+      D.rows.forEach(function(r){ var v=o.a.skillPct&&o.a.skillPct[r.skill]; if(v==null){ cells.push(_c("—",{color:RPT.muted})); return; } var l=annexLevelOf(Number(v),D.grade); cells.push(_c(Math.round(v)+"%",{bold:true,color:_lvlColor(l),fill:{color:_lvlFill(l)}})); });
+      cells.push(_c(o.score+"%",{bold:true}));
+      cells.push(_c(_lvlName(o.lvl),{bold:true,color:"FFFFFF",fill:{color:_lvlColor(o.lvl)}}));
       return cells; });
-    s.addTable([hs.map(function(t){return {text:t,options:{bold:true,color:"FFFFFF",fill:{color:ENH.navy},fontSize:7.5,align:"center",valign:"middle"}};})].concat(body),{x:0.35,y:1.3,w:9.3,colW:[nameW].concat(sk.map(function(){return skW;})).concat([0.7,0.6]),border:{type:"solid",pt:0.5,color:ENH.line},fontFace:"Calibri",margin:0.03,rowH:0.27,valign:"middle"});
-    s.addText(bands,{x:0.35,y:5.05,w:9.3,h:0.22,fontSize:7.5,color:ENH.muted,fontFace:"Calibri",margin:0});
+    _addTable(s,[hs.map(function(t){return _th(t);})].concat(body),{x:0.35,y:1.3,w:9.3,colW:[nameW].concat(sk.map(function(){return skW;})).concat([0.7,0.6]),border:{type:"solid",pt:0.5,color:RPT.line},margin:0.03,rowH:0.27,valign:"middle"});
+    s.addText(bands,_txtOpts({x:0.35,y:5.05,w:9.3,h:0.22,fontSize:7.5,color:RPT.muted}));
     _enhFooter(s,next());
   }
-  // For each chosen month: intervention groups, enrichment, timeline
   monthList(month).forEach(function(m){
-    var g=_groupRows(D,m); if(!g.length) g=[[{text:"No student is below the proficient level — no intervention group needed.",options:{fontSize:9,colspan:6,align:"center"}}]];
-    _enhPaged(pptx,H,"Intervention groups — "+ANNEX_MONTHS[m-1],tag,GHEAD.map(function(t){return _th(t,ENH.F);}),g,GCOLS,next);
-    var e=_enrichRows(D,m); if(!e.length) e=[[{text:"No student is proficient yet — focus on the intervention groups first.",options:{fontSize:9,colspan:5,align:"center"}}]];
-    _enhPaged(pptx,H,"Enrichment plan — "+ANNEX_MONTHS[m-1],tag,EHEAD.map(function(t){return _th(t,ENH.P);}),e,ECOLS,next);
-    var focus=ranked.filter(function(r){return r.L2.length||r.L3.length;}).slice(0,2).map(function(r){return r.skill;}).join(" & ")||ranked[0].skill;
+    var g=_groupRows(D,m); if(!g.length) g=[[_c(tr("No student is below the proficient level — no intervention group needed.","لا يوجد طالب دون مستوى الإتقان — لا حاجة إلى مجموعة تدخل."),{fontSize:9,colspan:6})]];
+    _enhPaged(pptx,H,tr("Intervention groups — ","مجموعات التدخل — ")+mName(m),tag,_gHead().map(function(t){return _th(t,ENH.F);}),g,GCOLS,next);
+    var e=_enrichRows(D,m); if(!e.length) e=[[_c(tr("No student is proficient yet — focus on the intervention groups first.","لا يوجد طالب متقن بعد — التركيز على مجموعات التدخل أولًا."),{fontSize:9,colspan:5})]];
+    _enhPaged(pptx,H,tr("Enrichment plan — ","خطة الإثراء — ")+mName(m),tag,_eHead().map(function(t){return _th(t,ENH.P);}),e,ECOLS,next);
+    var focus=ranked.filter(function(r){return r.L2.length||r.L3.length;}).slice(0,2).map(function(r){return skN(r.skill);}).join(tr(" & "," و"))||skN(ranked[0].skill);
     _enhTimeline(pptx,H,tag,m,focus,next);
   });
   _enhApproval(pptx,H,tag,teacher,today,next);
-  return {pptx:pptx,fileName:safeName("Enhanced Report - "+D.c.name+" - "+subj+" - Term "+D.term+" - "+monthLabel(month))+".pptx"};
-}
-function _skillRow(r,prio){
-  var st=r.profPct>=80?["DCFCE7",ENH.P]:(r.profPct>=50?["FEF9C3",ENH.BP]:["FEE2E2",ENH.F]);
-  var act=r.profPct>=80?"Enrich":(r.profPct>=50?"Small groups":"Re-teach all");
-  return [{text:r.skill,options:{fontSize:8,bold:true,color:ENH.ink}},{text:(r.avg||0)+"%",options:{fontSize:8,align:"center"}},{text:r.profPct+"%",options:{fontSize:8,align:"center",bold:true,color:st[1]}},{text:String(r.P.length),options:{fontSize:8,align:"center"}},{text:String(r.L2.length),options:{fontSize:8,align:"center"}},{text:String(r.L3.length),options:{fontSize:8,align:"center"}},{text:prio,options:{fontSize:8,align:"center",bold:true,fill:{color:st[0]},color:st[1]}},{text:act,options:{fontSize:8,align:"center"}}];
+  var r={pptx:pptx,fileName:safeName("Enhanced Report - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+" - "+(String(month)==="all"?"All Months":ANNEX_MONTHS[monthList(month)[0]-1])+(_ar()?" - Arabic":""))+".pptx"};
+  RL="en"; return r;
 }
 /* ===== Combined report for ALL classes (current school) ===== */
 function combinedData(term){ return classesList().map(function(c){ return annexData(c.id,term); }).filter(function(D){ return D&&D.rows.length; }); }
-function buildCombinedEnhancedPptx(Ds,term,month){
+function buildCombinedEnhancedPptx(Ds,term,month,lang){
   if(!Ds.length) return null;
-  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Combined report — all classes";
-  var H=annexSchoolHeader(Ds[0].c), teacher=Ds[0].c.teacherName||ownerName()||"Teacher", today=new Date().toLocaleDateString("en-GB");
-  var tag="All classes ("+Ds.length+") · Term "+term, pg=1, next=function(){return ++pg;};
+  RL=lang==="ar"?"ar":"en";
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; pptx.title="Combined report — all classes"; if(_ar()) pptx.rtlMode=true;
+  var H=annexSchoolHeader(Ds[0].c), teacher=Ds[0].c.teacherName||ownerName()||tr("Teacher","المعلّم/ة"), today=new Date().toLocaleDateString("en-GB");
+  var tag=tr("All classes ("+Ds.length+") · Term "+term,"جميع الصفوف ("+Ds.length+") · الفصل "+term), pg=1, next=function(){return ++pg;};
   var all=[], cnt={P:0,BP:0,BF:0,F:0}; Ds.forEach(function(D){ _overallOf(D).forEach(function(o){ all.push(o); cnt[o.lvl]++; }); });
   var avg=all.length?Math.round(all.reduce(function(s,o){return s+o.score;},0)/all.length):0;
-  _enhCover(pptx,H,"Combined Diagnostic Report — All Classes",tag+" · "+Array.from(new Set(Ds.map(function(D){return subjLabelLong(D.c.subject);}))).join(", "),teacher,_periodText(month),today,"Levels use each class's MOE pass mark — Cycle 3: 60% (Proficient ≥ 70%), Cycle 2: 50% (Proficient ≥ 60%).");
-  // Overview
-  var s=pptx.addSlide(); _enhHeader(s,H,"All classes at a glance",tag);
-  _enhTiles(s,[["Classes · students",Ds.length+" · "+all.length,ENH.navy],["Overall average",avg+"%",ENH.teal],["Proficient",cnt.P+" · "+(all.length?Math.round(cnt.P/all.length*100):0)+"%",ENH.P],["Borderline (BP + BF)",String(cnt.BP+cnt.BF),ENH.BF],["Failing (F)",String(cnt.F),ENH.F]]);
-  var labs=Ds.map(function(D){ return _clip(D.c.name,22)+" · "+subjLabel(D.c.subject); });
+  _enhCover(pptx,H,tr("Combined Diagnostic Report — All Classes","التقرير التشخيصي المجمّع — جميع الصفوف"),tag+" · "+Array.from(new Set(Ds.map(function(D){return subjN(D.c.subject);}))).join(_ar()?"، ":", "),teacher,_periodText(month),today,tr("Levels use each class's MOE pass mark — Cycle 3: 60% (Proficient ≥ 70%), Cycle 2: 50% (Proficient ≥ 60%).","المستويات حسب درجة النجاح المعتمدة لكل صف — الحلقة 3: 60% (متقن ≥ 70%)، الحلقة 2: 50% (متقن ≥ 60%)."));
+  var s=pptx.addSlide(); _enhHeader(s,H,tr("All classes at a glance","نظرة عامة على جميع الصفوف"),tag);
+  _enhTiles(s,[[tr("Classes · students","الصفوف · الطلبة"),Ds.length+" · "+all.length,RPT.ink],[tr("Overall average","المتوسط العام"),avg+"%",RPT.gold],[tr("Proficient","متقن"),cnt.P+" · "+(all.length?Math.round(cnt.P/all.length*100):0)+"%",ENH.P],[tr("Borderline (BP + BF)","حدّي (BP + BF)"),String(cnt.BP+cnt.BF),ENH.BF],[tr("Failing (F)","راسب (F)"),String(cnt.F),ENH.F]]);
+  var labs=Ds.map(function(D){ return _clip(clsN(D.c.name),22)+" · "+subjN(D.c.subject); });
   var lv=function(D,l){ return _overallOf(D).filter(function(o){return o.lvl===l;}).length; };
-  s.addChart(pptx.ChartType.bar,[{name:"Proficient",labels:labs,values:Ds.map(function(D){return lv(D,"P");})},{name:"BP",labels:labs,values:Ds.map(function(D){return lv(D,"BP");})},{name:"BF",labels:labs,values:Ds.map(function(D){return lv(D,"BF");})},{name:"F",labels:labs,values:Ds.map(function(D){return lv(D,"F");})}],
-    {x:0.35,y:2.45,w:5.9,h:2.8,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:7,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:7,showTitle:true,title:"Students by level in each class",titleFontSize:10,titleColor:ENH.navy,valGridLine:{color:ENH.line,size:0.5}});
-  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:["Proficient","BP","BF","F"],values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:6.4,y:2.45,w:3.25,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:"All students",titleFontSize:10,titleColor:ENH.navy});
+  var LV=[tr("Proficient","متقن"),"BP","BF","F"];
+  s.addChart(pptx.ChartType.bar,["P","BP","BF","F"].map(function(l,i){ return {name:LV[i],labels:labs,values:Ds.map(function(D){return lv(D,l);})}; }),
+    {x:_ar()?3.75:0.35,y:2.45,w:5.9,h:2.8,barDir:"bar",barGrouping:"stacked",chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],showLegend:true,legendPos:"b",legendFontSize:8,catAxisLabelFontSize:7,valAxisLabelFontSize:7,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:7,showTitle:true,title:tr("Students by level in each class","الطلبة حسب المستوى في كل صف"),titleFontSize:10,titleColor:RPT.ink,valGridLine:{color:RPT.line,size:0.5},catAxisLabelFontFace:_font(),legendFontFace:_font(),titleFontFace:_font()});
+  s.addChart(pptx.ChartType.doughnut,[{name:"Students",labels:LV,values:[cnt.P,cnt.BP,cnt.BF,cnt.F]}],{x:_ar()?0.35:6.4,y:2.45,w:3.25,h:2.8,chartColors:[ENH.P,ENH.BP,ENH.BF,ENH.F],holeSize:55,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:9,showLegend:true,legendPos:"b",legendFontSize:8,showTitle:true,title:tr("All students","جميع الطلبة"),titleFontSize:10,titleColor:RPT.ink,legendFontFace:_font(),titleFontFace:_font()});
   _enhFooter(s,next());
-  // Class summary table
   var crow=Ds.map(function(D){ var o=_overallOf(D), a=o.length?Math.round(o.reduce(function(s,x){return s+x.score;},0)/o.length):0, p=o.filter(function(x){return x.lvl==="P";}).length;
     var weak=D.rows.slice().sort(function(x,y){return x.profPct-y.profPct;})[0];
-    var c=function(t,opt){ return {text:String(t),options:Object.assign({fontSize:8,align:"center"},opt||{})}; };
-    return [c(annexClsLabel(D),{bold:true,align:"left"}),c(subjLabelLong(D.c.subject)),c(o.length),c(a+"%",{bold:true}),c((o.length?Math.round(p/o.length*100):0)+"%",{color:ENH.P,bold:true}),c(lv(D,"BP"),{color:ENH.BP}),c(lv(D,"BF"),{color:ENH.BF}),c(lv(D,"F"),{color:ENH.F,bold:true}),c(weak.skill+" ("+weak.profPct+"%)",{align:"left"})]; });
-  _enhPaged(pptx,H,"Class summary",tag,["Class","Subject","Students","Average","Proficient %","BP","BF","F","Weakest skill (prof. %)"].map(function(t){return _th(t);}),crow,[1.7,0.95,0.7,0.75,0.9,0.5,0.5,0.5,2.8],next);
-  // Skills priority list across all classes
+    return [_c(annexClsLabel(D),{bold:true,align:"left",fill:{color:RPT.cream}}),_c(subjN(D.c.subject)),_c(o.length),_c(a+"%",{bold:true}),_c((o.length?Math.round(p/o.length*100):0)+"%",{color:ENH.P,bold:true}),_c(lv(D,"BP"),{color:ENH.BP}),_c(lv(D,"BF"),{color:ENH.BF}),_c(lv(D,"F"),{color:ENH.F,bold:true}),_c(skN(weak.skill)+" ("+weak.profPct+"%)",{align:"left"})]; });
+  _enhPaged(pptx,H,tr("Class summary","ملخص الصفوف"),tag,tr(["Class","Subject","Students","Average","Proficient %","BP","BF","F","Weakest skill (prof. %)"],["الصف","المادة","الطلبة","المتوسط","نسبة الإتقان","BP","BF","F","أضعف مهارة (نسبة الإتقان)"]).map(function(t){return _th(t);}),crow,[1.7,0.95,0.7,0.75,0.9,0.5,0.5,0.5,2.8],next);
   var prio=[]; Ds.forEach(function(D){ D.rows.forEach(function(r){ prio.push({D:D,r:r}); }); });
   prio.sort(function(a,b){return a.r.profPct-b.r.profPct;});
-  var prow=prio.map(function(x,i){ var row=_skillRow(x.r,"#"+(i+1)); row[0]={text:annexClsLabel(x.D)+" — "+x.r.skill,options:{fontSize:8,bold:true,color:ENH.ink}}; return row; });
-  _enhPaged(pptx,H,"Skill priorities across all classes",tag,["Class — Skill","Avg","Prof. %","P","L2","L3","Priority","Action"].map(function(t){return _th(t);}),prow,[3.2,0.7,0.8,0.55,0.55,0.55,0.9,2.05],next);
-  // Per month: intervention + enrichment for every class, and one timeline
+  var prow=prio.map(function(x,i){ return _skillRow(x.r,"#"+(i+1),annexClsLabel(x.D)+" — "+skN(x.r.skill)); });
+  _enhPaged(pptx,H,tr("Skill priorities across all classes","أولويات المهارات في جميع الصفوف"),tag,_skHead(tr("Class — Skill","الصف — المهارة")),prow,[3.2,0.7,0.8,0.55,0.55,0.55,0.9,2.05],next);
   monthList(month).forEach(function(m){
     var g=[]; Ds.forEach(function(D){ g=g.concat(_groupRows(D,m,annexClsLabel(D)+" — ")); });
-    if(!g.length) g=[[{text:"No student is below the proficient level — no intervention group needed.",options:{fontSize:9,colspan:6,align:"center"}}]];
-    _enhPaged(pptx,H,"Intervention groups — "+ANNEX_MONTHS[m-1],tag,GHEAD.map(function(t,i){return _th(i===0?"Class — Skill":t,ENH.F);}),g,[1.6,0.95,1.85,3.1,0.85,0.95],next);
+    if(!g.length) g=[[_c(tr("No student is below the proficient level — no intervention group needed.","لا يوجد طالب دون مستوى الإتقان — لا حاجة إلى مجموعة تدخل."),{fontSize:9,colspan:6})]];
+    _enhPaged(pptx,H,tr("Intervention groups — ","مجموعات التدخل — ")+mName(m),tag,_gHead(tr("Class — Skill","الصف — المهارة")).map(function(t){return _th(t,ENH.F);}),g,[1.6,0.95,1.85,3.1,0.85,0.95],next);
     var e=[]; Ds.forEach(function(D){ e=e.concat(_enrichRows(D,m,annexClsLabel(D)+" — ")); });
-    if(!e.length) e=[[{text:"No student is proficient yet — focus on the intervention groups first.",options:{fontSize:9,colspan:5,align:"center"}}]];
-    _enhPaged(pptx,H,"Enrichment plan — "+ANNEX_MONTHS[m-1],tag,EHEAD.map(function(t,i){return _th(i===0?"Class — Skill":t,ENH.P);}),e,[1.7,2.45,3.3,0.85,1.0],next);
-    _enhTimeline(pptx,H,tag,m,"each class's top-priority skill",next);
+    if(!e.length) e=[[_c(tr("No student is proficient yet — focus on the intervention groups first.","لا يوجد طالب متقن بعد — التركيز على مجموعات التدخل أولًا."),{fontSize:9,colspan:5})]];
+    _enhPaged(pptx,H,tr("Enrichment plan — ","خطة الإثراء — ")+mName(m),tag,_eHead(tr("Class — Skill","الصف — المهارة")).map(function(t){return _th(t,ENH.P);}),e,[1.7,2.45,3.3,0.85,1.0],next);
+    _enhTimeline(pptx,H,tag,m,tr("each class's top-priority skill","المهارة ذات الأولوية في كل صف"),next);
   });
   _enhApproval(pptx,H,tag,teacher,today,next);
-  return {pptx:pptx,fileName:safeName("Combined Enhanced Report - All classes - Term "+term+" - "+monthLabel(month))+".pptx"};
+  var r={pptx:pptx,fileName:safeName("Combined Enhanced Report - All classes - Term "+term+" - "+(String(month)==="all"?"All Months":ANNEX_MONTHS[monthList(month)[0]-1])+(_ar()?" - Arabic":""))+".pptx"};
+  RL="en"; return r;
 }
 /* ===== ZIP packs ===== */
 function ensureZipLib(){
   if(window.JSZip) return Promise.resolve();
-  return ensurePptxLib().then(function(){ if(window.JSZip) return;   // the PowerPoint bundle includes JSZip
+  return ensurePptxLib().then(function(){ if(window.JSZip) return;
     return _loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js").catch(function(){ return _loadScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"); })
       .then(function(){ if(!window.JSZip) throw new Error("Couldn't load the ZIP library. Please refresh and try again."); }); });
 }
 async function _zipAdd(zip,path,r){ if(r) zip.file(path+r.fileName, await r.pptx.write({outputType:"arraybuffer"})); }
-async function buildReportPackZip(classId,term,month){
+function _langs(lang){ return lang==="both"?["en","ar"]:[lang==="ar"?"ar":"en"]; }
+function _langDir(l,lang){ return lang==="both"?(l==="ar"?"العربية - Arabic/":"English/"):""; }
+async function buildReportPackZip(classId,term,month,lang){
   var D=annexData(classId,term); if(!D||!D.rows.length) return null;
   var zip=new JSZip();
-  await _zipAdd(zip,"1 - School template version/",buildAnnexFromData([D],"3",month,false));
-  await _zipAdd(zip,"1 - School template version/",buildAnnexFromData([D],"4",month,false));
-  await _zipAdd(zip,"2 - Enhanced version/",buildEnhancedPptx(classId,term,month));
-  return {zip:zip,fileName:safeName("Report pack - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+" - "+monthLabel(month))+".zip"};
+  for(const l of _langs(lang)){ var p=_langDir(l,lang);
+    await _zipAdd(zip,p+"1 - School template version/",buildAnnexFromData([D],"3",month,false,l));
+    await _zipAdd(zip,p+"1 - School template version/",buildAnnexFromData([D],"4",month,false,l));
+    await _zipAdd(zip,p+"2 - Enhanced version/",buildEnhancedPptx(classId,term,month,l)); }
+  return {zip:zip,fileName:safeName("Report pack - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+" - "+(String(month)==="all"?"All Months":ANNEX_MONTHS[monthList(month)[0]-1])+(lang==="ar"?" - Arabic":(lang==="both"?" - EN+AR":"")))+".zip"};
 }
-async function buildCombinedPackZip(term,month){
+async function buildCombinedPackZip(term,month,lang){
   var Ds=combinedData(term); if(!Ds.length) return null;
   var zip=new JSZip();
-  await _zipAdd(zip,"1 - School template version (all classes)/",buildAnnexFromData(Ds,"3",month,true));
-  await _zipAdd(zip,"1 - School template version (all classes)/",buildAnnexFromData(Ds,"4",month,true));
-  await _zipAdd(zip,"2 - Enhanced version (all classes)/",buildCombinedEnhancedPptx(Ds,term,month));
-  for(var i=0;i<Ds.length;i++){ var D=Ds[i], f="3 - Each class/"+safeName(D.c.name+" - "+subjLabelLong(D.c.subject))+"/";
-    await _zipAdd(zip,f,buildAnnexFromData([D],"3",month,false)); await _zipAdd(zip,f,buildAnnexFromData([D],"4",month,false)); await _zipAdd(zip,f,buildEnhancedPptx(D.c.id,term,month)); }
-  return {zip:zip,classes:Ds.length,fileName:safeName("Combined report pack - All classes - Term "+term+" - "+monthLabel(month))+".zip"};
+  for(const l of _langs(lang)){ var p=_langDir(l,lang);
+    await _zipAdd(zip,p+"1 - School template version (all classes)/",buildAnnexFromData(Ds,"3",month,true,l));
+    await _zipAdd(zip,p+"1 - School template version (all classes)/",buildAnnexFromData(Ds,"4",month,true,l));
+    await _zipAdd(zip,p+"2 - Enhanced version (all classes)/",buildCombinedEnhancedPptx(Ds,term,month,l));
+    for(var i=0;i<Ds.length;i++){ var D=Ds[i], f=p+"3 - Each class/"+safeName(D.c.name+" - "+subjLabelLong(D.c.subject))+"/";
+      await _zipAdd(zip,f,buildAnnexFromData([D],"3",month,false,l)); await _zipAdd(zip,f,buildAnnexFromData([D],"4",month,false,l)); await _zipAdd(zip,f,buildEnhancedPptx(D.c.id,term,month,l)); } }
+  return {zip:zip,classes:Ds.length,fileName:safeName("Combined report pack - All classes - Term "+term+" - "+(String(month)==="all"?"All Months":ANNEX_MONTHS[monthList(month)[0]-1])+(lang==="ar"?" - Arabic":(lang==="both"?" - EN+AR":"")))+".zip"};
 }
 async function _runZip(btnId,maker,emptyMsg){
   var btn=document.getElementById(btnId), old=btn&&btn.textContent;
@@ -3191,18 +3236,25 @@ async function _runZip(btnId,maker,emptyMsg){
     var r=await maker(); if(!r){ alert(emptyMsg); return; }
     downloadBlob(await r.zip.generateAsync({type:"blob"}),r.fileName,"application/zip");
   }catch(e){ alert("Couldn't create the report pack: "+((e&&e.message)||e)); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
+  finally{ RL="en"; if(btn){ btn.disabled=false; btn.textContent=old; } }
 }
-function downloadReportPack(classId){ var term=String(S.classTerm||"1"), month=(document.getElementById("annex_month")||{}).value||"1";
-  return _runZip("pack_btn",function(){ return buildReportPackZip(classId,term,month); },"No completed diagnostics in Term "+term+" for this class yet, so there is nothing to report."); }
-function downloadCombinedPack(){ var term=(document.getElementById("comb_term")||{}).value||"1", month=(document.getElementById("comb_month")||{}).value||"1";
-  return _runZip("comb_btn",function(){ return buildCombinedPackZip(term,month); },"None of your classes has a completed Term "+term+" diagnostic yet, so there is nothing to report."); }
+function _val(id,d){ return (document.getElementById(id)||{}).value||d; }
+function downloadReportPack(classId){ var term=String(S.classTerm||"1"), month=_val("annex_month","1"), lang=_val("annex_lang","en");
+  return _runZip("pack_btn",function(){ return buildReportPackZip(classId,term,month,lang); },"No completed diagnostics in Term "+term+" for this class yet, so there is nothing to report."); }
+function downloadCombinedPack(){ var term=_val("comb_term","1"), month=_val("comb_month","1"), lang=_val("comb_lang","en");
+  return _runZip("comb_btn",function(){ return buildCombinedPackZip(term,month,lang); },"None of your classes has a completed Term "+term+" diagnostic yet, so there is nothing to report."); }
+// Single files: with "English + العربية" chosen, both language files download.
+async function downloadAnnex(classId,which){
+  try{ var term=String(S.classTerm||"1"), month=_val("annex_month","1"), lang=_val("annex_lang","en");
+    await ensurePptxLib();
+    for(const l of _langs(lang)){ var r=buildAnnexPptx(classId,term,String(which),month,false,l); if(!r) return; await r.pptx.writeFile({fileName:r.fileName}); }
+  }catch(e){ alert("Couldn't create the PowerPoint: "+((e&&e.message)||e)); } finally{ RL="en"; }
+}
 async function downloadEnhanced(classId){
-  try{ var term=String(S.classTerm||"1"), month=(document.getElementById("annex_month")||{}).value||"1";
-    await ensurePptxLib(); var r=buildEnhancedPptx(classId,term,month);
-    if(!r){ alert("No completed diagnostics in Term "+term+" for this class yet."); return; }
-    await r.pptx.writeFile({fileName:r.fileName});
-  }catch(e){ alert("Couldn't create the PowerPoint: "+((e&&e.message)||e)); }
+  try{ var term=String(S.classTerm||"1"), month=_val("annex_month","1"), lang=_val("annex_lang","en");
+    await ensurePptxLib();
+    for(const l of _langs(lang)){ var r=buildEnhancedPptx(classId,term,month,l); if(!r){ alert("No completed diagnostics in Term "+term+" for this class yet."); return; } await r.pptx.writeFile({fileName:r.fileName}); }
+  }catch(e){ alert("Couldn't create the PowerPoint: "+((e&&e.message)||e)); } finally{ RL="en"; }
 }
 function monthOptionsHtml(){ return ANNEX_MONTHS.map(function(m,i){return '<option value="'+(i+1)+'">'+m+'</option>';}).join("")+'<option value="all">All Months</option>'; }
 function combinedReportCardHtml(){
@@ -3210,9 +3262,10 @@ function combinedReportCardHtml(){
   var any=["1","2","3"].filter(function(t){ return cls.some(function(c){ return classCompletedForTerm(c.id,t).length; }); });
   if(!any.length) return "";
   var t0=any.indexOf(String(S.classTerm||"1"))>=0?String(S.classTerm||"1"):any[0];
-  return '<div class="card" style="border-left:4px solid var(--gold,#C9A55A)"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:center"><div><h2 style="margin:0 0 2px">📚 Combined report — all classes</h2><p class="sub" style="margin:0">One report pack for every class'+(typeof curSchool==="function"&&schoolsEnabled()?' in '+esc(schoolShort(curSchool())):'')+' with a completed diagnostic: combined Annex 3 + Annex 4, a combined Enhanced report, and each class’s own reports.</p></div>'
+  return '<div class="card" style="border-left:4px solid #B38A39"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:center"><div><h2 style="margin:0 0 2px">📚 Combined report — all classes</h2><p class="sub" style="margin:0">One report pack for every class'+(typeof curSchool==="function"&&schoolsEnabled()?' in '+esc(schoolShort(curSchool())):'')+' with a completed diagnostic: combined Annex 3 + Annex 4, a combined Enhanced report, and each class’s own reports.</p></div>'
    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Term</label><select id="comb_term" style="width:auto">'+["1","2","3"].map(function(t){return '<option value="'+t+'"'+(t===t0?" selected":"")+'>Term '+t+(any.indexOf(t)<0?" (no results)":"")+'</option>';}).join("")+'</select>'
    +'<label style="display:inline;margin:0;font-size:12px">Plan month</label><select id="comb_month" style="width:auto">'+monthOptionsHtml()+'</select>'
+   +'<label style="display:inline;margin:0;font-size:12px">Language</label>'+langOptionsHtml("comb_lang")
    +'<button class="btn gold sm" id="comb_btn" onclick="downloadCombinedPack()">⬇ Combined report pack (.zip)</button></div></div></div>';
 }
 function viewClass(id){

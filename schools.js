@@ -296,14 +296,16 @@ function runSplit(){
 /* ===== Report settings (per school): the name printed on reports + who approves them =====
    Stored on the school's document (admin-only write). Al Noaimiyah has built-in defaults. */
 var REPORT_DEFAULTS={
-  noaimiyah:{reportName:"Al Noaimiyah Girls School-Cycle 1,2&3", principal:"Fanda Salem Ahmed Helais Alkaabi", approver:"Bhawna Sharma"}
+  noaimiyah:{reportName:"Al Noaimiyah Girls School-Cycle 1,2&3", reportNameAr:"مدرسة النعيمية للبنات – الحلقة الأولى والثانية والثالثة", principal:"Fanda Salem Ahmed Helais Alkaabi", approver:"Bhawna Sharma"},
+  ibnhazm:{reportNameAr:"مدرسة ابن حزم للبنين"}
 };
 function reportSettings(sid){
   sid=sid||DEFAULT_SCHOOL;
   var d=REPORT_DEFAULTS[sid]||{}, doc=schoolList().filter(function(x){return x.id===sid;})[0]||{};
   return {reportName:(doc.reportName||d.reportName||schoolName(sid)||"School"),
           principal:(doc.principal!=null&&doc.principal!==""?doc.principal:(d.principal||"")),
-          approver:(doc.approver!=null&&doc.approver!==""?doc.approver:(d.approver||""))};
+          approver:(doc.approver!=null&&doc.approver!==""?doc.approver:(d.approver||"")),
+          reportNameAr:(doc.reportNameAr||d.reportNameAr||""), principalAr:(doc.principalAr||d.principalAr||""), approverAr:(doc.approverAr||d.approverAr||"")};
 }
 function adminReportSettingsView(){
   var list=schoolsEnabled()?schoolList():SCHOOL_SEED.filter(function(s){return s.id===DEFAULT_SCHOOL;});
@@ -312,13 +314,16 @@ function adminReportSettingsView(){
       +'<div class="row"><div class="col"><label>School name on reports</label><input id="rs_name_'+k+'" value="'+esc(r.reportName)+'"></div></div>'
       +'<div class="row"><div class="col"><label>School Principal (approves reports)</label><input id="rs_pr_'+k+'" value="'+esc(r.principal)+'" placeholder="Principal’s full name"></div>'
       +'<div class="col"><label>Academic Approver</label><input id="rs_ap_'+k+'" value="'+esc(r.approver)+'" placeholder="Academic approver’s full name"></div></div>'
+      +'<div class="row"><div class="col"><label>School name in Arabic (Arabic reports)</label><input id="rs_nameAr_'+k+'" dir="rtl" value="'+esc(r.reportNameAr)+'" placeholder="اسم المدرسة بالعربية"></div></div>'
+      +'<div class="row"><div class="col"><label>Principal’s name in Arabic (optional)</label><input id="rs_prAr_'+k+'" dir="rtl" value="'+esc(r.principalAr)+'" placeholder="يُستخدم الاسم الإنجليزي إذا تُرك فارغًا"></div>'
+      +'<div class="col"><label>Academic Approver’s name in Arabic (optional)</label><input id="rs_apAr_'+k+'" dir="rtl" value="'+esc(r.approverAr)+'" placeholder="يُستخدم الاسم الإنجليزي إذا تُرك فارغًا"></div></div>'
       +'<button class="btn sm" onclick="saveReportSettings(\''+k+'\')">Save</button> <span id="rs_msg_'+k+'" style="font-size:12px;margin-left:8px"></span></div>'; }).join("");
   return '<div class="card"><h2 style="margin:0 0 4px">🖋 Report settings</h2><p class="sub">The school name and the names printed on the approval lines of every report (Annex 3, Annex 4 and the Enhanced report). Each school has its own — teachers of that school get these automatically.</p>'
     +(schoolsEnabled()?'':'<div class="notice">Set up schools first (🏫 Schools) to save changes.</div>')+rows+'</div>';
 }
 function saveReportSettings(id){
   var g=function(p){ return ((document.getElementById(p+id)||{}).value||"").trim(); }, m=document.getElementById("rs_msg_"+id);
-  var data={reportName:g("rs_name_"), principal:g("rs_pr_"), approver:g("rs_ap_")};
+  var data={reportName:g("rs_name_"), principal:g("rs_pr_"), approver:g("rs_ap_"), reportNameAr:g("rs_nameAr_"), principalAr:g("rs_prAr_"), approverAr:g("rs_apAr_")};
   if(!data.reportName){ if(m){ m.style.color="var(--red)"; m.textContent="The school name can’t be empty."; } return; }
   db.collection("schools").doc(id).set(data,{merge:true}).then(function(){ if(m){ m.style.color="var(--ok)"; m.textContent="Saved ✓"; } })
     .catch(function(e){ if(m){ m.style.color="var(--red)"; m.textContent="Couldn’t save: "+fbErr(e); } });
