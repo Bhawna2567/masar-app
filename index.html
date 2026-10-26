@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-26a";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-26b";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -766,6 +766,7 @@ function syncResultToAssignment(){
   db.collection("assignments").doc(S.activeAssignment).set(payload,{merge:true}).catch(e=>console.warn("sync:",e));
 }
 function startListeners(){
+  try{ if(AUTH&&AUTH.role==="teacher"&&typeof myUid==="function"&&myUid()&&!(typeof ADMIN_AS!=="undefined"&&ADMIN_AS)){ db.collection("users").doc(myUid()).update({lastActiveAt:Date.now()}).catch(function(){}); } }catch(e){}
   _unsub.forEach(u=>{try{u()}catch(e){}}); _unsub=[];
   _unsub.push(db.collection("schools").onSnapshot(s=>{CACHE.schools=s.docs.map(d=>Object.assign({id:d.id},d.data())); render();}, e=>console.warn(e)));
   if(AUTH.role==="teacher"){
@@ -1877,7 +1878,7 @@ function adminMenu(){
   var sec=S.adminSection||"reports";
   return '<div class="card"><div class="flex-between"><h2 style="margin:0">Admin</h2><button class="btn ghost sm" onclick="setAdmin(\'_close\')">← Back to my dashboard</button></div>'
    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">'
-   +[["schools","🏫 Schools"],["reportset","🖋 Report settings"],["reports","📊 Admin Reports"],["classes","📚 All classes"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
+   +[["schools","🏫 Schools"],["reportset","🖋 Report settings"],["monitor","📈 Teacher monitoring"],["reports","📊 Admin Reports"],["classes","📚 All classes"],["activity","👥 Teachers & students"],["manage","👤 Manage users"],["disk","💾 Usage"],["twofactor","🔐 Two-factor"]].map(function(x){ return '<button class="btn '+(sec===x[0]?"":"ghost")+' sm" onclick="setAdmin(\''+x[0]+'\')">'+x[1]+'</button>'; }).join("")
    +' <button class="btn ghost sm" onclick="exportUsersCSV()">⬇ Export users CSV</button> <button class="btn ghost sm" onclick="exportStudentsByClass()">🏫 Export students by class</button>'
    +'</div>'+adminSchoolSwitcher()+'</div>';
 }
@@ -1924,7 +1925,7 @@ function adminDisk(){
 function adminTwoFactor(){
   return '<div class="card"><h2>Two-factor authentication</h2><p class="sub">Extra login security for accounts.</p><p style="font-size:14px;line-height:1.7">Built-in SMS two-factor for teacher/student logins needs Firebase’s paid <b>Blaze</b> plan. On the current free plan, your accounts are already protected by:</p><ul style="font-size:14px;line-height:1.8"><li><b>App Check</b> is enforced — only the real app can reach your data.</li><li>Passwords must be at least <b>8 characters</b>.</li><li><b>Email verification</b> is requested at sign-up.</li><li>You can <b>block</b> any suspicious account from Manage users.</li></ul><p class="muted" style="font-size:12px">Also turn on <b>2FA for your GitHub account</b> — that protects the whole app. If you upgrade to Blaze later, SMS multi-factor for teachers can be switched on.</p></div>';
 }
-function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="schools"?adminSchoolsView() : sec==="reportset"?adminReportSettingsView() : sec==="classes"?adminAllClasses() : sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
+function viewAdmin(){ ensureAdminListeners(); var sec=S.adminSection||"reports"; var body = sec==="schools"?adminSchoolsView() : sec==="reportset"?adminReportSettingsView() : sec==="monitor"?adminTeacherMonitorView() : sec==="classes"?adminAllClasses() : sec==="manage"?adminManage() : (sec==="activity"?adminActivity() : (sec==="disk"?adminDisk() : (sec==="twofactor"?adminTwoFactor() : adminReports()))); return adminMenu()+body; }
 
 /* ===== ADMIN: drill into any teacher's classes and their students' progress ===== */
 function esc(s){ return (""+(s==null?"":s)).replace(/[&<>"]/g,function(m){return m==="&"?"&amp;":m==="<"?"&lt;":m===">"?"&gt;":"&quot;";}); }
@@ -3276,9 +3277,12 @@ var WP_WEEKS={"1":17,"2":10,"3":10}, WP_TASKS={"1":7,"2":5,"3":5};
 function wpStartOf(a){ var w=a.snapshot&&a.snapshot.result&&a.snapshot.result.when; var t=w?Date.parse(w):NaN; return isNaN(t)?(a.completedAt||a.createdAt||null):t; }
 function weeklyPracticeData(classId,term,now){
   var c=classesList().find(function(x){return x.id===classId;}); if(!c) return null;
-  term=String(term); now=now||Date.now();
+  return wpCompute(c,assignments().filter(function(a){return a.classId===classId;}),term,now);
+}
+function wpCompute(c,classAssigns,term,now){
+  term=String(term); now=now||Date.now(); var classId=c.id;
   var brk=Math.max(0,Number((c.practiceBreakWeeks||{})[term])||0);
-  var byStu={}; assignments().filter(function(a){ return a.classId===classId && aTerm(a)===term; }).forEach(function(a){ var k=a.studentEmail, cur=byStu[k];
+  var byStu={}; classAssigns.filter(function(a){ return a.classId===classId && aTerm(a)===term; }).forEach(function(a){ var k=a.studentEmail, cur=byStu[k];
     if(!cur || (a.status==="completed"&&cur.status!=="completed") || ((a.status==="completed")===(cur.status==="completed") && (a.createdAt||0)>(cur.createdAt||0))) byStu[k]=a; });
   var rows=Object.keys(byStu).map(function(k){
     var a=byStu[k], name=a.studentName||a.studentEmail;
@@ -3394,6 +3398,123 @@ function buildWeeklyPracticePptx(D,lang){
     _addTable(t,[head.map(function(x){return _th(x);})].concat(rows.slice(i,i+per)),{x:0.4,y:2.05,w:9.2,colW:colW,border:{type:"solid",pt:0.5,color:RPT.line},margin:0.04,rowH:0.27,valign:"middle"});
   }
   var r={pptx:pptx,fileName:safeName("Weekly practice - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+(_ar()?" - Arabic":""))+".pptx"};
+  RL="en"; return r;
+}
+/* ===== ADMIN · Teacher monitoring: is each teacher using Adeptly and getting students to do the weekly practice? ===== */
+function _teacherLastActive(u,classes,assigns){
+  var t=Number(u&&u.lastActiveAt)||0;
+  classes.forEach(function(c){ t=Math.max(t,Number(c.createdAt)||0); });
+  assigns.forEach(function(a){ t=Math.max(t,Number(a.createdAt)||0); });
+  return t||null;
+}
+function _classUsage(c,list,term,now){
+  var D=wpCompute(c,list,term,now), rows=D.rows;
+  var enrolled=new Set(list.map(function(a){return a.studentEmail;})).size;
+  var diag=rows.filter(function(r){return r.state!=="nodiag";}), n=diag.length;
+  var onTrack=diag.filter(function(r){return r.state==="ontrack"||r.state==="ahead";}).length;
+  var started=diag.filter(function(r){return r.done>0;}).length;
+  var active7=diag.filter(function(r){return r.lastActive&&(now-r.lastActive)<=7*864e5;}).length;
+  var behind=n?diag.reduce(function(s,r){return s+(r.behind||0);},0)/n:0;
+  var far=diag.filter(function(r){return r.state==="far"||r.state==="notstarted";}).length;
+  var pct=function(x){return n?Math.round(x/n*100):0;};
+  var flag = !rows.length||!n ? "none" : (pct(onTrack)>=70&&pct(active7)>=50) ? "good" : (pct(onTrack)<50||pct(active7)<30||behind>=2) ? "follow" : "fair";
+  return {c:c,D:D,enrolled:enrolled,termStudents:rows.length,diagDone:n,diagPct:rows.length?Math.round(n/rows.length*100):0,onTrack:onTrack,onTrackPct:pct(onTrack),started:started,startedPct:pct(started),active7:active7,active7Pct:pct(active7),avgBehind:Math.round(behind*10)/10,far:far,flag:flag};
+}
+var TM_FLAG={good:["Good","جيد","green","16A34A","DCFCE7"],fair:["Fair","مقبول","amber","CA8A04","FEF9C3"],follow:["Needs follow-up","يحتاج متابعة","red","DC2626","FEE2E2"],none:["Not using yet","لم يبدأ الاستخدام","grey","64748B","F1F5F9"]};
+function teacherMonitorData(term,now){
+  now=now||Date.now(); term=String(term||"1");
+  var classes=adminClasses(), assigns=adminAssign(), users=adminUsers();
+  var uids={}; users.filter(function(u){return u.role==="teacher";}).forEach(function(u){uids[u.uid]=u;}); classes.forEach(function(c){ if(c.teacherUid&&!uids[c.teacherUid]) uids[c.teacherUid]={uid:c.teacherUid,name:c.teacherName,email:c.teacherEmail}; });
+  var out=Object.keys(uids).map(function(uid){
+    var u=uids[uid], cl=classes.filter(function(c){return c.teacherUid===uid;}), as=assigns.filter(function(a){return a.teacherUid===uid;});
+    var cu=cl.map(function(c){ return _classUsage(c,as.filter(function(a){return a.classId===c.id;}),term,now); });
+    cu.forEach(function(x){ x.enrolled=new Set(as.filter(function(a){return a.classId===x.c.id;}).map(function(a){return a.studentEmail;})).size; });
+    var sum=function(k){return cu.reduce(function(s,x){return s+x[k];},0);};
+    var diag=sum("diagDone"), ts=sum("termStudents");
+    var pct=function(x){return diag?Math.round(x/diag*100):0;};
+    var avgB=diag?Math.round(cu.reduce(function(s,x){return s+x.avgBehind*x.diagDone;},0)/diag*10)/10:0;
+    var t={uid:uid,name:u.name||u.email||"Teacher",email:u.email||"",classes:cu,nClasses:cl.length,enrolled:sum("enrolled"),termStudents:ts,diagDone:diag,diagPct:ts?Math.round(diag/ts*100):0,
+      onTrack:sum("onTrack"),onTrackPct:pct(sum("onTrack")),active7:sum("active7"),active7Pct:pct(sum("active7")),startedPct:pct(sum("started")),avgBehind:avgB,far:sum("far"),lastActive:_teacherLastActive(u,cl,as)};
+    t.flag=!cl.length||!diag?"none":(t.onTrackPct>=70&&t.active7Pct>=50)?"good":(t.onTrackPct<50||t.active7Pct<30||avgB>=2)?"follow":"fair";
+    return t;
+  });
+  var ord={follow:0,none:1,fair:2,good:3};
+  out.sort(function(a,b){ return (ord[a.flag]-ord[b.flag]) || (b.avgBehind-a.avgBehind) || String(a.name).localeCompare(String(b.name)); });
+  return {term:term,now:now,teachers:out};
+}
+function setTmTerm(v){ S.tmTerm=String(v); render(); }
+function adminTeacherMonitorView(){
+  var term=String(S.tmTerm||"1"), M=teacherMonitorData(term);
+  var T=M.teachers, cnt={}; T.forEach(function(t){cnt[t.flag]=(cnt[t.flag]||0)+1;});
+  var pill=function(f){var x=TM_FLAG[f]; return '<span class="pill '+x[2]+'">'+x[0]+'</span>';};
+  var bar=function(p){ return '<div style="display:flex;align-items:center;gap:6px"><div class="bar" style="width:70px;margin:0"><span style="width:'+p+'%;background:'+(p>=70?'var(--ok)':p>=50?'var(--amber)':'var(--red)')+'"></span></div><span style="font-size:12px">'+p+'%</span></div>'; };
+  var rows=T.map(function(t){
+    var cls=t.classes.map(function(x){ return '<tr style="background:#fafafa"><td style="padding-left:22px">↳ '+esc(x.c.name)+' <span class="muted" style="font-size:11px">· '+esc(subjLabelLong(x.c.subject))+'</span></td><td style="text-align:center">'+x.enrolled+'</td><td style="text-align:center">'+x.diagDone+' / '+x.termStudents+'</td><td>'+bar(x.onTrackPct)+'</td><td>'+bar(x.active7Pct)+'</td><td style="text-align:center">'+x.avgBehind+'</td><td style="text-align:center">'+x.far+'</td><td></td><td>'+pill(x.flag)+'</td></tr>'; }).join("");
+    return '<tr><td><b>'+esc(t.name)+'</b><div class="muted" style="font-size:11px">'+esc(t.email)+' · '+t.nClasses+' class(es)</div></td><td style="text-align:center">'+t.enrolled+'</td><td style="text-align:center">'+t.diagDone+' / '+t.termStudents+'</td><td>'+bar(t.onTrackPct)+'</td><td>'+bar(t.active7Pct)+'</td><td style="text-align:center"><b>'+t.avgBehind+'</b></td><td style="text-align:center">'+t.far+'</td><td style="font-size:12px">'+_fmtD(t.lastActive)+'</td><td>'+pill(t.flag)+' <button class="btn ghost sm" onclick="adminOpenTeacher(\''+t.uid+'\')">Open</button></td></tr>'+cls;
+  }).join("");
+  return '<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:center"><div><h2 style="margin:0 0 2px">📈 Teacher monitoring — weekly practice</h2><p class="sub" style="margin:0">Is each teacher using Adeptly and getting students to keep up with their weekly folders? Teachers needing follow-up are listed first.</p></div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Term</label><select style="width:auto" onchange="setTmTerm(this.value)">'+["1","2","3"].map(function(x){return '<option value="'+x+'"'+(x===term?" selected":"")+'>Term '+x+'</option>';}).join("")+'</select>'
+   +langOptionsHtml("tm_lang")+'<button class="btn sm" onclick="downloadTeacherMonitor(\'xlsx\')">⬇ Excel</button><button class="btn gold sm" onclick="downloadTeacherMonitor(\'pptx\')">⬇ PowerPoint</button></div></div>'
+   +'<div class="notice" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f8fafc;margin-top:10px"><b style="font-size:13px">'+T.length+' teacher(s):</b>'+pill("good")+' '+(cnt.good||0)+' &nbsp;'+pill("fair")+' '+(cnt.fair||0)+' &nbsp;'+pill("follow")+' '+(cnt.follow||0)+' &nbsp;'+pill("none")+' '+(cnt.none||0)+'</div>'
+   +'<table style="margin-top:8px"><thead><tr><th>Teacher / class</th><th>Students</th><th>Diagnostics done</th><th>On track</th><th>Active last 7 days</th><th>Avg weeks behind</th><th>4+ wks behind / not started</th><th>Teacher last active</th><th>Status</th></tr></thead><tbody>'+(rows||'<tr><td colspan="9" class="muted">No teachers in this school yet.</td></tr>')+'</tbody></table>'
+   +'<p class="muted" style="font-size:12px;margin-top:10px"><b>Good</b> = ≥ 70% of students on track and ≥ 50% practised in the last 7 days. <b>Needs follow-up</b> = under 50% on track, under 30% active, or 2+ weeks behind on average. <b>Not using yet</b> = no class or no completed diagnostic this term. Holiday weeks a teacher entered are taken into account.</p></div>';
+}
+async function downloadTeacherMonitor(fmt){
+  var M=teacherMonitorData(S.tmTerm||"1"), lang=_val("tm_lang","en");
+  if(!M.teachers.length){ alert("No teachers to report on yet."); return; }
+  try{
+    if(fmt==="xlsx"){
+      await ensureXlsxLibs();
+      for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"متابعة المعلمين":"Teacher monitoring",ar?{views:[{rightToLeft:true}]}:{});
+        ws.columns=[{width:30},{width:28},{width:16},{width:10},{width:14},{width:12},{width:14},{width:14},{width:14},{width:16},{width:18}];
+        RL=l; var H=annexSchoolHeader({schoolId:(adminSchool()==="ALL"?DEFAULT_SCHOOL:adminSchool())}); RL="en";
+        ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
+        ws.addRow([(ar?"تقرير متابعة استخدام المعلمين للتدريب الأسبوعي — الفصل ":"Teacher monitoring — weekly practice — Term ")+M.term+" · "+new Date().toLocaleDateString("en-GB")]); ws.addRow([]);
+        hdrRow(ws,ar?["المعلّم/ة","الصف","المادة","الطلبة","التشخيص المنجز","على المسار %","نشط آخر 7 أيام %","متوسط أسابيع التأخر","متأخر 4+ / لم يبدأ","آخر نشاط للمعلّم","الحالة"]:["Teacher","Class","Subject","Students","Diagnostics done","On track %","Active 7 days %","Avg weeks behind","4+ behind / not started","Teacher last active","Status"]);
+        M.teachers.forEach(function(t){
+          var r=ws.addRow([t.name,ar?"جميع الصفوف":"All classes","",t.enrolled,t.diagDone+" / "+t.termStudents,t.onTrackPct,t.active7Pct,t.avgBehind,t.far,_fmtD(t.lastActive),TM_FLAG[t.flag][ar?1:0]]); r.font={bold:true};
+          var f=TM_FLAG[t.flag], cc=r.getCell(11); cc.font={bold:true,color:{argb:"FF"+f[3]}}; cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+f[4]}};
+          t.classes.forEach(function(x){ var rr=ws.addRow(["",x.c.name,subjLabelLong(x.c.subject),x.enrolled,x.diagDone+" / "+x.termStudents,x.onTrackPct,x.active7Pct,x.avgBehind,x.far,"",TM_FLAG[x.flag][ar?1:0]]); var g=TM_FLAG[x.flag]; rr.getCell(11).font={color:{argb:"FF"+g[3]}}; });
+        });
+        downloadBlob(await wb.xlsx.writeBuffer(),safeName("Teacher monitoring - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
+    } else {
+      await ensurePptxLib();
+      for(const l of _langs(lang)){ var p=buildTeacherMonitorPptx(M,l); await p.pptx.writeFile({fileName:p.fileName}); }
+    }
+  }catch(e){ alert("Couldn't create the report: "+((e&&e.message)||e)); } finally{ RL="en"; }
+}
+function buildTeacherMonitorPptx(M,lang){
+  RL=lang==="ar"?"ar":"en";
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; if(_ar()) pptx.rtlMode=true;
+  var H=annexSchoolHeader({schoolId:(typeof adminSchool==="function"&&adminSchool()!=="ALL")?adminSchool():DEFAULT_SCHOOL});
+  var title=tr("Teacher Monitoring — Weekly Practice","متابعة المعلمين — التدريب الأسبوعي"), sub=tr("Term ","الفصل ")+M.term+" · "+new Date().toLocaleDateString("en-GB");
+  var T=M.teachers, cnt={}; T.forEach(function(t){cnt[t.flag]=(cnt[t.flag]||0)+1;});
+  var s=pptx.addSlide(); s.background={color:"FFFFFF"}; _schoolHead(s,H,"");
+  s.addText(title,_txtOpts({x:0.4,y:1.35,w:9.2,h:0.35,fontSize:17,bold:true,color:RPT.ink}));
+  s.addText(sub,_txtOpts({x:0.4,y:1.72,w:9.2,h:0.25,fontSize:9,italic:true,color:RPT.muted}));
+  var tiles=[["good",tr("Good","جيد"),RPT.P],["fair",tr("Fair","مقبول"),RPT.BP],["follow",tr("Needs follow-up","يحتاج متابعة"),RPT.F],["none",tr("Not using yet","لم يبدأ الاستخدام"),RPT.muted]];
+  if(_ar()) tiles=tiles.reverse();
+  tiles.forEach(function(t,i){ var x=0.4+i*2.3; s.addShape("roundRect",{x:x,y:2.1,w:2.18,h:0.95,fill:{color:"FBF8F1"},line:{color:RPT.line},rectRadius:0.08});
+    s.addShape("rect",{x:x,y:2.1,w:2.18,h:0.07,fill:{color:t[2]},line:{color:t[2]}});
+    s.addText(String(cnt[t[0]]||0),_txtOpts({x:x+0.12,y:2.2,w:1.9,h:0.45,fontSize:24,bold:true,color:t[2]}));
+    s.addText(t[1],_txtOpts({x:x+0.12,y:2.66,w:1.9,h:0.3,fontSize:9,color:RPT.muted})); });
+  var names=T.map(function(t){return _clip(t.name,24);});
+  s.addChart(pptx.ChartType.bar,[{name:tr("On track %","على المسار %"),labels:names,values:T.map(function(t){return t.onTrackPct;})},{name:tr("Active last 7 days %","نشط آخر 7 أيام %"),labels:names,values:T.map(function(t){return t.active7Pct;})}],
+    {x:0.4,y:3.2,w:9.2,h:1.75,barDir:"col",chartColors:[RPT.gold,RPT.ink],valAxisMaxVal:100,valAxisMinVal:0,showValue:true,dataLabelFontSize:7,catAxisLabelFontSize:7,valAxisLabelFontSize:7,showLegend:true,legendPos:"r",legendFontSize:8,valGridLine:{color:RPT.line,size:0.5},catAxisLabelFontFace:_font(),legendFontFace:_font()});
+  s.addText(tr("Good = ≥ 70% on track and ≥ 50% active in the last 7 days · Needs follow-up = < 50% on track, < 30% active, or 2+ weeks behind on average.","جيد = ≥ 70% على المسار و≥ 50% نشطون آخر 7 أيام · يحتاج متابعة = أقل من 50% على المسار، أو أقل من 30% نشطون، أو تأخر بمتوسط أسبوعين فأكثر."),_txtOpts({x:0.4,y:5.05,w:9.2,h:0.3,fontSize:8,color:RPT.muted,fit:"shrink"}));
+  var head=tr(["Teacher / class","Students","Diagnostics done","On track","Active 7 days","Avg weeks behind","4+ behind / not started","Teacher last active","Status"],["المعلّم/ة / الصف","الطلبة","التشخيص المنجز","على المسار","نشط آخر 7 أيام","متوسط أسابيع التأخر","متأخر 4+ / لم يبدأ","آخر نشاط للمعلّم","الحالة"]);
+  var colW=[2.4,0.65,0.95,0.8,0.85,0.85,0.95,0.9,0.85];
+  var rows=[]; T.forEach(function(t){ var f=TM_FLAG[t.flag];
+    rows.push([_c(t.name,{align:"left",bold:true,fill:{color:RPT.cream}}),_c(t.enrolled,{bold:true}),_c(t.diagDone+" / "+t.termStudents,{bold:true}),_c(t.onTrackPct+"%",{bold:true}),_c(t.active7Pct+"%",{bold:true}),_c(t.avgBehind,{bold:true}),_c(t.far,{bold:true}),_c(_fmtD(t.lastActive)),_c(f[_ar()?1:0],{bold:true,color:f[3],fill:{color:f[4]}})]);
+    t.classes.forEach(function(x){ var g=TM_FLAG[x.flag]; rows.push([_c("   ↳ "+clsN(x.c.name)+" · "+subjN(x.c.subject),{align:"left",fontSize:7.5}),_c(x.enrolled),_c(x.diagDone+" / "+x.termStudents),_c(x.onTrackPct+"%"),_c(x.active7Pct+"%"),_c(x.avgBehind),_c(x.far),_c(""),_c(g[_ar()?1:0],{color:g[3]})]); }); });
+  var per=11;
+  for(var i=0;i<rows.length;i+=per){
+    var t=pptx.addSlide(); t.background={color:"FFFFFF"}; _schoolHead(t,H,"");
+    t.addText(title+(rows.length>per?(" ("+(i/per+1)+"/"+Math.ceil(rows.length/per)+")"):""),_txtOpts({x:0.4,y:1.35,w:9.2,h:0.35,fontSize:15,bold:true,color:RPT.ink}));
+    t.addText(sub,_txtOpts({x:0.4,y:1.7,w:9.2,h:0.25,fontSize:9,italic:true,color:RPT.muted}));
+    _addTable(t,[head.map(function(x){return _th(x);})].concat(rows.slice(i,i+per)),{x:0.4,y:2.05,w:9.2,colW:colW,border:{type:"solid",pt:0.5,color:RPT.line},margin:0.04,rowH:0.26,valign:"middle"});
+  }
+  var r={pptx:pptx,fileName:safeName("Teacher monitoring - Term "+M.term+(_ar()?" - Arabic":""))+".pptx"};
   RL="en"; return r;
 }
 function viewClass(id){
