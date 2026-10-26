@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-05e";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-26a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3268,6 +3268,134 @@ function combinedReportCardHtml(){
    +'<label style="display:inline;margin:0;font-size:12px">Language</label>'+langOptionsHtml("comb_lang")
    +'<button class="btn gold sm" id="comb_btn" onclick="downloadCombinedPack()">⬇ Combined report pack (.zip)</button></div></div></div>';
 }
+/* ===== Weekly practice tracker: is each student on track with the weekly folders, or how many weeks behind? =====
+   A student's folders start when they finish that term's diagnostic. Expected weeks = whole weeks since then
+   (minus any holiday weeks the teacher enters), capped at the term's number of folders. Weeks completed =
+   activities done ÷ activities per folder. Weeks behind = expected − completed. */
+var WP_WEEKS={"1":17,"2":10,"3":10}, WP_TASKS={"1":7,"2":5,"3":5};
+function wpStartOf(a){ var w=a.snapshot&&a.snapshot.result&&a.snapshot.result.when; var t=w?Date.parse(w):NaN; return isNaN(t)?(a.completedAt||a.createdAt||null):t; }
+function weeklyPracticeData(classId,term,now){
+  var c=classesList().find(function(x){return x.id===classId;}); if(!c) return null;
+  term=String(term); now=now||Date.now();
+  var brk=Math.max(0,Number((c.practiceBreakWeeks||{})[term])||0);
+  var byStu={}; assignments().filter(function(a){ return a.classId===classId && aTerm(a)===term; }).forEach(function(a){ var k=a.studentEmail, cur=byStu[k];
+    if(!cur || (a.status==="completed"&&cur.status!=="completed") || ((a.status==="completed")===(cur.status==="completed") && (a.createdAt||0)>(cur.createdAt||0))) byStu[k]=a; });
+  var rows=Object.keys(byStu).map(function(k){
+    var a=byStu[k], name=a.studentName||a.studentEmail;
+    if(a.status!=="completed") return {a:a,name:name,email:k,state:"nodiag",behind:null,expected:0,done:0,total:0,weeksDone:0,lastActive:null};
+    var snap=a.snapshot||{}, plan=snap.plan, td=snap.taskDone||{};
+    var T=plan&&plan.terms&&plan.terms[term], W=(plan&&plan.termWeeks&&plan.termWeeks[term])||(T&&T.weeks&&T.weeks.length)||WP_WEEKS[term]||10;
+    var per=(T&&T.weeks&&T.weeks[0]&&T.weeks[0].tasks&&T.weeks[0].tasks.length)||WP_TASKS[term]||5;
+    var done=0, total=0, fullWeeks=0, lastWeek=0;
+    if(T&&T.weeks) T.weeks.forEach(function(w){ var d=0; (w.tasks||[]).forEach(function(_,i){ total++; if(td[term+"-"+w.week+"-"+i]){ done++; d++; } }); if(w.tasks&&w.tasks.length&&d===w.tasks.length) fullWeeks++; if(d) lastWeek=Math.max(lastWeek,w.week); });
+    else total=W*per;
+    var start=wpStartOf(a), elapsed=start?Math.floor((now-start)/(7*864e5)):0;
+    var expected=Math.max(0,Math.min(W,elapsed-brk));
+    var weeksDone=Math.floor(done/per+1e-9);
+    var behind=Math.max(0,expected-weeksDone), ahead=Math.max(0,weeksDone-expected);
+    var state = (done===0&&expected>=1)?"notstarted" : behind===0?(ahead>0?"ahead":"ontrack") : behind===1?"slightly" : behind<=3?"behind" : "far";
+    return {a:a,name:name,email:k,state:state,behind:behind,ahead:ahead,expected:expected,done:done,total:total,per:per,weeks:W,weeksDone:weeksDone,fullWeeks:fullWeeks,lastWeek:lastWeek,start:start,lastActive:(a.progress&&a.progress.updatedAt)||null};
+  });
+  var order={far:0,notstarted:1,behind:2,slightly:3,ontrack:4,ahead:5,nodiag:6};
+  rows.sort(function(x,y){ return (order[x.state]-order[y.state]) || ((y.behind||0)-(x.behind||0)) || String(x.name).localeCompare(String(y.name)); });
+  var cnt={}; rows.forEach(function(r){ cnt[r.state]=(cnt[r.state]||0)+1; });
+  return {c:c,term:term,rows:rows,cnt:cnt,brk:brk,weeks:WP_WEEKS[term]||10,now:now};
+}
+var WP_STATE={ahead:["Ahead","متقدّم","green","16A34A","DCFCE7"],ontrack:["On track","على المسار","green","16A34A","DCFCE7"],slightly:["1 week behind","متأخر أسبوعًا","amber","CA8A04","FEF9C3"],
+  behind:["Behind","متأخر","amber","EA580C","FFEDD5"],far:["Far behind","متأخر كثيرًا","red","DC2626","FEE2E2"],notstarted:["Not started","لم يبدأ","red","DC2626","FEE2E2"],nodiag:["Diagnostic not done","لم يُكمل التشخيص","grey","64748B","F1F5F9"]};
+function wpStatusText(r,ar){
+  var s=WP_STATE[r.state];
+  if(r.state==="nodiag") return ar?s[1]:s[0];
+  if(r.state==="ahead") return ar?("متقدّم "+r.ahead+(r.ahead===1?" أسبوع":" أسابيع")):("Ahead by "+r.ahead+" week"+(r.ahead===1?"":"s"));
+  if(r.state==="ontrack") return ar?s[1]:s[0];
+  if(r.state==="notstarted") return ar?("لم يبدأ — متأخر "+r.behind+(r.behind===1?" أسبوع":" أسابيع")):("Not started — "+r.behind+" week"+(r.behind===1?"":"s")+" behind");
+  return ar?("متأخر "+r.behind+(r.behind===1?" أسبوع":" أسابيع")):(r.behind+" week"+(r.behind===1?"":"s")+" behind");
+}
+function _fmtD(t){ return t?new Date(t).toLocaleDateString("en-GB"):"—"; }
+function setPracticeBreak(classId,term,v){
+  var c=classesList().find(function(x){return x.id===classId;}); if(!c) return;
+  var n=Math.max(0,Math.min(10,parseInt(v,10)||0)), m=Object.assign({},c.practiceBreakWeeks||{}); m[String(term)]=n;
+  db.collection("classes").doc(classId).update({practiceBreakWeeks:m}).then(function(){ c.practiceBreakWeeks=m; render(); }).catch(function(e){ alert("Couldn't save: "+fbErr(e)); });
+}
+function weeklyPracticeCardHtml(c){
+  var D=weeklyPracticeData(c.id,S.classTerm||"1"); if(!D||!D.rows.length) return "";
+  var cn=D.cnt, k=function(x){return cn[x]||0;};
+  var started=D.rows.filter(function(r){return r.state!=="nodiag";});
+  var avgBehind=started.length?(started.reduce(function(s,r){return s+(r.behind||0);},0)/started.length):0;
+  var rowsHtml=D.rows.map(function(r){ var st=WP_STATE[r.state];
+    return '<tr><td><b>'+esc(r.name)+'</b><div class="muted" style="font-size:11px">'+esc(r.email)+'</div></td>'
+      +'<td>'+(r.state==="nodiag"?"—":_fmtD(r.start))+'</td>'
+      +'<td style="text-align:center">'+(r.state==="nodiag"?"—":(r.expected+" / "+r.weeks))+'</td>'
+      +'<td style="text-align:center">'+(r.state==="nodiag"?"—":(r.weeksDone+' <span class="muted" style="font-size:11px">('+r.done+"/"+r.total+' activities)</span>'))+'</td>'
+      +'<td><span class="pill '+st[2]+'">'+esc(wpStatusText(r,false))+'</span></td>'
+      +'<td>'+_fmtD(r.lastActive)+'</td></tr>'; }).join("");
+  return '<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:center"><div><h2 style="margin:0 0 2px">📅 Weekly practice tracker — Term '+D.term+'</h2>'
+    +'<p class="sub" style="margin:0">Folders start when each student finishes the diagnostic. Expected = whole weeks since then'+(D.brk?(' minus '+D.brk+' holiday week(s)'):'')+'; completed = activities done ÷ activities per folder.</p></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px" title="School holidays / breaks since the folders started — not counted as expected weeks">Holiday weeks</label><input type="number" min="0" max="10" value="'+D.brk+'" style="width:64px" onchange="setPracticeBreak(\''+c.id+'\',\''+D.term+'\',this.value)">'
+    +langOptionsHtml("wp_lang")+'<button class="btn sm" onclick="downloadWeeklyPractice(\''+c.id+'\',\'xlsx\')">⬇ Excel</button><button class="btn gold sm" onclick="downloadWeeklyPractice(\''+c.id+'\',\'pptx\')">⬇ PowerPoint</button></div></div>'
+    +'<div class="notice" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f8fafc;margin-top:10px"><span class="pill green">'+(k("ontrack")+k("ahead"))+' on track</span><span class="pill amber">'+k("slightly")+' 1 week behind</span><span class="pill amber">'+k("behind")+' 2–3 weeks behind</span><span class="pill red">'+(k("far")+k("notstarted"))+' 4+ weeks behind / not started</span>'+(k("nodiag")?'<span class="pill grey">'+k("nodiag")+' diagnostic not done</span>':'')+'<span class="muted" style="font-size:12px">· average '+avgBehind.toFixed(1)+' week(s) behind</span></div>'
+    +'<details'+(D.rows.length<=40?' open':'')+' style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">Student list (most behind first)</summary>'
+    +'<table><thead><tr><th>Student</th><th>Folders started</th><th>Weeks expected</th><th>Weeks completed</th><th>Status</th><th>Last active</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></details></div>';
+}
+async function downloadWeeklyPractice(classId,fmt){
+  var D=weeklyPracticeData(classId,S.classTerm||"1"); if(!D||!D.rows.length){ alert("No students in this term yet."); return; }
+  var lang=_val("wp_lang","en");
+  try{
+    if(fmt==="xlsx"){
+      await ensureXlsxLibs();
+      for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"التدريب الأسبوعي":"Weekly practice",ar?{views:[{rightToLeft:true}]}:{});
+        ws.columns=[{width:30},{width:32},{width:16},{width:16},{width:18},{width:16},{width:28},{width:14}];
+        var H=annexSchoolHeader(D.c); RL=l; H=annexSchoolHeader(D.c); RL="en";
+        ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
+        ws.addRow([(ar?"تقرير التدريب الأسبوعي — ":"Weekly practice report — ")+D.c.name+" · "+(ar?"الفصل ":"Term ")+D.term+" · "+new Date().toLocaleDateString("en-GB")]);
+        ws.addRow([]);
+        hdrRow(ws,ar?["الطالب/ة","البريد الإلكتروني","بدء المجلدات","الأسابيع المتوقعة","الأسابيع المنجزة","الأنشطة المنجزة","الحالة","آخر نشاط"]:["Student","Email","Folders started","Weeks expected","Weeks completed","Activities done","Status","Last active"]);
+        D.rows.forEach(function(r){ var row=ws.addRow([r.name,r.email,r.state==="nodiag"?"—":_fmtD(r.start),r.state==="nodiag"?"—":(r.expected+" / "+r.weeks),r.state==="nodiag"?"—":r.weeksDone,r.state==="nodiag"?"—":(r.done+" / "+r.total),wpStatusText(r,ar),_fmtD(r.lastActive)]);
+          var st=WP_STATE[r.state]; var cell=row.getCell(7); cell.font={bold:true,color:{argb:"FF"+st[3]}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+st[4]}}; });
+        downloadBlob(await wb.xlsx.writeBuffer(),safeName("Weekly practice - "+D.c.name+" - Term "+D.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
+    } else {
+      await ensurePptxLib();
+      for(const l of _langs(lang)){ var r=buildWeeklyPracticePptx(D,l); await r.pptx.writeFile({fileName:r.fileName}); }
+    }
+  }catch(e){ alert("Couldn't create the report: "+((e&&e.message)||e)); } finally{ RL="en"; }
+}
+function buildWeeklyPracticePptx(D,lang){
+  RL=lang==="ar"?"ar":"en";
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; if(_ar()) pptx.rtlMode=true;
+  var H=annexSchoolHeader(D.c), dept=_deptOf([{c:D.c}]), cls=clsN(D.c.name), next=1;
+  var title=tr("Weekly Practice Progress Report","تقرير متابعة التدريب الأسبوعي");
+  var sub=subjN(D.c.subject)+" · "+cls+" · "+tr("Term ","الفصل ")+D.term+" · "+new Date().toLocaleDateString("en-GB")+(D.brk?tr(" · "+D.brk+" holiday week(s) excluded"," · استُبعد "+D.brk+" أسبوع إجازة"):"");
+  // Summary slide
+  var s=pptx.addSlide(); s.background={color:"FFFFFF"}; _schoolHead(s,H,dept);
+  s.addText(title,_txtOpts({x:0.4,y:1.35,w:9.2,h:0.35,fontSize:17,bold:true,color:RPT.ink}));
+  s.addText(sub,_txtOpts({x:0.4,y:1.72,w:9.2,h:0.25,fontSize:9,italic:true,color:RPT.muted,fit:"shrink"}));
+  var k=function(x){return D.cnt[x]||0;};
+  var groups=[["ontrack",tr("On track","على المسار"),k("ontrack")+k("ahead"),RPT.P],["slightly",tr("1 week behind","متأخر أسبوعًا"),k("slightly"),RPT.BP],["behind",tr("2–3 weeks behind","متأخر 2–3 أسابيع"),k("behind"),RPT.BF],["far",tr("4+ weeks behind / not started","متأخر 4+ أسابيع / لم يبدأ"),k("far")+k("notstarted"),RPT.F]];
+  var tiles=groups.map(function(g){ return [g[1],String(g[2]),g[3]]; }); if(k("nodiag")) tiles.push([tr("Diagnostic not done","لم يُكمل التشخيص"),String(k("nodiag")),RPT.muted]);
+  if(_ar()) tiles=tiles.reverse();
+  var tw=9.2/tiles.length;
+  tiles.forEach(function(t,i){ var x=0.4+i*tw; s.addShape("roundRect",{x:x,y:2.1,w:tw-0.12,h:1.0,fill:{color:"FBF8F1"},line:{color:RPT.line},rectRadius:0.08});
+    s.addShape("rect",{x:x,y:2.1,w:tw-0.12,h:0.07,fill:{color:t[2]},line:{color:t[2]}});
+    s.addText(t[1],_txtOpts({x:x+0.12,y:2.22,w:tw-0.36,h:0.45,fontSize:24,bold:true,color:t[2]}));
+    s.addText(t[0],_txtOpts({x:x+0.12,y:2.68,w:tw-0.36,h:0.36,fontSize:9,color:RPT.muted,fit:"shrink"})); });
+  var labels=groups.map(function(g){return g[1];});
+  s.addChart(pptx.ChartType.bar,[{name:tr("Students","الطلبة"),labels:labels,values:groups.map(function(g){return g[2];})}],{x:0.4,y:3.25,w:9.2,h:1.7,barDir:"bar",chartColors:groups.map(function(g){return g[3];}),showValue:true,dataLabelFontSize:9,catAxisLabelFontSize:9,valAxisHidden:true,valGridLine:{style:"none"},showLegend:false,catAxisLabelFontFace:_font(),varyColors:true});
+  s.addText(tr("Expected weeks = whole weeks since the student finished the diagnostic"+(D.brk?" (minus holiday weeks)":"")+" · Weeks completed = activities done ÷ activities per weekly folder.","الأسابيع المتوقعة = الأسابيع الكاملة منذ إنهاء الطالب للتقييم التشخيصي"+(D.brk?" (مع استبعاد أسابيع الإجازة)":"")+" · الأسابيع المنجزة = الأنشطة المنجزة ÷ أنشطة المجلد الأسبوعي."),_txtOpts({x:0.4,y:5.05,w:9.2,h:0.35,fontSize:8,color:RPT.muted,fit:"shrink"}));
+  // Student table slides
+  var head=tr(["Student","Folders started","Weeks expected","Weeks completed","Activities done","Status","Last active"],["الطالب/ة","بدء المجلدات","الأسابيع المتوقعة","الأسابيع المنجزة","الأنشطة المنجزة","الحالة","آخر نشاط"]);
+  var colW=[2.4,1.1,1.1,1.1,1.2,1.6,0.9];
+  var rows=D.rows.map(function(r){ var st=WP_STATE[r.state], nd=r.state==="nodiag";
+    return [_c(r.name,{align:"left",bold:true,fill:{color:RPT.cream}}),_c(nd?"—":_fmtD(r.start)),_c(nd?"—":(r.expected+" / "+r.weeks)),_c(nd?"—":r.weeksDone,{bold:true}),_c(nd?"—":(r.done+" / "+r.total)),_c(wpStatusText(r,_ar()),{bold:true,color:st[3],fill:{color:st[4]}}),_c(_fmtD(r.lastActive))]; });
+  var per=10;
+  for(var i=0;i<rows.length;i+=per){
+    var t=pptx.addSlide(); t.background={color:"FFFFFF"}; _schoolHead(t,H,dept);
+    t.addText(title+(rows.length>per?(" ("+(i/per+1)+"/"+Math.ceil(rows.length/per)+")"):""),_txtOpts({x:0.4,y:1.35,w:9.2,h:0.35,fontSize:15,bold:true,color:RPT.ink}));
+    t.addText(sub,_txtOpts({x:0.4,y:1.7,w:9.2,h:0.25,fontSize:9,italic:true,color:RPT.muted,fit:"shrink"}));
+    _addTable(t,[head.map(function(x){return _th(x);})].concat(rows.slice(i,i+per)),{x:0.4,y:2.05,w:9.2,colW:colW,border:{type:"solid",pt:0.5,color:RPT.line},margin:0.04,rowH:0.27,valign:"middle"});
+  }
+  var r={pptx:pptx,fileName:safeName("Weekly practice - "+D.c.name+" - "+subjLabelLong(D.c.subject)+" - Term "+D.term+(_ar()?" - Arabic":""))+".pptx"};
+  RL="en"; return r;
+}
 function viewClass(id){
   const c=classesList().find(x=>x.id===id);
   if(!c){S.openClassId=null;return viewTeacher();}
@@ -3341,6 +3469,7 @@ function viewClass(id){
   })()}
   ${atRiskCardHtml(done, c.curGrade||c.prevGrade)}
   ${annexCardHtml(c,done)}
+  ${weeklyPracticeCardHtml(c)}
   ${mtssPyramidCard(done)}
   <div class="card"><div class="flex-between" style="align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Class roster — Term ${term}</h2>${caAll.some(a=>a.status==="completed")?`<button class="btn gold sm" onclick="downloadClassMarked('${c.id}')">⬇ Download all marked tests (all terms)</button>`:""}</div>
     <p class="sub">Same diagnostic for everyone this term, ranked by score. Results update live as students finish. Use the per-row <b>⬇ Marked</b> for a single test, <b>⬇ All terms</b> for one student across terms, or <b>Download all marked tests</b> above for the whole class.</p>
