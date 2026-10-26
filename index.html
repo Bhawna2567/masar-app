@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-26d";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-26e";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3347,7 +3347,7 @@ async function downloadWeeklyPractice(classId,fmt){
   try{
     if(fmt==="xlsx"){
       await ensureXlsxLibs();
-      for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"التدريب الأسبوعي":"Weekly practice",ar?{views:[{rightToLeft:true}]}:{});
+      for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"Adeptly · التدريب الأسبوعي":"Adeptly · Weekly practice",ar?{views:[{rightToLeft:true}]}:{});
         ws.columns=[{width:30},{width:32},{width:16},{width:16},{width:18},{width:16},{width:28},{width:14}];
         var H=annexSchoolHeader(D.c); RL=l; H=annexSchoolHeader(D.c); RL="en";
         _adeptlyTitleRow(ws); wb.creator="Adeptly";
@@ -3357,7 +3357,7 @@ async function downloadWeeklyPractice(classId,fmt){
         hdrRow(ws,ar?["الطالب/ة","البريد الإلكتروني","بدء المجلدات","الأسابيع المتوقعة","الأسابيع المنجزة","الأنشطة المنجزة","الحالة","آخر نشاط"]:["Student","Email","Folders started","Weeks expected","Weeks completed","Activities done","Status","Last active"]);
         D.rows.forEach(function(r){ var row=ws.addRow([r.name,r.email,r.state==="nodiag"?"—":_fmtD(r.start),r.state==="nodiag"?"—":(r.expected+" / "+r.weeks),r.state==="nodiag"?"—":r.weeksDone,r.state==="nodiag"?"—":(r.done+" / "+r.total),wpStatusText(r,ar),_fmtD(r.lastActive)]);
           var st=WP_STATE[r.state]; var cell=row.getCell(7); cell.font={bold:true,color:{argb:"FF"+st[3]}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+st[4]}}; });
-        downloadBlob(await wb.xlsx.writeBuffer(),safeName("Weekly practice - "+D.c.name+" - Term "+D.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
+        downloadBlob(await wb.xlsx.writeBuffer(),safeName("Adeptly - Weekly practice - "+D.c.name+" - Term "+D.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
     } else {
       await ensurePptxLib();
       for(const l of _langs(lang)){ var r=buildWeeklyPracticePptx(D,l); await r.pptx.writeFile({fileName:r.fileName}); }
@@ -3466,7 +3466,7 @@ async function downloadTeacherMonitor(fmt){
   try{
     if(fmt==="xlsx"){
       await ensureXlsxLibs();
-      for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"متابعة المعلمين":"Teacher monitoring",ar?{views:[{rightToLeft:true}]}:{});
+      for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"Adeptly · متابعة المعلمين":"Adeptly · Teacher monitoring",ar?{views:[{rightToLeft:true}]}:{});
         ws.columns=[{width:30},{width:28},{width:16},{width:10},{width:14},{width:12},{width:14},{width:14},{width:14},{width:16},{width:18}];
         RL=l; var H=annexSchoolHeader({schoolId:(adminSchool()==="ALL"?DEFAULT_SCHOOL:adminSchool())}); RL="en";
         _adeptlyTitleRow(ws); wb.creator="Adeptly";
@@ -3478,7 +3478,7 @@ async function downloadTeacherMonitor(fmt){
           var f=TM_FLAG[t.flag], cc=r.getCell(11); cc.font={bold:true,color:{argb:"FF"+f[3]}}; cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+f[4]}};
           t.classes.forEach(function(x){ var rr=ws.addRow(["",x.c.name,subjLabelLong(x.c.subject),x.enrolled,x.diagDone+" / "+x.termStudents,x.onTrackPct,x.active7Pct,x.avgBehind,x.far,"",TM_FLAG[x.flag][ar?1:0]]); var g=TM_FLAG[x.flag]; rr.getCell(11).font={color:{argb:"FF"+g[3]}}; });
         });
-        downloadBlob(await wb.xlsx.writeBuffer(),safeName("Teacher monitoring - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
+        downloadBlob(await wb.xlsx.writeBuffer(),safeName("Adeptly - Teacher monitoring - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); }
     } else {
       await ensurePptxLib();
       for(const l of _langs(lang)){ var p=buildTeacherMonitorPptx(M,l); await p.pptx.writeFile({fileName:p.fileName}); }
@@ -3486,14 +3486,24 @@ async function downloadTeacherMonitor(fmt){
   }catch(e){ alert("Couldn't create the report: "+((e&&e.message)||e)); } finally{ RL="en"; }
 }
 // ONE Excel sheet: every teacher → each class → every student's weekly-folder progress, with teacher and class summary rows.
-function _adeptlyTitleRow(ws){ var r=ws.addRow(["Adeptly — Curriculum Diagnostic & Skill Development"]); r.font={bold:true,size:18,color:{argb:"FF4F46E5"}}; r.height=26; return r; }
+// App banner on every weekly-practice / monitoring Excel: a full-width indigo bar reading "ADEPTLY", plus the
+// app name in the sheet tab, the file name and the printed header/footer.
+function _adeptlyTitleRow(ws,ncols){
+  ncols=ncols||(ws.columns&&ws.columns.length)||8;
+  var r=ws.addRow(["ADEPTLY  ·  Curriculum Diagnostic & Skill Development"]); r.height=34;
+  try{ ws.mergeCells(r.number,1,r.number,ncols); }catch(e){}
+  var c=r.getCell(1); c.font={bold:true,size:20,color:{argb:"FFFFFFFF"}}; c.alignment={vertical:"middle",horizontal:"left",indent:1};
+  c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF4F46E5"}};
+  ws.headerFooter={oddHeader:"&L&\"Calibri,Bold\"Adeptly&R&D",oddFooter:"&LAdeptly — Curriculum Diagnostic && Skill Development&RPage &P of &N"};
+  return r;
+}
 async function downloadCombinedPracticeExcel(){
   var M=teacherMonitorData(S.tmTerm||"1"), lang=_val("tm_lang","en");
   if(!M.teachers.length){ alert("No teachers to report on yet."); return; }
   try{
     await ensureXlsxLibs();
     var l=(lang==="ar")?"ar":"en", ar=l==="ar";
-    var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"تقدم التدريب الأسبوعي":"Weekly practice progress",{views:[{state:"frozen",ySplit:5,rightToLeft:ar}]}); wb.creator="Adeptly";
+    var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"Adeptly · تقدم التدريب الأسبوعي":"Adeptly · Weekly practice",{views:[{state:"frozen",ySplit:5,rightToLeft:ar}]}); wb.creator="Adeptly";
     ws.columns=[{width:26},{width:26},{width:16},{width:28},{width:30},{width:14},{width:14},{width:14},{width:14},{width:14},{width:26},{width:13}];
     RL=l; var H=annexSchoolHeader({schoolId:(adminSchool()==="ALL"?DEFAULT_SCHOOL:adminSchool())}); RL="en";
     _adeptlyTitleRow(ws);
@@ -3523,7 +3533,7 @@ async function downloadCombinedPracticeExcel(){
     ws.addRow([]);
     var tot=ws.addRow([ar?"المجموع":"TOTAL","","",(ar?"الطلبة: ":"Students: ")+totals.students,"","","",(ar?"على المسار: ":"On track: ")+totals.onTrack+" / "+totals.diag,(ar?"التشخيص المنجز: ":"Diagnostics done: ")+totals.diag,"",(ar?"متأخر 4+ / لم يبدأ: ":"4+ behind / not started: ")+totals.far,""]); tot.font={bold:true}; fill(tot,"FFF7F1E4");
     ws.autoFilter={from:{row:5,column:1},to:{row:5,column:12}};
-    downloadBlob(await wb.xlsx.writeBuffer(),safeName("Combined weekly practice - all teachers - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    downloadBlob(await wb.xlsx.writeBuffer(),safeName("Adeptly - Combined weekly practice - all teachers - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   }catch(e){ alert("Couldn't create the Excel file: "+((e&&e.message)||e)); } finally{ RL="en"; }
 }
 function buildTeacherMonitorPptx(M,lang){
