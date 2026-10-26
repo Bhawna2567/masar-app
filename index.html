@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-26c";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-26d";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3350,6 +3350,7 @@ async function downloadWeeklyPractice(classId,fmt){
       for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"التدريب الأسبوعي":"Weekly practice",ar?{views:[{rightToLeft:true}]}:{});
         ws.columns=[{width:30},{width:32},{width:16},{width:16},{width:18},{width:16},{width:28},{width:14}];
         var H=annexSchoolHeader(D.c); RL=l; H=annexSchoolHeader(D.c); RL="en";
+        _adeptlyTitleRow(ws); wb.creator="Adeptly";
         ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
         ws.addRow([(ar?"تقرير التدريب الأسبوعي — ":"Weekly practice report — ")+D.c.name+" · "+(ar?"الفصل ":"Term ")+D.term+" · "+new Date().toLocaleDateString("en-GB")]);
         ws.addRow([]);
@@ -3468,6 +3469,7 @@ async function downloadTeacherMonitor(fmt){
       for(const l of _langs(lang)){ var ar=l==="ar", wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"متابعة المعلمين":"Teacher monitoring",ar?{views:[{rightToLeft:true}]}:{});
         ws.columns=[{width:30},{width:28},{width:16},{width:10},{width:14},{width:12},{width:14},{width:14},{width:14},{width:16},{width:18}];
         RL=l; var H=annexSchoolHeader({schoolId:(adminSchool()==="ALL"?DEFAULT_SCHOOL:adminSchool())}); RL="en";
+        _adeptlyTitleRow(ws); wb.creator="Adeptly";
         ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
         ws.addRow([(ar?"تقرير متابعة استخدام المعلمين للتدريب الأسبوعي — الفصل ":"Teacher monitoring — weekly practice — Term ")+M.term+" · "+new Date().toLocaleDateString("en-GB")]); ws.addRow([]);
         hdrRow(ws,ar?["المعلّم/ة","الصف","المادة","الطلبة","التشخيص المنجز","على المسار %","نشط آخر 7 أيام %","متوسط أسابيع التأخر","متأخر 4+ / لم يبدأ","آخر نشاط للمعلّم","الحالة"]:["Teacher","Class","Subject","Students","Diagnostics done","On track %","Active 7 days %","Avg weeks behind","4+ behind / not started","Teacher last active","Status"]);
@@ -3484,15 +3486,17 @@ async function downloadTeacherMonitor(fmt){
   }catch(e){ alert("Couldn't create the report: "+((e&&e.message)||e)); } finally{ RL="en"; }
 }
 // ONE Excel sheet: every teacher → each class → every student's weekly-folder progress, with teacher and class summary rows.
+function _adeptlyTitleRow(ws){ var r=ws.addRow(["Adeptly — Curriculum Diagnostic & Skill Development"]); r.font={bold:true,size:18,color:{argb:"FF4F46E5"}}; r.height=26; return r; }
 async function downloadCombinedPracticeExcel(){
   var M=teacherMonitorData(S.tmTerm||"1"), lang=_val("tm_lang","en");
   if(!M.teachers.length){ alert("No teachers to report on yet."); return; }
   try{
     await ensureXlsxLibs();
     var l=(lang==="ar")?"ar":"en", ar=l==="ar";
-    var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"تقدم التدريب الأسبوعي":"Weekly practice progress",{views:[{state:"frozen",ySplit:4,rightToLeft:ar}]});
+    var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"تقدم التدريب الأسبوعي":"Weekly practice progress",{views:[{state:"frozen",ySplit:5,rightToLeft:ar}]}); wb.creator="Adeptly";
     ws.columns=[{width:26},{width:26},{width:16},{width:28},{width:30},{width:14},{width:14},{width:14},{width:14},{width:14},{width:26},{width:13}];
     RL=l; var H=annexSchoolHeader({schoolId:(adminSchool()==="ALL"?DEFAULT_SCHOOL:adminSchool())}); RL="en";
+    _adeptlyTitleRow(ws);
     ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
     ws.addRow([(ar?"تقرير مجمّع لتقدم مجلدات التدريب الأسبوعي — جميع المعلمين والصفوف — الفصل ":"Combined weekly practice progress — all teachers & classes — Term ")+M.term+" · "+new Date().toLocaleDateString("en-GB")]).font={italic:true,color:{argb:"FF6B6255"}};
     ws.addRow([]);
@@ -3518,7 +3522,7 @@ async function downloadCombinedPracticeExcel(){
     });
     ws.addRow([]);
     var tot=ws.addRow([ar?"المجموع":"TOTAL","","",(ar?"الطلبة: ":"Students: ")+totals.students,"","","",(ar?"على المسار: ":"On track: ")+totals.onTrack+" / "+totals.diag,(ar?"التشخيص المنجز: ":"Diagnostics done: ")+totals.diag,"",(ar?"متأخر 4+ / لم يبدأ: ":"4+ behind / not started: ")+totals.far,""]); tot.font={bold:true}; fill(tot,"FFF7F1E4");
-    ws.autoFilter={from:{row:4,column:1},to:{row:4,column:12}};
+    ws.autoFilter={from:{row:5,column:1},to:{row:5,column:12}};
     downloadBlob(await wb.xlsx.writeBuffer(),safeName("Combined weekly practice - all teachers - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   }catch(e){ alert("Couldn't create the Excel file: "+((e&&e.message)||e)); } finally{ RL="en"; }
 }
