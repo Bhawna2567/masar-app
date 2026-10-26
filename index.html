@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-26b";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-10-26c";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -3454,7 +3454,7 @@ function adminTeacherMonitorView(){
   }).join("");
   return '<div class="card"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:center"><div><h2 style="margin:0 0 2px">📈 Teacher monitoring — weekly practice</h2><p class="sub" style="margin:0">Is each teacher using Adeptly and getting students to keep up with their weekly folders? Teachers needing follow-up are listed first.</p></div>'
    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:inline;margin:0;font-size:12px">Term</label><select style="width:auto" onchange="setTmTerm(this.value)">'+["1","2","3"].map(function(x){return '<option value="'+x+'"'+(x===term?" selected":"")+'>Term '+x+'</option>';}).join("")+'</select>'
-   +langOptionsHtml("tm_lang")+'<button class="btn sm" onclick="downloadTeacherMonitor(\'xlsx\')">⬇ Excel</button><button class="btn gold sm" onclick="downloadTeacherMonitor(\'pptx\')">⬇ PowerPoint</button></div></div>'
+   +langOptionsHtml("tm_lang")+'<button class="btn gold sm" onclick="downloadCombinedPracticeExcel()" title="One sheet: every teacher, class and student">⬇ Combined Excel (all teachers, classes &amp; students)</button><button class="btn sm" onclick="downloadTeacherMonitor(\'xlsx\')">⬇ Summary Excel</button><button class="btn gold sm" onclick="downloadTeacherMonitor(\'pptx\')">⬇ PowerPoint</button></div></div>'
    +'<div class="notice" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f8fafc;margin-top:10px"><b style="font-size:13px">'+T.length+' teacher(s):</b>'+pill("good")+' '+(cnt.good||0)+' &nbsp;'+pill("fair")+' '+(cnt.fair||0)+' &nbsp;'+pill("follow")+' '+(cnt.follow||0)+' &nbsp;'+pill("none")+' '+(cnt.none||0)+'</div>'
    +'<table style="margin-top:8px"><thead><tr><th>Teacher / class</th><th>Students</th><th>Diagnostics done</th><th>On track</th><th>Active last 7 days</th><th>Avg weeks behind</th><th>4+ wks behind / not started</th><th>Teacher last active</th><th>Status</th></tr></thead><tbody>'+(rows||'<tr><td colspan="9" class="muted">No teachers in this school yet.</td></tr>')+'</tbody></table>'
    +'<p class="muted" style="font-size:12px;margin-top:10px"><b>Good</b> = ≥ 70% of students on track and ≥ 50% practised in the last 7 days. <b>Needs follow-up</b> = under 50% on track, under 30% active, or 2+ weeks behind on average. <b>Not using yet</b> = no class or no completed diagnostic this term. Holiday weeks a teacher entered are taken into account.</p></div>';
@@ -3482,6 +3482,45 @@ async function downloadTeacherMonitor(fmt){
       for(const l of _langs(lang)){ var p=buildTeacherMonitorPptx(M,l); await p.pptx.writeFile({fileName:p.fileName}); }
     }
   }catch(e){ alert("Couldn't create the report: "+((e&&e.message)||e)); } finally{ RL="en"; }
+}
+// ONE Excel sheet: every teacher → each class → every student's weekly-folder progress, with teacher and class summary rows.
+async function downloadCombinedPracticeExcel(){
+  var M=teacherMonitorData(S.tmTerm||"1"), lang=_val("tm_lang","en");
+  if(!M.teachers.length){ alert("No teachers to report on yet."); return; }
+  try{
+    await ensureXlsxLibs();
+    var l=(lang==="ar")?"ar":"en", ar=l==="ar";
+    var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet(ar?"تقدم التدريب الأسبوعي":"Weekly practice progress",{views:[{state:"frozen",ySplit:4,rightToLeft:ar}]});
+    ws.columns=[{width:26},{width:26},{width:16},{width:28},{width:30},{width:14},{width:14},{width:14},{width:14},{width:14},{width:26},{width:13}];
+    RL=l; var H=annexSchoolHeader({schoolId:(adminSchool()==="ALL"?DEFAULT_SCHOOL:adminSchool())}); RL="en";
+    ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
+    ws.addRow([(ar?"تقرير مجمّع لتقدم مجلدات التدريب الأسبوعي — جميع المعلمين والصفوف — الفصل ":"Combined weekly practice progress — all teachers & classes — Term ")+M.term+" · "+new Date().toLocaleDateString("en-GB")]).font={italic:true,color:{argb:"FF6B6255"}};
+    ws.addRow([]);
+    var hr=hdrRow(ws,ar?["المعلّم/ة","الصف","المادة","الطالب/ة","البريد الإلكتروني","بدء المجلدات","الأسابيع المتوقعة","الأسابيع المنجزة","الأنشطة المنجزة","أسابيع التأخر","الحالة","آخر نشاط"]
+                       :["Teacher","Class","Subject","Student","Email","Folders started","Weeks expected","Weeks completed","Activities done","Weeks behind","Status","Last active"]);
+    hr.eachCell(function(c){ c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFB38A39"}}; c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.alignment={vertical:"middle",horizontal:"center",wrapText:true}; });
+    var fill=function(row,argb){ row.eachCell({includeEmpty:true},function(c,i){ if(i<=12) c.fill={type:"pattern",pattern:"solid",fgColor:{argb:argb}}; }); };
+    var totals={students:0,diag:0,onTrack:0,far:0};
+    M.teachers.forEach(function(t){
+      var f=TM_FLAG[t.flag];
+      var tr_=ws.addRow([t.name,(ar?"جميع الصفوف (":"All classes (")+t.nClasses+")","",(ar?"الطلبة: ":"Students: ")+t.enrolled,t.email,"",(ar?"على المسار ":"On track ")+t.onTrackPct+"%",(ar?"نشط 7 أيام ":"Active 7d ")+t.active7Pct+"%",(ar?"التشخيص ":"Diagnostics ")+t.diagDone+"/"+t.termStudents,t.avgBehind,f[ar?1:0],_fmtD(t.lastActive)]);
+      tr_.font={bold:true}; fill(tr_,"FFF7F1E4"); tr_.getCell(11).font={bold:true,color:{argb:"FF"+f[3]}};
+      totals.students+=t.enrolled; totals.diag+=t.diagDone; totals.onTrack+=t.onTrack; totals.far+=t.far;
+      t.classes.forEach(function(x){
+        var g=TM_FLAG[x.flag];
+        var cr=ws.addRow([t.name,x.c.name,subjLabelLong(x.c.subject),(ar?"الطلبة: ":"Students: ")+x.enrolled,"",x.D.brk?((ar?"إجازة: ":"Holiday wks: ")+x.D.brk):"",(ar?"على المسار ":"On track ")+x.onTrackPct+"%",(ar?"نشط 7 أيام ":"Active 7d ")+x.active7Pct+"%",(ar?"التشخيص ":"Diagnostics ")+x.diagDone+"/"+x.termStudents,x.avgBehind,g[ar?1:0],""]);
+        cr.font={bold:true,italic:true}; fill(cr,"FFFBF8F1"); cr.getCell(11).font={bold:true,italic:true,color:{argb:"FF"+g[3]}};
+        x.D.rows.forEach(function(r){ var st=WP_STATE[r.state], nd=r.state==="nodiag";
+          var sr=ws.addRow([t.name,x.c.name,subjLabelLong(x.c.subject),r.name,r.email,nd?"—":_fmtD(r.start),nd?"—":r.expected,nd?"—":r.weeksDone,nd?"—":(r.done+" / "+r.total),nd?"—":(r.behind||0),wpStatusText(r,ar),_fmtD(r.lastActive)]);
+          var sc=sr.getCell(11); sc.font={bold:true,color:{argb:"FF"+st[3]}}; sc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+st[4]}};
+          if(!nd&&(r.behind||0)>=2) sr.getCell(10).font={bold:true,color:{argb:"FF"+st[3]}}; });
+      });
+    });
+    ws.addRow([]);
+    var tot=ws.addRow([ar?"المجموع":"TOTAL","","",(ar?"الطلبة: ":"Students: ")+totals.students,"","","",(ar?"على المسار: ":"On track: ")+totals.onTrack+" / "+totals.diag,(ar?"التشخيص المنجز: ":"Diagnostics done: ")+totals.diag,"",(ar?"متأخر 4+ / لم يبدأ: ":"4+ behind / not started: ")+totals.far,""]); tot.font={bold:true}; fill(tot,"FFF7F1E4");
+    ws.autoFilter={from:{row:4,column:1},to:{row:4,column:12}};
+    downloadBlob(await wb.xlsx.writeBuffer(),safeName("Combined weekly practice - all teachers - Term "+M.term+(ar?" - Arabic":""))+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }catch(e){ alert("Couldn't create the Excel file: "+((e&&e.message)||e)); } finally{ RL="en"; }
 }
 function buildTeacherMonitorPptx(M,lang){
   RL=lang==="ar"?"ar":"en";
