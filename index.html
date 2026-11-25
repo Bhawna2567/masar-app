@@ -232,7 +232,7 @@ function prevGradeOf(g){
 if (typeof QUESTION_BANK === "undefined") { var QUESTION_BANK = {}; }
 if (typeof QUESTION_BANK_AR === "undefined") { var QUESTION_BANK_AR = {}; }
 if (typeof QUESTION_POOL === "undefined") { var QUESTION_POOL = {}; }
-var APP_BUILD="2026-10-26e";  // shown in the header so you can confirm the latest build is running
+var APP_BUILD="2026-11-25a";  // shown in the header so you can confirm the latest build is running
 
 /* ===== Difficulty-tagged pool assembly (Foundational / Core / Challenge) =====
    Each diagnostic is assembled from a larger tagged pool with a deliberate spread of
@@ -1695,7 +1695,7 @@ function viewTeacher(){
   <div class="card"><h2>Assigned diagnostics</h2><table><thead><tr><th>Student</th><th>Subject</th><th>Grades</th><th>Status</th><th></th></tr></thead><tbody>${assignRows}</tbody></table></div>`;
   const settingsBody=`<div class="card"><h2>Back up your data</h2><p class="sub">Download all your classes and diagnostics as a file you can keep safe. Good to do before any big change.</p><button class="btn ghost" onclick="exportBackup()">⬇ Download my data (JSON)</button></div>
   <div class="card" style="border:1px solid #f3c8cc"><h2>Reset dashboard</h2><p class="sub">Permanently delete all your students, classes and diagnostics to start fresh. This cannot be undone.</p><button class="btn" style="background:var(--red)" onclick="resetDashboard()">Reset everything</button></div>`;
-  const body = sec==="classes"?(classCard()+combinedReportCardHtml()+allMyClassesCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
+  const body = sec==="classes"?(classCard()+combinedReportCardHtml()+lowAchieversCardHtml("t")+allMyClassesCard()+mySchoolsCard()) : (sec==="tests"?importCard() : (sec==="settings"?settingsBody : studentsBody));
   return `<div class="card"><h2>Teacher Dashboard</h2><p class="sub">${me.name} · ${me.email}${schoolsEnabled()?" · 🏫 <b>"+esc(schoolName(curSchool()))+"</b>":""}</p></div>${nav}${body}`;
 }
 function setTSection(s){ S.tSection=s; render(); }
@@ -3458,7 +3458,7 @@ function adminTeacherMonitorView(){
    +langOptionsHtml("tm_lang")+'<button class="btn gold sm" onclick="downloadCombinedPracticeExcel()" title="One sheet: every teacher, class and student">⬇ Combined Excel (all teachers, classes &amp; students)</button><button class="btn sm" onclick="downloadTeacherMonitor(\'xlsx\')">⬇ Summary Excel</button><button class="btn gold sm" onclick="downloadTeacherMonitor(\'pptx\')">⬇ PowerPoint</button></div></div>'
    +'<div class="notice" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f8fafc;margin-top:10px"><b style="font-size:13px">'+T.length+' teacher(s):</b>'+pill("good")+' '+(cnt.good||0)+' &nbsp;'+pill("fair")+' '+(cnt.fair||0)+' &nbsp;'+pill("follow")+' '+(cnt.follow||0)+' &nbsp;'+pill("none")+' '+(cnt.none||0)+'</div>'
    +'<table style="margin-top:8px"><thead><tr><th>Teacher / class</th><th>Students</th><th>Diagnostics done</th><th>On track</th><th>Active last 7 days</th><th>Avg weeks behind</th><th>4+ wks behind / not started</th><th>Teacher last active</th><th>Status</th></tr></thead><tbody>'+(rows||'<tr><td colspan="9" class="muted">No teachers in this school yet.</td></tr>')+'</tbody></table>'
-   +'<p class="muted" style="font-size:12px;margin-top:10px"><b>Good</b> = ≥ 70% of students on track and ≥ 50% practised in the last 7 days. <b>Needs follow-up</b> = under 50% on track, under 30% active, or 2+ weeks behind on average. <b>Not using yet</b> = no class or no completed diagnostic this term. Holiday weeks a teacher entered are taken into account.</p></div>';
+   +'<p class="muted" style="font-size:12px;margin-top:10px">'+'<b>Good</b> = ≥ 70% of students on track and ≥ 50% practised in the last 7 days. <b>Needs follow-up</b> = under 50% on track, under 30% active, or 2+ weeks behind on average. <b>Not using yet</b> = no class or no completed diagnostic this term. Holiday weeks a teacher entered are taken into account.</p></div>'+lowAchieversCardHtml("a");
 }
 async function downloadTeacherMonitor(fmt){
   var M=teacherMonitorData(S.tmTerm||"1"), lang=_val("tm_lang","en");
@@ -3569,6 +3569,143 @@ function buildTeacherMonitorPptx(M,lang){
   }
   var r={pptx:pptx,fileName:safeName("Teacher monitoring - Term "+M.term+(_ar()?" - Arabic":""))+".pptx"};
   RL="en"; return r;
+}
+/* ===== Low achievers — intervention & impact report (for the School Development Plan) =====
+   Low achiever = Term baseline diagnostic at MOE level F or BF (below the pass mark), or achiever tier "Low".
+   Shows baseline → intervention → weekly practice → change at the next diagnostic. */
+function _gnum(g){ return parseInt(String(g||""),10)||0; }
+function laSrc(scope){ return scope==="a"?{classes:adminClasses(),assigns:adminAssign()}:{classes:classesList(),assigns:assignments()}; }
+function laInitials(n){ return String(n||"").trim().split(/\s+/).filter(Boolean).map(function(w){return w.charAt(0).toUpperCase()+".";}).join(" "); }
+var LVL_ORDER={F:0,BF:1,BP:2,P:3};
+function laData(src,subj,grades,term,cmp,now){
+  term=String(term); cmp=cmp?String(cmp):""; now=now||Date.now();
+  var classes=src.classes.filter(function(c){ return c.subject===subj && grades.indexOf(_gnum(c.curGrade||c.prevGrade))>=0; });
+  var rows=[];
+  classes.forEach(function(c){
+    var ca=src.assigns.filter(function(a){return a.classId===c.id;});
+    var W=wpCompute(c,ca,term,now), wm={}; W.rows.forEach(function(r){ wm[r.email]=r; });
+    var base={}; ca.filter(function(a){return aTerm(a)===term&&a.status==="completed";}).forEach(function(a){ var k=a.studentEmail; if(!base[k]||(a.completedAt||0)>(base[k].completedAt||0)) base[k]=a; });
+    Object.keys(base).forEach(function(k){
+      var a=base[k], grade=c.curGrade||c.prevGrade, pass=passMarkFor(grade), sc=Number(a.score)||0, lvl=annexLevelOf(sc,grade), tier=a.achieverTier||(a.achiever&&a.achiever.tier)||"";
+      if(!(lvl==="F"||lvl==="BF"||tier==="Low")) return;
+      var sp=a.skillPct||{}, weak=skillsFor(subj).filter(function(s){return sp[s]!=null;}).sort(function(x,y){return sp[x]-sp[y];}).slice(0,2);
+      var b=cmp?src.assigns.filter(function(x){ return x.studentEmail===k&&x.subject===subj&&aTerm(x)===cmp&&x.status==="completed"; }).sort(function(x,y){return (y.completedAt||0)-(x.completedAt||0);})[0]:null;
+      var w=wm[k]||{}, per=w.per||7, exp=w.expected||0;
+      var r={a:a,c:c,name:a.studentName||k,email:k,grade:grade,pass:pass,score:sc,level:lvl,tier:tier,weak:weak.map(function(s){return {skill:s,pct:sp[s]};}),
+        done:w.done||0,total:w.total||0,weeksDone:w.weeksDone||0,expected:exp,behind:w.behind||0,state:w.state||"nodiag",completion:exp?Math.min(100,Math.round((w.weeksDone||0)/exp*100)):null};
+      if(b){ var s2=Number(b.score)||0, l2=annexLevelOf(s2,grade), sp2=b.skillPct||{};
+        r.after={score:s2,level:l2,change:s2-sc,moved:LVL_ORDER[l2]>LVL_ORDER[lvl],passing:s2>=pass,weak:r.weak.map(function(x){return {skill:x.skill,before:x.pct,after:sp2[x.skill]};})}; }
+      rows.push(r);
+    });
+  });
+  rows.sort(function(x,y){ return x.score-y.score; });
+  var n=rows.length, S2={n:n,F:0,BF:0,lowOnly:0,onTrack:0,comp:[],cmpN:0,gain:0,moved:0,passing:0};
+  rows.forEach(function(r){ if(r.level==="F")S2.F++; else if(r.level==="BF")S2.BF++; else S2.lowOnly++;
+    if(r.state==="ontrack"||r.state==="ahead") S2.onTrack++; if(r.completion!=null) S2.comp.push(r.completion);
+    if(r.after){ S2.cmpN++; S2.gain+=r.after.change; if(r.after.moved)S2.moved++; if(r.after.passing)S2.passing++; } });
+  S2.avgComp=S2.comp.length?Math.round(S2.comp.reduce(function(s,x){return s+x;},0)/S2.comp.length):0;
+  S2.onTrackPct=n?Math.round(S2.onTrack/n*100):0; S2.avgGain=S2.cmpN?Math.round(S2.gain/S2.cmpN*10)/10:null;
+  // per-skill implementation summary
+  var bySkill={}; rows.forEach(function(r){ r.weak.forEach(function(w){ (bySkill[w.skill]=bySkill[w.skill]||[]).push(r); }); });
+  // skill averages for low achievers, before vs after
+  var skillAvg=skillsFor(subj).map(function(s){ var b=[],a=[]; rows.forEach(function(r){ var v=r.a.skillPct&&r.a.skillPct[s]; if(v!=null&&(!S2.cmpN||r.after))b.push(Number(v)); if(r.after){ var cm=src.assigns.filter(function(x){return x.studentEmail===r.email&&x.subject===subj&&aTerm(x)===cmp&&x.status==="completed";})[0]; var v2=cm&&cm.skillPct&&cm.skillPct[s]; if(v2!=null)a.push(Number(v2)); } });
+    var av=function(L){return L.length?Math.round(L.reduce(function(x,y){return x+y;},0)/L.length):null;}; return {skill:s,before:av(b),after:av(a)}; });
+  return {subj:subj,grades:grades,term:term,cmp:cmp,classes:classes,rows:rows,sum:S2,bySkill:bySkill,skillAvg:skillAvg};
+}
+function laName(r,ini){ return ini?laInitials(r.name):r.name; }
+function laStatusText(r,ar){ return r.state==="nodiag"?"—":wpStatusText(r,ar); }
+function laGradesLabel(g){ return g.slice().sort(function(a,b){return a-b;}).map(function(x){return tr("Grade ","الصف ")+x;}).join(tr(" & "," و")); }
+function laIntervention(r,i){ var s=r.weak[0]?r.weak[0].skill:null; if(!s) return "—"; return annexStrategy(s,"support",i||0,true)+" · "+(r.level==="F"?tr("3 × 30 min / week","3 × 30 دقيقة / أسبوع"):tr("2 × 30 min / week","2 × 30 دقيقة / أسبوع")); }
+function laLevelTxt(l){ return l==="P"?tr("Proficient","متقن"):l; }
+// ---------- UI ----------
+function laState(scope){ var src=laSrc(scope), subs=Array.from(new Set(src.classes.map(function(c){return c.subject;}))).filter(Boolean);
+  var subj=(S.laSubj&&subs.indexOf(S.laSubj)>=0)?S.laSubj:(subs.indexOf("English")>=0?"English":subs[0]);
+  var gr=Array.from(new Set(src.classes.filter(function(c){return c.subject===subj;}).map(function(c){return _gnum(c.curGrade||c.prevGrade);}))).filter(Boolean).sort(function(a,b){return a-b;});
+  var sel=(S.laGrades||[]).filter(function(g){return gr.indexOf(g)>=0;}); if(!sel.length) sel=gr.filter(function(g){return g>=11;}); if(!sel.length) sel=gr.slice();
+  return {src:src,subs:subs,subj:subj,grades:gr,sel:sel,term:String(S.laTerm||"1")}; }
+function laSet(k,v){ if(k==="g"){ var g=parseInt(v,10), cur=(S.laGrades&&S.laGrades.length)?S.laGrades.slice():laState(S.laScope||"t").sel.slice(); var i=cur.indexOf(g); if(i>=0) cur.splice(i,1); else cur.push(g); S.laGrades=cur; } else if(k==="s"){ S.laSubj=v; S.laGrades=null; } else if(k==="t"){ S.laTerm=v; } render(); }
+function lowAchieversCardHtml(scope){
+  S.laScope=scope; var st=laState(scope); if(!st.subs.length) return "";
+  var cmp=String(Number(st.term)+1); var D=laData(st.src,st.subj,st.sel,st.term,cmp<=3?cmp:"");
+  var s=D.sum;
+  return '<div class="card" style="border-left:4px solid #DC2626"><div class="flex-between" style="flex-wrap:wrap;gap:10px;align-items:flex-start"><div><h2 style="margin:0 0 2px">🎯 Low achievers — intervention &amp; impact</h2><p class="sub" style="margin:0">Evidence for the School Development Plan: who the low achievers are (F / BF or Low tier), what was done for them, and what changed.</p></div></div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><label style="display:inline;margin:0;font-size:12px">Subject</label><select style="width:auto" onchange="laSet(\'s\',this.value)">'+st.subs.map(function(x){return '<option value="'+x+'"'+(x===st.subj?" selected":"")+'>'+esc(subjLabelLong(x))+'</option>';}).join("")+'</select>'
+   +'<span style="font-size:12px;margin-left:6px">Grades</span>'+st.grades.map(function(g){return '<label style="display:inline-flex;align-items:center;gap:3px;margin:0 4px 0 0;font-size:13px;text-transform:none;letter-spacing:0"><input type="checkbox" style="width:auto"'+(st.sel.indexOf(g)>=0?" checked":"")+' onchange="laSet(\'g\','+g+')">'+g+'</label>';}).join("")
+   +'<label style="display:inline;margin:0 0 0 6px;font-size:12px">Baseline</label><select style="width:auto" onchange="laSet(\'t\',this.value)">'+["1","2"].map(function(t){return '<option value="'+t+'"'+(t===st.term?" selected":"")+'>Term '+t+' diagnostic</option>';}).join("")+'</select>'
+   +'<select id="la_names" style="width:auto"><option value="full">Full names</option><option value="ini">Initials only</option></select>'+langOptionsHtml("la_lang")
+   +'<button class="btn sm" onclick="downloadLowAchievers(\''+scope+'\',\'xlsx\')">⬇ Excel</button><button class="btn gold sm" onclick="downloadLowAchievers(\''+scope+'\',\'pptx\')">⬇ PowerPoint</button></div>'
+   +'<div class="notice" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f8fafc;margin-top:10px"><b>'+s.n+' low achiever(s)</b> in '+esc(subjLabelLong(st.subj))+' '+st.sel.join(", ")+' · <span class="pill red">F '+s.F+'</span><span class="pill amber">BF '+s.BF+'</span>'+(s.lowOnly?'<span class="pill grey">Low tier '+s.lowOnly+'</span>':'')
+   +' · weekly practice: <b>'+s.onTrackPct+'%</b> on track, <b>'+s.avgComp+'%</b> of expected folders done'
+   +(D.cmp?(s.cmpN?(' · Term '+D.cmp+': average change <b>'+(s.avgGain>=0?"+":"")+s.avgGain+'</b> points, <b>'+s.moved+'</b> moved up a level, <b>'+s.passing+'</b> now passing'):(' · <span class="muted">Term '+D.cmp+' diagnostic not taken yet — impact on scores will appear then</span>')):'')+'</div></div>';
+}
+async function downloadLowAchievers(scope,fmt){
+  var st=laState(scope), cmp=String(Number(st.term)+1); var D=laData(st.src,st.subj,st.sel,st.term,cmp<=3?cmp:"");
+  if(!D.rows.length){ alert("No low achievers found for these settings (or no completed diagnostics yet)."); return; }
+  var ini=_val("la_names","full")==="ini", lang=_val("la_lang","en");
+  try{
+    if(fmt==="xlsx"){ await ensureXlsxLibs(); for(const l of _langs(lang)){ var r=await buildLowAchieversXlsx(D,ini,l); downloadBlob(r.buf,r.fileName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); } }
+    else { await ensurePptxLib(); for(const l of _langs(lang)){ var p=buildLowAchieversPptx(D,ini,l); await p.pptx.writeFile({fileName:p.fileName}); } }
+  }catch(e){ alert("Couldn't create the report: "+((e&&e.message)||e)); } finally{ RL="en"; }
+}
+function laFileName(D,ext){ return safeName("Adeptly - Low achievers - "+subjLabelLong(D.subj)+" - Grade "+D.grades.slice().sort().join(" and ")+" - Term "+D.term+(_ar()?" - Arabic":""))+ext; }
+function buildLowAchieversPptx(D,ini,lang){
+  RL=lang==="ar"?"ar":"en";
+  var pptx=new PptxGenJS(); pptx.layout="LAYOUT_16x9"; if(_ar()) pptx.rtlMode=true;
+  var H=annexSchoolHeader(D.classes[0]||{}), dept=tr("Department of "+subjLabelLong(D.subj),"قسم "+subjN(D.subj)), s=D.sum;
+  var title=tr("Low Achievers — Intervention & Impact","الطلبة منخفضو التحصيل — التدخل والأثر");
+  var sub=subjN(D.subj)+" · "+laGradesLabel(D.grades)+" · "+tr("Baseline: Term "+D.term+" diagnostic","خط الأساس: التقييم التشخيصي للفصل "+D.term)+" · "+new Date().toLocaleDateString("en-GB");
+  var head=function(sl,t){ sl.background={color:"FFFFFF"}; _schoolHead(sl,H,dept); sl.addText(t,_txtOpts({x:0.4,y:1.33,w:9.2,h:0.35,fontSize:16,bold:true,color:RPT.ink})); sl.addText(sub,_txtOpts({x:0.4,y:1.68,w:9.2,h:0.24,fontSize:8.5,italic:true,color:RPT.muted,fit:"shrink"})); };
+  // 1 Summary
+  var sl=pptx.addSlide(); head(sl,title);
+  var tiles=[[tr("Low achievers identified","الطلبة منخفضو التحصيل"),String(s.n),RPT.ink],[tr("F · BF","F · BF"),s.F+" · "+s.BF,RPT.F],[tr("On track with weekly practice","على المسار في التدريب الأسبوعي"),s.onTrackPct+"%",RPT.P],[tr("Expected practice completed","نسبة إنجاز التدريب المتوقع"),s.avgComp+"%",RPT.gold]];
+  if(D.cmp) tiles.push(s.cmpN?[tr("Avg change at Term "+D.cmp,"متوسط التغير في الفصل "+D.cmp),(s.avgGain>=0?"+":"")+s.avgGain+tr(" pts"," درجة"),RPT.P]:[tr("Term "+D.cmp+" diagnostic","تشخيص الفصل "+D.cmp),tr("Pending","قيد الانتظار"),RPT.muted]);
+  if(_ar()) tiles.reverse(); var tw=9.2/tiles.length;
+  tiles.forEach(function(t,i){ var x=0.4+i*tw; sl.addShape("roundRect",{x:x,y:2.05,w:tw-0.12,h:0.95,fill:{color:"FBF8F1"},line:{color:RPT.line},rectRadius:0.08}); sl.addShape("rect",{x:x,y:2.05,w:tw-0.12,h:0.07,fill:{color:t[2]},line:{color:t[2]}});
+    sl.addText(t[1],_txtOpts({x:x+0.1,y:2.15,w:tw-0.32,h:0.45,fontSize:22,bold:true,color:t[2],fit:"shrink"})); sl.addText(t[0],_txtOpts({x:x+0.1,y:2.6,w:tw-0.32,h:0.36,fontSize:8.5,color:RPT.muted,fit:"shrink"})); });
+  var sk=D.skillAvg.filter(function(x){return x.before!=null;}), labs=sk.map(function(x){return skN(x.skill);});
+  var series=[{name:s.cmpN?tr("Term "+D.term+" baseline (same "+s.cmpN+" students)","خط الأساس للفصل "+D.term+" (نفس "+s.cmpN+" طلبة)"):tr("Term "+D.term+" (baseline)","الفصل "+D.term+" (خط الأساس)"),labels:labs,values:sk.map(function(x){return x.before;})}];
+  if(s.cmpN) series.push({name:tr("Term "+D.cmp,"الفصل "+D.cmp),labels:labs,values:sk.map(function(x){return x.after||0;})});
+  sl.addChart(pptx.ChartType.bar,series,{x:0.4,y:3.15,w:5.6,h:2.05,barDir:"col",chartColors:[RPT.F,RPT.P],valAxisMaxVal:100,valAxisMinVal:0,showValue:true,dataLabelFontSize:7,catAxisLabelFontSize:7.5,valAxisLabelFontSize:7,showLegend:true,legendPos:"b",legendFontSize:7.5,showTitle:true,title:tr("Low achievers — average % by skill","منخفضو التحصيل — المتوسط حسب المهارة"),titleFontSize:9,titleColor:RPT.ink,valGridLine:{color:RPT.line,size:0.5},catAxisLabelFontFace:_font(),legendFontFace:_font(),titleFontFace:_font()});
+  var k=function(x){return D.rows.filter(function(r){return x.indexOf(r.state)>=0;}).length;};
+  var pl=[tr("On track","على المسار"),tr("1 week behind","متأخر أسبوعًا"),tr("2–3 weeks","2–3 أسابيع"),tr("4+ / not started","4+ / لم يبدأ")];
+  sl.addChart(pptx.ChartType.doughnut,[{name:"",labels:pl,values:[k(["ontrack","ahead"]),k(["slightly"]),k(["behind"]),k(["far","notstarted"])]}],{x:6.15,y:3.15,w:3.45,h:2.05,chartColors:[RPT.P,RPT.BP,RPT.BF,RPT.F],holeSize:55,showValue:true,dataLabelColor:"FFFFFF",dataLabelFontSize:8,showLegend:true,legendPos:"r",legendFontSize:7.5,showTitle:true,title:tr("Weekly practice status","حالة التدريب الأسبوعي"),titleFontSize:9,titleColor:RPT.ink,legendFontFace:_font(),titleFontFace:_font()});
+  // 2 Implementation by skill
+  sl=pptx.addSlide(); head(sl,tr("What was done — intervention by skill","ما تم تنفيذه — التدخل حسب المهارة"));
+  var ih=tr(["Weak skill","Low achievers","Intervention strategies","Frequency","Weekly practice in Adeptly","Success target"],["المهارة الضعيفة","عدد الطلبة","استراتيجيات التدخل","التكرار","التدريب الأسبوعي في Adeptly","هدف النجاح"]);
+  var irows=Object.keys(D.bySkill).sort(function(a,b){return D.bySkill[b].length-D.bySkill[a].length;}).map(function(skl){ var L=D.bySkill[skl], sup=strategyList(skl,"support");
+    var dn=L.reduce(function(x,r){return x+r.done;},0);
+    return [_c(skN(skl),{bold:true,align:"left",fill:{color:RPT.cream}}),_c(L.length,{bold:true}),_c([sup[0],sup[1]].map(function(x){return "• "+_clip(_stripTags(x),150);}).join("\n"),{fontSize:7,align:"left"}),_c(tr("F: 3 × 30 min · BF: 2 × 30 min / week","F: 3 × 30 د · BF: 2 × 30 د / أسبوع"),{fontSize:7.5}),_c(tr("Personalised weekly folders; "+dn+" activities completed","مجلدات أسبوعية مخصصة؛ "+dn+" نشاطًا منجزًا"),{fontSize:7.5}),_c(tr("Reach ≥ pass mark ("+D.rows[0].pass+"%) and out of F/BF","بلوغ درجة النجاح ("+D.rows[0].pass+"%) والخروج من F/BF"),{fontSize:7.5})]; });
+  _addTable(sl,[ih.map(function(x){return _th(x);})].concat(irows),{x:0.4,y:2.05,w:9.2,colW:[1.3,0.8,3.3,1.3,1.4,1.1],border:{type:"solid",pt:0.5,color:RPT.line},margin:0.05,valign:"middle"});
+  // 3 Students
+  var sh=tr(["Student","Class","Baseline","Weakest skills","Intervention","Weekly practice","Term "+(D.cmp||"–")+" result","Change"],["الطالب/ة","الصف","خط الأساس","أضعف المهارات","التدخل","التدريب الأسبوعي","نتيجة الفصل "+(D.cmp||"–"),"التغير"]);
+  var srows=D.rows.map(function(r,i){ var st=WP_STATE[r.state]||WP_STATE.nodiag;
+    return [_c(laName(r,ini),{bold:true,align:"left",fill:{color:RPT.cream}}),_c(clsN(r.c.name),{fontSize:7.5}),_c(r.score+"% · "+laLevelTxt(r.level),{bold:true,color:_lvlColor(r.level),fill:{color:_lvlFill(r.level)}}),
+      _c(r.weak.map(function(w){return skN(w.skill)+" "+w.pct+"%";}).join("\n"),{fontSize:7,align:"left"}),_c(laIntervention(r,i),{fontSize:7}),
+      _c(r.done+"/"+r.total+"\n"+laStatusText(r,_ar()),{fontSize:7,color:st[3]}),
+      _c(r.after?(r.after.score+"% · "+laLevelTxt(r.after.level)):tr("Pending","قيد الانتظار"),r.after?{bold:true,color:_lvlColor(r.after.level)}:{color:RPT.muted}),
+      _c(r.after?((r.after.change>=0?"+":"")+r.after.change+(r.after.moved?tr(" ↑ level"," ↑ مستوى"):"")):"—",r.after?{bold:true,color:r.after.change>=0?RPT.P:RPT.F}:{color:RPT.muted})]; });
+  for(var i=0;i<srows.length;i+=9){ sl=pptx.addSlide(); head(sl,tr("Each low achiever — baseline, support and progress","كل طالب منخفض التحصيل — خط الأساس والدعم والتقدم")+(srows.length>9?(" ("+(i/9+1)+"/"+Math.ceil(srows.length/9)+")"):""));
+    _addTable(sl,[sh.map(function(x){return _th(x);})].concat(srows.slice(i,i+9)),{x:0.4,y:2.05,w:9.2,colW:[1.5,1.05,0.9,1.45,1.6,1.15,0.85,0.7],border:{type:"solid",pt:0.5,color:RPT.line},margin:0.04,valign:"middle"}); }
+  var r={pptx:pptx,fileName:laFileName(D,".pptx")}; RL="en"; return r;
+}
+async function buildLowAchieversXlsx(D,ini,lang){
+  RL=lang==="ar"?"ar":"en"; var ar=_ar(), s=D.sum;
+  var wb=new ExcelJS.Workbook(); wb.creator="Adeptly"; var ws=wb.addWorksheet(ar?"Adeptly · منخفضو التحصيل":"Adeptly · Low achievers",{views:[{rightToLeft:ar}]});
+  ws.columns=[{width:26},{width:20},{width:16},{width:30},{width:34},{width:14},{width:24},{width:16},{width:14}];
+  _adeptlyTitleRow(ws,9); var H=annexSchoolHeader(D.classes[0]||{});
+  ws.addRow([H.title]).font={bold:true,size:14,color:{argb:"FFB38A39"}};
+  ws.addRow([tr("Low achievers — intervention & impact · ","الطلبة منخفضو التحصيل — التدخل والأثر · ")+subjN(D.subj)+" · "+laGradesLabel(D.grades)+" · "+tr("Baseline Term ","خط الأساس الفصل ")+D.term+" · "+new Date().toLocaleDateString("en-GB")]).font={italic:true,color:{argb:"FF6B6255"}};
+  ws.addRow([]);
+  [[tr("Low achievers identified","الطلبة منخفضو التحصيل"),s.n],[tr("At F / BF","في المستوى F / BF"),s.F+" / "+s.BF],[tr("On track with weekly practice","على المسار في التدريب الأسبوعي"),s.onTrackPct+"%"],[tr("Expected weekly practice completed","نسبة إنجاز التدريب المتوقع"),s.avgComp+"%"]]
+   .concat(D.cmp?[[tr("Term "+D.cmp+" diagnostic taken","أكملوا تشخيص الفصل "+D.cmp),s.cmpN+" / "+s.n],[tr("Average change (points)","متوسط التغير (درجة)"),s.avgGain==null?"—":s.avgGain],[tr("Moved up a level","انتقلوا لمستوى أعلى"),s.moved],[tr("Now at or above the pass mark","بلغوا درجة النجاح أو أعلى"),s.passing]]:[])
+   .forEach(function(x){ var r=ws.addRow(x); r.getCell(1).font={bold:true}; });
+  ws.addRow([]);
+  hdrRow(ws,tr(["Student","Class","Baseline","Weakest skills","Intervention","Weekly practice","Practice status","Term "+(D.cmp||"–")+" result","Change"],["الطالب/ة","الصف","خط الأساس","أضعف المهارات","التدخل","التدريب الأسبوعي","حالة التدريب","نتيجة الفصل "+(D.cmp||"–"),"التغير"]));
+  D.rows.forEach(function(r,i){ var row=ws.addRow([laName(r,ini),clsN(r.c.name),r.score+"% · "+laLevelTxt(r.level),r.weak.map(function(w){return skN(w.skill)+" "+w.pct+"%";}).join(", "),laIntervention(r,i),r.done+" / "+r.total,laStatusText(r,ar),r.after?(r.after.score+"% · "+laLevelTxt(r.after.level)):tr("Pending","قيد الانتظار"),r.after?((r.after.change>=0?"+":"")+r.after.change):"—"]);
+    row.getCell(3).font={bold:true,color:{argb:"FF"+_lvlColor(r.level)}}; var st=WP_STATE[r.state]||WP_STATE.nodiag; row.getCell(7).font={color:{argb:"FF"+st[3]}}; });
+  ws.addRow([]); hdrRow(ws,tr(["Skill","Low achievers' average — Term "+D.term,"Term "+(D.cmp||"–")],["المهارة","متوسط منخفضي التحصيل — الفصل "+D.term,"الفصل "+(D.cmp||"–")]));
+  D.skillAvg.forEach(function(x){ ws.addRow([skN(x.skill),x.before==null?"—":x.before+"%",x.after==null?"—":x.after+"%"]); });
+  var r={buf:await wb.xlsx.writeBuffer(),fileName:laFileName(D,".xlsx")}; RL="en"; return r;
 }
 function viewClass(id){
   const c=classesList().find(x=>x.id===id);
